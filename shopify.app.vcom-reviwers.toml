@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "4a9d3ae260912edfdfb9937c2a6d8148"
-application_url = "https://example.com"
+application_url = "https://vcom-reviews-production.up.railway.app"
 embedded = true
 name = "vcom reviwers"
 
@@ -9,7 +9,7 @@ name = "vcom reviwers"
 automatically_update_urls_on_dev = true
 
 [webhooks]
-api_version = "2025-01"
+api_version = "2026-04"
 
   [[webhooks.subscriptions]]
   topics = ["app/uninstalled"]
@@ -19,7 +19,10 @@ api_version = "2025-01"
 scopes = "read_metaobject_definitions,write_metaobject_definitions,read_metaobjects,write_metaobjects,read_files,write_files,read_products,read_themes"
 
 [auth]
-redirect_urls = ["https://example.com/auth/callback", "https://example.com/auth/shopify/callback"]
+redirect_urls = [
+  "https://vcom-reviews-production.up.railway.app/auth/callback",
+  "https://vcom-reviews-production.up.railway.app/auth/shopify/callback",
+]
 
 [pos]
 embedded = false

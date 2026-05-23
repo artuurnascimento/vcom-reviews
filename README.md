@@ -62,9 +62,33 @@ reviews-app/
 
 ## Deploy
 
+### Theme extension (Shopify)
+
 ```bash
-npm run deploy
+shopify app deploy
 ```
+
+### Servidor (Railway / Render)
+
+Variáveis **obrigatórias** no painel do host:
+
+| Variável | Exemplo |
+|----------|---------|
+| `SHOPIFY_API_KEY` | Client ID do Partners (`4a9d3ae2...`) |
+| `SHOPIFY_API_SECRET` | Client secret do Partners |
+| `SHOPIFY_APP_URL` | URL pública HTTPS do Railway **sem** `/` no final |
+| `SCOPES` | Mesma string do `.env.example` |
+| `NODE_ENV` | `production` |
+
+**Railway:** Settings → Networking → **Generate Domain** → copie a URL → cole em `SHOPIFY_APP_URL` → **Redeploy**.
+
+Depois atualize no Partners (ou `shopify.app.vcom-reviwers.toml` + `shopify app deploy`):
+
+- App URL = `SHOPIFY_APP_URL`
+- Redirects = `{SHOPIFY_APP_URL}/auth/callback` e `.../auth/shopify/callback`
+- Webhook = `{SHOPIFY_APP_URL}/webhooks/app/uninstalled`
+
+Build: `npm ci && npm run build` · Start: `npm run start`
 
 ## Notas
 
