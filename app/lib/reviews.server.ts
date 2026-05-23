@@ -5,9 +5,7 @@ type AdminApi = {
   ) => Promise<Response>;
 };
 import {
-  PRODUCT_REVIEWS_METAFIELD,
   REVIEW_METAOBJECT_TYPE,
-  SHOP_REVIEWS_METAFIELD,
   type ReviewFormData,
   type ReviewPlacement,
   type ReviewRecord,
@@ -111,21 +109,11 @@ export async function getReview(admin: AdminApi, id: string) {
 }
 
 export async function createReview(admin: AdminApi, data: ReviewFormData) {
-  const publish = data.status !== "pending";
   const payload: ReviewFormData = {
     ...data,
-    status: publish ? "approved" : "pending",
+    status: data.status ?? "approved",
   };
-  const metaobjectId = await createMetaobject(admin, payload);
-  if (publish) {
-    await appendReviewReference(
-      admin,
-      payload.placement,
-      metaobjectId,
-      payload.productId,
-    );
-  }
-  return metaobjectId;
+  return createMetaobject(admin, payload);
 }
 
 /** Avaliação enviada pelo cliente na vitrine — aguarda aprovação */
@@ -151,12 +139,6 @@ export async function approveReview(admin: AdminApi, id: string) {
   if (review.status === "approved") return id;
 
   await updateMetaobjectStatus(admin, id, "approved", review);
-  await appendReviewReference(
-    admin,
-    review.placement,
-    id,
-    review.productId,
-  );
   return id;
 }
 
@@ -178,10 +160,6 @@ export async function updateReview(
   const status = data.status ?? existing.status;
   const fields = buildMetaobjectFields({ ...data, status });
   await metaobjectUpdate(admin, id, fields);
-
-  if (status === "approved" && existing.status !== "approved") {
-    await appendReviewReference(admin, data.placement, id, data.productId);
-  }
   return id;
 }
 
@@ -329,108 +307,6 @@ export async function getReviewPlacement(
     return { placement: review.placement, productId: review.productId };
   }
   return { placement: "homepage" };
-}
-
-function parseMetafieldIdList(raw: string | null | undefined): string[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-async function appendReviewReference(
-  admin: AdminApi,
-  placement: ReviewPlacement,
-  metaobjectId: string,
-  productId?: string,
-) {
-  if (placement === "homepage") {
-    await appendToOwnerList(admin, "shop", SHOP_REVIEWS_METAFIELD, metaobjectId);
-    return;
-  }
-  if (!productId) {
-    throw new Error("Produto obrigatório para avaliações de produto.");
-  }
-  await appendToOwnerList(admin, productId, PRODUCT_REVIEWS_METAFIELD, metaobjectId);
-}
-
-async function appendToOwnerList(
-  admin: AdminApi,
-  ownerId: string,
-  metafield: { namespace: string; key: string },
-  metaobjectId: string,
-) {
-  const ownerGid =
-    ownerId === "shop"
-      ? (await getShopGid(admin))
-      : ownerId.startsWith("gid://")
-        ? ownerId
-        : `gid://shopify/Product/${ownerId.replace(/\D/g, "")}`;
-
-  const current = await admin.graphql(
-    `#graphql
-    query OwnerReviews($id: ID!, $namespace: String!, $key: String!) {
-      node(id: $id) {
-        ... on Shop {
-          metafield(namespace: $namespace, key: $key) { value }
-        }
-        ... on Product {
-          metafield(namespace: $namespace, key: $key) { value }
-        }
-      }
-    }`,
-    {
-      variables: {
-        id: ownerGid,
-        namespace: metafield.namespace,
-        key: metafield.key,
-      },
-    },
-  );
-  const currentJson = await current.json();
-  const raw = currentJson.data?.node?.metafield?.value;
-  let list: string[] = [];
-  if (raw) {
-    try {
-      list = JSON.parse(raw);
-    } catch {
-      list = [];
-    }
-  }
-  if (!list.includes(metaobjectId)) {
-    list.unshift(metaobjectId);
-  }
-
-  await admin.graphql(
-    `#graphql
-    mutation SetReviewsList($metafields: [MetafieldsSetInput!]!) {
-      metafieldsSet(metafields: $metafields) {
-        userErrors { message }
-      }
-    }`,
-    {
-      variables: {
-        metafields: [
-          {
-            ownerId: ownerGid,
-            namespace: metafield.namespace,
-            key: metafield.key,
-            type: "list.metaobject_reference",
-            value: JSON.stringify(list),
-          },
-        ],
-      },
-    },
-  );
-}
-
-async function getShopGid(admin: AdminApi) {
-  const r = await admin.graphql(`#graphql query { shop { id } }`);
-  const j = await r.json();
-  return j.data?.shop?.id as string;
 }
 
 export async function searchProducts(admin: AdminApi, query: string) {

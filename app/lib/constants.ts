@@ -1,20 +1,5 @@
-/** Metaobject type — mesmos field keys que product-reviews.liquid (modo metafield) */
+/** Metaobject type — fonte única de dados (sem metafields na loja/produto) */
 export const REVIEW_METAOBJECT_TYPE = "review";
-
-export const PRODUCT_REVIEWS_METAFIELD = {
-  namespace: "custom",
-  key: "reviews",
-} as const;
-
-export const SHOP_REVIEWS_METAFIELD = {
-  namespace: "custom",
-  key: "reviews",
-} as const;
-
-export const SHOP_TRUSTED_AVATARS_METAFIELD = {
-  namespace: "custom",
-  key: "reviews_trusted_avatars",
-} as const;
 
 export type ReviewPlacement = "homepage" | "product";
 export type ReviewStatus = "approved" | "pending" | "rejected";

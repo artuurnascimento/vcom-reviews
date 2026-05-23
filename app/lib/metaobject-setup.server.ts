@@ -4,12 +4,7 @@ type AdminApi = {
     options?: { variables?: Record<string, unknown> },
   ) => Promise<Response>;
 };
-import {
-  PRODUCT_REVIEWS_METAFIELD,
-  REVIEW_METAOBJECT_TYPE,
-  SHOP_REVIEWS_METAFIELD,
-  SHOP_TRUSTED_AVATARS_METAFIELD,
-} from "./constants";
+import { REVIEW_METAOBJECT_TYPE } from "./constants";
 
 const REVIEW_FIELD_DEFINITIONS = [
   { key: "rating", name: "Rating", type: "number_decimal", required: true },
@@ -77,30 +72,6 @@ export async function ensureReviewInfrastructure(admin: AdminApi) {
     }
   }
 
-  await ensureMetafieldDefinition(admin, {
-    name: "Product reviews",
-    namespace: PRODUCT_REVIEWS_METAFIELD.namespace,
-    key: PRODUCT_REVIEWS_METAFIELD.key,
-    ownerType: "PRODUCT",
-    type: "list.metaobject_reference",
-  });
-
-  await ensureMetafieldDefinition(admin, {
-    name: "Homepage reviews",
-    namespace: SHOP_REVIEWS_METAFIELD.namespace,
-    key: SHOP_REVIEWS_METAFIELD.key,
-    ownerType: "SHOP",
-    type: "list.metaobject_reference",
-  });
-
-  await ensureMetafieldDefinition(admin, {
-    name: "Trusted avatars",
-    namespace: SHOP_TRUSTED_AVATARS_METAFIELD.namespace,
-    key: SHOP_TRUSTED_AVATARS_METAFIELD.key,
-    ownerType: "SHOP",
-    type: "list.file_reference",
-  });
-
   return { ok: errors.length === 0, errors };
 }
 
@@ -108,100 +79,22 @@ export async function getInfrastructureStatus(admin: AdminApi) {
   const response = await admin.graphql(
     `#graphql
     query InfraStatus {
-      metaobjectDefinitionByType(type: "${REVIEW_METAOBJECT_TYPE}") { id }
-      productDef: metafieldDefinitions(ownerType: PRODUCT, first: 1, namespace: "${PRODUCT_REVIEWS_METAFIELD.namespace}", key: "${PRODUCT_REVIEWS_METAFIELD.key}") {
-        nodes { id }
-      }
-      shopReviewsDef: metafieldDefinitions(ownerType: SHOP, first: 1, namespace: "${SHOP_REVIEWS_METAFIELD.namespace}", key: "${SHOP_REVIEWS_METAFIELD.key}") {
-        nodes { id }
-      }
-      shopAvatarsDef: metafieldDefinitions(ownerType: SHOP, first: 1, namespace: "${SHOP_TRUSTED_AVATARS_METAFIELD.namespace}", key: "${SHOP_TRUSTED_AVATARS_METAFIELD.key}") {
-        nodes { id }
-      }
+      metaobjectDefinitionByType(type: "${REVIEW_METAOBJECT_TYPE}") { id type }
     }`,
   );
   const json = await response.json();
+  const def = json.data?.metaobjectDefinitionByType;
   const items = [
     {
       id: "metaobject",
       label: "Metaobject review",
-      description: "Definição do tipo review (campos de avaliação)",
-      ready: Boolean(json.data?.metaobjectDefinitionByType?.id),
-    },
-    {
-      id: "shop-reviews",
-      label: "Metafield loja · custom.reviews",
-      description: "Lista de reviews na homepage",
-      ready: Boolean(json.data?.shopReviewsDef?.nodes?.length),
-    },
-    {
-      id: "product-reviews",
-      label: "Metafield produto · custom.reviews",
-      description: "Lista de reviews por produto",
-      ready: Boolean(json.data?.productDef?.nodes?.length),
-    },
-    {
-      id: "trusted-avatars",
-      label: "Metafield loja · reviews_trusted_avatars",
-      description: "Fotos da linha trusted by (opcional)",
-      ready: Boolean(json.data?.shopAvatarsDef?.nodes?.length),
+      description:
+        "Armazena todas as avaliações (sem metafields). Vitrine lê shop.metaobjects.review",
+      ready: Boolean(def?.id),
     },
   ];
   return {
     items,
-    allReady: items.every((i) => i.ready),
+    allReady: Boolean(def?.id),
   };
-}
-
-async function ensureMetafieldDefinition(
-  admin: AdminApi,
-  input: {
-    name: string;
-    namespace: string;
-    key: string;
-    ownerType: string;
-    type: string;
-  },
-) {
-  const q = await admin.graphql(
-    `#graphql
-    query MetafieldDef($ownerType: MetafieldOwnerType!, $namespace: String!, $key: String!) {
-      metafieldDefinitions(ownerType: $ownerType, first: 1, namespace: $namespace, key: $key) {
-        nodes { id }
-      }
-    }`,
-    {
-      variables: {
-        ownerType: input.ownerType,
-        namespace: input.namespace,
-        key: input.key,
-      },
-    },
-  );
-  const qJson = await q.json();
-  if (qJson.data?.metafieldDefinitions?.nodes?.length) return;
-
-  await admin.graphql(
-    `#graphql
-    mutation CreateMetafieldDef($definition: MetafieldDefinitionInput!) {
-      metafieldDefinitionCreate(definition: $definition) {
-        createdDefinition { id }
-        userErrors { message }
-      }
-    }`,
-    {
-      variables: {
-        definition: {
-          name: input.name,
-          namespace: input.namespace,
-          key: input.key,
-          ownerType: input.ownerType,
-          type: input.type,
-          validations: input.type.includes("metaobject")
-            ? [{ name: "metaobject_definition_type", value: REVIEW_METAOBJECT_TYPE }]
-            : undefined,
-        },
-      },
-    },
-  );
 }

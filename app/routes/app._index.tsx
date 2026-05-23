@@ -53,7 +53,7 @@ export default function AppHome() {
           >
             <p>
               Antes de publicar reviews na loja, execute a configuração para criar o
-              metaobject <code>review</code> e os metafields <code>custom.reviews</code>.
+              metaobject <code>review</code> (sem metafields).
             </p>
           </Banner>
         ) : null}
@@ -92,7 +92,7 @@ export default function AppHome() {
           <StatCard
             label="Na homepage"
             value={stats.homepagePublished}
-            hint="shop.metafields.custom.reviews"
+            hint="placement: homepage · aprovadas"
           />
           <StatCard
             label="Verified Buyer"
@@ -256,8 +256,8 @@ export default function AppHome() {
                       </Badge>
                     </InlineStack>
                     <Text as="p" variant="bodySm" tone="subdued">
-                      Homepage: <code>shop.custom.reviews</code> · Produto:{" "}
-                      <code>product.custom.reviews</code>
+                      Fonte: <code>shop.metaobjects.review</code> filtrado por status e
+                      placement
                     </Text>
                   </BlockStack>
                 </BlockStack>

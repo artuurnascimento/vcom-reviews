@@ -105,18 +105,14 @@ export default function SetupPage() {
                 </Text>
                 <List type="bullet">
                   <List.Item>
-                    Metaobject <strong>review</strong> — rating, verified_buyer, title,
-                    body, author, time, status, placement, images
+                    Metaobject <strong>review</strong> — única fonte de dados (rating,
+                    status, placement, product_id, imagens, etc.)
                   </List.Item>
                   <List.Item>
-                    Metafield <strong>custom.reviews</strong> na loja (homepage)
+                    Vitrine lê <strong>shop.metaobjects.review</strong> — sem metafields
                   </List.Item>
                   <List.Item>
-                    Metafield <strong>custom.reviews</strong> no produto
-                  </List.Item>
-                  <List.Item>
-                    Metafield <strong>custom.reviews_trusted_avatars</strong> (avatares
-                    da linha &quot;trusted by&quot;)
+                    Aprovação altera o campo <strong>status</strong> no metaobject
                   </List.Item>
                 </List>
               </BlockStack>

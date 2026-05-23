@@ -1,23 +1,16 @@
 {%- comment -%}
-  VCOM Reviews App block — paridade com sections/product-reviews.liquid (modo metafield)
+  VCOM Reviews App — lê metaobjects review (shop.metaobjects.review), sem metafields
 {%- endcomment -%}
 
 {%- assign bid = block.id -%}
 {%- assign ds = block.settings.data_source | default: 'auto' -%}
-{%- assign product_reviews = nil -%}
-{%- if ds == 'homepage' -%}
-  {%- assign reviews_ref = shop.metafields.custom.reviews | default: nil -%}
-{%- elsif ds == 'product' -%}
-  {%- assign reviews_ref = product.metafields.custom.reviews | default: nil -%}
-{%- else -%}
-  {%- if request.page_type == 'index' -%}
-    {%- assign reviews_ref = shop.metafields.custom.reviews | default: nil -%}
-  {%- else -%}
-    {%- assign reviews_ref = product.metafields.custom.reviews | default: nil -%}
-  {%- endif -%}
-{%- endif -%}
-{%- if reviews_ref != blank -%}
-  {%- assign product_reviews = reviews_ref.value | default: nil -%}
+{%- assign all_reviews = shop.metaobjects.review.values | default: nil -%}
+
+{%- assign reviews_context = 'homepage' -%}
+{%- if ds == 'product' -%}
+  {%- assign reviews_context = 'product' -%}
+{%- elsif ds == 'auto' and request.page_type == 'product' -%}
+  {%- assign reviews_context = 'product' -%}
 {%- endif -%}
 
 {%- assign has_reviews = false -%}
@@ -28,7 +21,6 @@
 {%- assign text_max_chars = block.settings.reviews_text_max_chars | default: 150 -%}
 {%- assign title_max_chars = block.settings.reviews_title_max_chars | default: 80 -%}
 {%- assign verified_color = block.settings.verified_icon_color | default: '#1d8a42' -%}
-{%- assign trusted_avatars = shop.metafields.custom.reviews_trusted_avatars.value | default: nil -%}
 {%- assign reviews_per_page = block.settings.reviews_per_page | default: 6 -%}
 
 {%- assign submit_placement = 'homepage' -%}
@@ -44,15 +36,24 @@
 {%- assign review_count = 0 -%}
 {%- assign rating_avg = 0 -%}
 {%- assign rating_sum = 0 -%}
-{%- if product_reviews != blank -%}
-  {%- for r in product_reviews -%}
+{%- if all_reviews != blank -%}
+  {%- for r in all_reviews -%}
     {%- assign r_st = 'approved' -%}
     {%- if r.status != blank -%}{%- assign r_st = r.status.value | default: r.status -%}{%- endif -%}
-    {%- unless r_st == 'pending' or r_st == 'rejected' -%}
-      {%- assign review_count = review_count | plus: 1 -%}
-      {%- assign r_val_raw = r.rating.value | default: r.rating | replace: ',', '.' -%}
-      {%- assign rating_sum = rating_sum | plus: r_val_raw | plus: 0.0 -%}
-    {%- endunless -%}
+    {%- if r_st == 'pending' or r_st == 'rejected' -%}{%- continue -%}{%- endif -%}
+    {%- assign r_pl = 'homepage' -%}
+    {%- if r.placement != blank -%}{%- assign r_pl = r.placement.value | default: r.placement -%}{%- endif -%}
+    {%- if reviews_context == 'homepage' -%}
+      {%- unless r_pl == 'homepage' -%}{%- continue -%}{%- endunless -%}
+    {%- else -%}
+      {%- unless r_pl == 'product' -%}{%- continue -%}{%- endunless -%}
+      {%- assign r_pid = '' -%}
+      {%- if r.product_id != blank -%}{%- assign r_pid = r.product_id.value | default: r.product_id -%}{%- endif -%}
+      {%- unless product != blank and r_pid == product.id -%}{%- continue -%}{%- endunless -%}
+    {%- endif -%}
+    {%- assign review_count = review_count | plus: 1 -%}
+    {%- assign r_val_raw = r.rating.value | default: r.rating | replace: ',', '.' -%}
+    {%- assign rating_sum = rating_sum | plus: r_val_raw | plus: 0.0 -%}
   {%- endfor -%}
   {%- if review_count > 0 -%}
     {%- assign rating_avg = rating_sum | times: 1.0 | divided_by: review_count -%}
@@ -75,11 +76,6 @@
             {{ shop.name }} {{ block.settings.trusted_text_after | default: 'is trusted by over' }}
             <span style="color:{{ block.settings.trusted_highlight_color | default: '#1d8a42' }};margin-left:4px;">{{ block.settings.trusted_text_highlight | default: '28k+' }}</span>
           </span>
-          {%- if trusted_avatars != blank -%}{%- for av in trusted_avatars -%}
-            {%- if av != blank -%}
-              <img src="{{ av | image_url: width: 76 }}" alt="" width="19" height="19" loading="lazy" style="height:19px;width:19px;border-radius:50%;object-fit:cover;{% unless forloop.first %}margin-left:-6px;{% endunless %}border:2px solid {{ block.settings.background | default: '#fff' }};">
-            {%- endif -%}
-          {%- endfor -%}{%- endif -%}
         </div>
       {%- endif -%}
 
@@ -88,10 +84,20 @@
         <div class="product-reviews__wrap" id="vcom-reviews-grid-{{ block.id }}">
           
           {%- assign approved_index = 0 -%}
-          {%- for review in product_reviews -%}
+          {%- for review in all_reviews -%}
             {%- assign r_status = 'approved' -%}
             {%- if review.status != blank -%}{%- assign r_status = review.status.value | default: review.status -%}{%- endif -%}
             {%- if r_status == 'pending' or r_status == 'rejected' -%}{%- continue -%}{%- endif -%}
+            {%- assign r_pl = 'homepage' -%}
+            {%- if review.placement != blank -%}{%- assign r_pl = review.placement.value | default: review.placement -%}{%- endif -%}
+            {%- if reviews_context == 'homepage' -%}
+              {%- unless r_pl == 'homepage' -%}{%- continue -%}{%- endunless -%}
+            {%- else -%}
+              {%- unless r_pl == 'product' -%}{%- continue -%}{%- endunless -%}
+              {%- assign r_pid = '' -%}
+              {%- if review.product_id != blank -%}{%- assign r_pid = review.product_id.value | default: review.product_id -%}{%- endif -%}
+              {%- unless product != blank and r_pid == product.id -%}{%- continue -%}{%- endunless -%}
+            {%- endif -%}
             {%- assign page_num = approved_index | divided_by: reviews_per_page | plus: 1 -%}
             {%- assign approved_index = approved_index | plus: 1 -%}
             {%- assign stars_raw = '5' -%}
