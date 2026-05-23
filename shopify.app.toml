@@ -1,0 +1,24 @@
+# Substitua client_id após criar o app em https://dev.shopify.com
+client_id = "YOUR_CLIENT_ID"
+name = "VCOM Reviews"
+application_url = "https://localhost"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+
+[webhooks]
+api_version = "2025-01"
+
+  [[webhooks.subscriptions]]
+  topics = ["app/uninstalled"]
+  uri = "/webhooks/app/uninstalled"
+
+[access_scopes]
+scopes = "read_metaobject_definitions,write_metaobject_definitions,read_metaobjects,write_metaobjects,read_files,write_files,read_products,read_themes"
+
+[auth]
+redirect_urls = ["https://localhost/auth/callback", "https://localhost/auth/shopify/callback"]
+
+[pos]
+embedded = false

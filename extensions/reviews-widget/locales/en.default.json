@@ -1,0 +1,24 @@
+{
+  "product_reviews": {
+    "form": {
+      "button": "Write a review",
+      "rating_label": "Your rating",
+      "title_label": "Review title",
+      "title_placeholder": "e.g. Great product!",
+      "body_label": "Your review",
+      "body_placeholder": "Share your experience with the product...",
+      "author_label": "Your name",
+      "author_placeholder": "Display name",
+      "images_label": "Add product photos",
+      "images_btn": "Select images",
+      "submit": "Submit review",
+      "cancel": "Cancel",
+      "success": "Thank you! Your review was submitted successfully.",
+      "star_rating": "{{ value }} out of 5 stars",
+      "remove_image": "Remove",
+      "view_image": "View image",
+      "view_more": "See more",
+      "view_less": "See less"
+    }
+  }
+}

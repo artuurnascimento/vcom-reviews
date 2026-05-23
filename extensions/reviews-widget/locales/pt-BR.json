@@ -1,0 +1,24 @@
+{
+  "product_reviews": {
+    "form": {
+      "button": "Escrever avaliação",
+      "rating_label": "Sua nota",
+      "title_label": "Título da avaliação",
+      "title_placeholder": "Ex.: Muito bom!",
+      "body_label": "Sua avaliação",
+      "body_placeholder": "Conte sua experiência com o produto...",
+      "author_label": "Seu nome",
+      "author_placeholder": "Como deseja ser chamado",
+      "images_label": "Adicionar fotos do produto",
+      "images_btn": "Selecionar imagens",
+      "submit": "Enviar avaliação",
+      "cancel": "Cancelar",
+      "success": "Sua avaliação foi enviada com sucesso! Obrigado por compartilhar sua experiência.",
+      "star_rating": "{{ value }} de 5 estrelas",
+      "remove_image": "Remover",
+      "view_image": "Ver imagem",
+      "view_more": "Ver mais",
+      "view_less": "Ver menos"
+    }
+  }
+}

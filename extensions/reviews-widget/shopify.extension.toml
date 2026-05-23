@@ -1,0 +1,6 @@
+api_version = "2025-01"
+
+name = "reviews-widget"
+type = "theme"
+handle = "reviews-widget"
+uid = "6cea37c8-6927-f5f3-2a46-b9a5792e946fa85d53f9"
