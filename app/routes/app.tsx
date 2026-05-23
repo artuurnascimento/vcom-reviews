@@ -19,7 +19,7 @@ export default function AppLayout() {
     <AppProvider isEmbeddedApp apiKey={apiKey}>
       <NavMenu>
         <Link to="/app" rel="home">
-          Início
+          Painel
         </Link>
         <Link to="/app/reviews">Avaliações</Link>
         <Link to="/app/setup">Configuração</Link>

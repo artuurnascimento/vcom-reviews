@@ -101,6 +101,55 @@ export async function ensureReviewInfrastructure(admin: AdminApi) {
   return { ok: errors.length === 0, errors };
 }
 
+export async function getInfrastructureStatus(admin: AdminApi) {
+  const response = await admin.graphql(
+    `#graphql
+    query InfraStatus {
+      metaobjectDefinitionByType(type: "${REVIEW_METAOBJECT_TYPE}") { id }
+      productDef: metafieldDefinitions(ownerType: PRODUCT, first: 1, namespace: "${PRODUCT_REVIEWS_METAFIELD.namespace}", key: "${PRODUCT_REVIEWS_METAFIELD.key}") {
+        nodes { id }
+      }
+      shopReviewsDef: metafieldDefinitions(ownerType: SHOP, first: 1, namespace: "${SHOP_REVIEWS_METAFIELD.namespace}", key: "${SHOP_REVIEWS_METAFIELD.key}") {
+        nodes { id }
+      }
+      shopAvatarsDef: metafieldDefinitions(ownerType: SHOP, first: 1, namespace: "${SHOP_TRUSTED_AVATARS_METAFIELD.namespace}", key: "${SHOP_TRUSTED_AVATARS_METAFIELD.key}") {
+        nodes { id }
+      }
+    }`,
+  );
+  const json = await response.json();
+  const items = [
+    {
+      id: "metaobject",
+      label: "Metaobject review",
+      description: "Definição do tipo review (campos de avaliação)",
+      ready: Boolean(json.data?.metaobjectDefinitionByType?.id),
+    },
+    {
+      id: "shop-reviews",
+      label: "Metafield loja · custom.reviews",
+      description: "Lista de reviews na homepage",
+      ready: Boolean(json.data?.shopReviewsDef?.nodes?.length),
+    },
+    {
+      id: "product-reviews",
+      label: "Metafield produto · custom.reviews",
+      description: "Lista de reviews por produto",
+      ready: Boolean(json.data?.productDef?.nodes?.length),
+    },
+    {
+      id: "trusted-avatars",
+      label: "Metafield loja · reviews_trusted_avatars",
+      description: "Fotos da linha trusted by (opcional)",
+      ready: Boolean(json.data?.shopAvatarsDef?.nodes?.length),
+    },
+  ];
+  return {
+    items,
+    allReady: items.every((i) => i.ready),
+  };
+}
+
 async function ensureMetafieldDefinition(
   admin: AdminApi,
   input: {
