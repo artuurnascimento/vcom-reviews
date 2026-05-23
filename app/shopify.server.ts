@@ -5,6 +5,7 @@ import {
   shopifyApp,
 } from "@shopify/shopify-app-remix/server";
 import { SQLiteSessionStorage } from "@shopify/shopify-app-session-storage-sqlite";
+import { ensureReviewInfrastructure } from "./lib/metaobject-setup.server";
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY || "",
@@ -17,6 +18,22 @@ const shopify = shopifyApp({
   distribution: AppDistribution.AppStore,
   future: {
     unstable_newEmbeddedAuthStrategy: true,
+  },
+  hooks: {
+    afterAuth: async ({ admin, session }) => {
+      try {
+        const result = await ensureReviewInfrastructure(admin);
+        if (!result.ok) {
+          console.error(
+            "[vcom-reviews] afterAuth setup failed",
+            session.shop,
+            result.errors,
+          );
+        }
+      } catch (error) {
+        console.error("[vcom-reviews] afterAuth setup error", session.shop, error);
+      }
+    },
   },
   ...(process.env.SHOP_CUSTOM_DOMAIN
     ? { customShopDomains: [process.env.SHOP_CUSTOM_DOMAIN] }

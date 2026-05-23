@@ -25,7 +25,8 @@ cp .env.example .env
 
 1. No Partner Dashboard, crie um app e copie **API key** e **API secret** para `.env`.
 2. Atualize `client_id` em `shopify.app.toml`.
-3. Execute a configuração da loja no app: **Configuração → Executar configuração** (cria metaobject + metafields).
+3. Ao instalar o app na loja, o metaobject `review` é criado automaticamente. Se
+   precisar, reexecute em **Configuração → Executar configuração**.
 
 ## Desenvolvimento
 

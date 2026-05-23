@@ -61,7 +61,8 @@ export default function SetupPage() {
 
             {!status.allReady && !justRan ? (
               <Banner tone="warning" title="Ação necessária">
-                Execute a configuração antes de criar avaliações na vitrine.
+                A configuração roda automaticamente na instalação. Se algo falhou,
+                use o botão abaixo para reexecutar.
               </Banner>
             ) : null}
 
