@@ -75,6 +75,21 @@ export async function ensureReviewInfrastructure(admin: AdminApi) {
   return { ok: errors.length === 0, errors };
 }
 
+/** Garante que o tipo review existe antes de criar/listar avaliações */
+export async function ensureReviewDefinitionReady(admin: AdminApi) {
+  const check = await admin.graphql(
+    `#graphql
+    query ReviewDefinitionCheck {
+      metaobjectDefinitionByType(type: "${REVIEW_METAOBJECT_TYPE}") { id }
+    }`,
+  );
+  const checkJson = await check.json();
+  if (checkJson.data?.metaobjectDefinitionByType?.id) {
+    return { ok: true, errors: [] as string[] };
+  }
+  return ensureReviewInfrastructure(admin);
+}
+
 export async function getInfrastructureStatus(admin: AdminApi) {
   const response = await admin.graphql(
     `#graphql

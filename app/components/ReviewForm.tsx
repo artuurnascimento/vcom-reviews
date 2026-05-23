@@ -112,10 +112,7 @@ export function ReviewForm({
           <Select
             label="Onde exibir"
             options={[
-              {
-                label: "Página inicial (shop.metafields.custom.reviews)",
-                value: "homepage",
-              },
+              { label: "Página inicial (homepage)", value: "homepage" },
               { label: "Página de produto", value: "product" },
             ]}
             value={placement}

@@ -11,6 +11,7 @@ import {
   type ReviewRecord,
   type ReviewStatus,
 } from "./constants";
+import { ensureReviewDefinitionReady } from "./metaobject-setup.server";
 
 function parseStatus(raw: string | null | undefined): ReviewStatus {
   if (raw === "pending" || raw === "rejected") return raw;
@@ -109,11 +110,22 @@ export async function getReview(admin: AdminApi, id: string) {
 }
 
 export async function createReview(admin: AdminApi, data: ReviewFormData) {
+  await ensureDefinition(admin);
   const payload: ReviewFormData = {
     ...data,
     status: data.status ?? "approved",
   };
   return createMetaobject(admin, payload);
+}
+
+async function ensureDefinition(admin: AdminApi) {
+  const result = await ensureReviewDefinitionReady(admin);
+  if (!result.ok) {
+    throw new Error(
+      result.errors.join(". ") ||
+        "Configuração incompleta. Abra Configuração e clique em Executar configuração.",
+    );
+  }
 }
 
 /** Avaliação enviada pelo cliente na vitrine — aguarda aprovação */

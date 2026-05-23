@@ -27,7 +27,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     await createReview(admin, data);
     return redirect("/app/reviews");
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "Erro ao salvar" };
+    const msg = e instanceof Error ? e.message : "Erro ao salvar";
+    if (msg.includes("metaobject definition")) {
+      return {
+        error:
+          "O tipo review ainda não existe na loja. Abra Configuração → Executar configuração e tente novamente.",
+      };
+    }
+    return { error: msg };
   }
 };
 
