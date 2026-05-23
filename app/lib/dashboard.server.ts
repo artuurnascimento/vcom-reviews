@@ -1,6 +1,6 @@
 import type { ReviewRecord } from "./constants";
 import { REVIEW_METAOBJECT_TYPE, SHOP_REVIEWS_METAFIELD } from "./constants";
-import { listReviews } from "./reviews.server";
+import { listPendingReviews, listReviews } from "./reviews.server";
 
 type AdminApi = Parameters<typeof listReviews>[0];
 
@@ -14,17 +14,20 @@ export type DashboardStats = {
   withImagesCount: number;
   ratingBuckets: Record<1 | 2 | 3 | 4 | 5, number>;
   recentReviews: ReviewRecord[];
+  pendingCount: number;
 };
 
 export async function getDashboardStats(admin: AdminApi): Promise<DashboardStats> {
-  const [{ reviews }, infra] = await Promise.all([
+  const [{ reviews }, infra, pending] = await Promise.all([
     listReviews(admin, { first: 250 }),
     fetchInfrastructure(admin),
+    listPendingReviews(admin),
   ]);
 
-  const sum = reviews.reduce((a, r) => a + r.rating, 0);
+  const approved = reviews.filter((r) => r.status === "approved");
+  const sum = approved.reduce((a, r) => a + r.rating, 0);
   const buckets: DashboardStats["ratingBuckets"] = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-  for (const r of reviews) {
+  for (const r of approved) {
     const bucket = Math.min(5, Math.max(1, Math.round(r.rating))) as 1 | 2 | 3 | 4 | 5;
     buckets[bucket] += 1;
   }
@@ -32,13 +35,14 @@ export async function getDashboardStats(admin: AdminApi): Promise<DashboardStats
   return {
     shopName: infra.shopName,
     setupReady: infra.setupReady,
-    totalReviews: reviews.length,
+    totalReviews: approved.length,
     homepagePublished: infra.homepageCount,
-    averageRating: reviews.length ? (sum / reviews.length).toFixed(1) : "—",
-    verifiedCount: reviews.filter((r) => r.verified_buyer).length,
-    withImagesCount: reviews.filter((r) => r.images.length > 0).length,
+    averageRating: approved.length ? (sum / approved.length).toFixed(1) : "—",
+    verifiedCount: approved.filter((r) => r.verified_buyer).length,
+    withImagesCount: approved.filter((r) => r.images.length > 0).length,
     ratingBuckets: buckets,
     recentReviews: reviews.slice(0, 5),
+    pendingCount: pending.length,
   };
 }
 

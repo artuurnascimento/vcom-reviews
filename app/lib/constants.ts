@@ -17,6 +17,7 @@ export const SHOP_TRUSTED_AVATARS_METAFIELD = {
 } as const;
 
 export type ReviewPlacement = "homepage" | "product";
+export type ReviewStatus = "approved" | "pending" | "rejected";
 
 export interface ReviewFormData {
   rating: number;
@@ -28,6 +29,7 @@ export interface ReviewFormData {
   placement: ReviewPlacement;
   productId?: string;
   imageFileIds?: string[];
+  status?: ReviewStatus;
 }
 
 export interface ReviewRecord {
@@ -40,4 +42,11 @@ export interface ReviewRecord {
   author: string;
   time: string;
   images: string[];
+  status: ReviewStatus;
+  placement: ReviewPlacement;
+  productId?: string;
+}
+
+export function isReviewPublished(record: ReviewRecord): boolean {
+  return record.status === "approved";
 }

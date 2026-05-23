@@ -14,6 +14,7 @@
       "submit": "Enviar avaliação",
       "cancel": "Cancelar",
       "success": "Sua avaliação foi enviada com sucesso! Obrigado por compartilhar sua experiência.",
+      "pending_success": "Obrigado! Sua avaliação foi enviada e será publicada após aprovação da loja.",
       "star_rating": "{{ value }} de 5 estrelas",
       "remove_image": "Remover",
       "view_image": "Ver imagem",

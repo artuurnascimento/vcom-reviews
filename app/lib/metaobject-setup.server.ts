@@ -18,6 +18,9 @@ const REVIEW_FIELD_DEFINITIONS = [
   { key: "body", name: "Body", type: "multi_line_text_field", required: true },
   { key: "author", name: "Author", type: "single_line_text_field", required: true },
   { key: "time", name: "Time", type: "single_line_text_field" },
+  { key: "status", name: "Status", type: "single_line_text_field" },
+  { key: "placement", name: "Placement", type: "single_line_text_field" },
+  { key: "product_id", name: "Product ID", type: "single_line_text_field" },
   {
     key: "images",
     name: "Images",

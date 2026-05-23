@@ -56,6 +56,12 @@ export default function ReviewsIndex() {
       subtitle={`${stats.totalReviews} no total · média ${stats.averageRating}`}
       backAction={{ url: "/app" }}
       primaryAction={{ content: "Nova avaliação", url: "/app/reviews/new" }}
+      secondaryActions={[
+        {
+          content: `Pendentes (${stats.pendingCount})`,
+          url: "/app/reviews/pending",
+        },
+      ]}
     >
       <BlockStack gap="500">
         <InlineGrid columns={{ xs: 2, sm: 4 }} gap="400">
@@ -87,6 +93,7 @@ export default function ReviewsIndex() {
                     { title: "Autor" },
                     { title: "Avaliação" },
                     { title: "Nota" },
+                    { title: "Status" },
                     { title: "Extras" },
                     { title: "Ações" },
                   ]}
@@ -125,6 +132,23 @@ export default function ReviewsIndex() {
                             {r.rating}
                           </Text>
                         </InlineStack>
+                      </IndexTable.Cell>
+                      <IndexTable.Cell>
+                        <Badge
+                          tone={
+                            r.status === "approved"
+                              ? "success"
+                              : r.status === "pending"
+                                ? "attention"
+                                : "critical"
+                          }
+                        >
+                          {r.status === "approved"
+                            ? "Publicada"
+                            : r.status === "pending"
+                              ? "Pendente"
+                              : "Rejeitada"}
+                        </Badge>
                       </IndexTable.Cell>
                       <IndexTable.Cell>
                         <InlineStack gap="200">

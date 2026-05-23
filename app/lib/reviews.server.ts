@@ -11,7 +11,17 @@ import {
   type ReviewFormData,
   type ReviewPlacement,
   type ReviewRecord,
+  type ReviewStatus,
 } from "./constants";
+
+function parseStatus(raw: string | null | undefined): ReviewStatus {
+  if (raw === "pending" || raw === "rejected") return raw;
+  return "approved";
+}
+
+function parsePlacement(raw: string | null | undefined): ReviewPlacement {
+  return raw === "product" ? "product" : "homepage";
+}
 
 function parseMetaobjectNode(node: {
   id: string;
@@ -38,6 +48,9 @@ function parseMetaobjectNode(node: {
     author: map.author || "",
     time: map.time || "",
     images,
+    status: parseStatus(map.status),
+    placement: parsePlacement(map.placement),
+    productId: map.product_id || undefined,
   };
 }
 
@@ -74,6 +87,11 @@ export async function listReviews(
   };
 }
 
+export async function listPendingReviews(admin: AdminApi) {
+  const { reviews } = await listReviews(admin, { first: 250 });
+  return reviews.filter((r) => r.status === "pending");
+}
+
 export async function getReview(admin: AdminApi, id: string) {
   const response = await admin.graphql(
     `#graphql
@@ -93,6 +111,94 @@ export async function getReview(admin: AdminApi, id: string) {
 }
 
 export async function createReview(admin: AdminApi, data: ReviewFormData) {
+  const publish = data.status !== "pending";
+  const payload: ReviewFormData = {
+    ...data,
+    status: publish ? "approved" : "pending",
+  };
+  const metaobjectId = await createMetaobject(admin, payload);
+  if (publish) {
+    await appendReviewReference(
+      admin,
+      payload.placement,
+      metaobjectId,
+      payload.productId,
+    );
+  }
+  return metaobjectId;
+}
+
+/** Avaliação enviada pelo cliente na vitrine — aguarda aprovação */
+export async function createCustomerPendingReview(
+  admin: AdminApi,
+  data: Omit<ReviewFormData, "verified_buyer" | "status"> & {
+    verified_buyer?: boolean;
+  },
+) {
+  const now = new Date();
+  const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  return createReview(admin, {
+    ...data,
+    verified_buyer: data.verified_buyer ?? false,
+    time: data.time || time,
+    status: "pending",
+  });
+}
+
+export async function approveReview(admin: AdminApi, id: string) {
+  const review = await getReview(admin, id);
+  if (!review) throw new Error("Avaliação não encontrada.");
+  if (review.status === "approved") return id;
+
+  await updateMetaobjectStatus(admin, id, "approved", review);
+  await appendReviewReference(
+    admin,
+    review.placement,
+    id,
+    review.productId,
+  );
+  return id;
+}
+
+export async function rejectReview(admin: AdminApi, id: string) {
+  const review = await getReview(admin, id);
+  if (!review) throw new Error("Avaliação não encontrada.");
+  await updateMetaobjectStatus(admin, id, "rejected", review);
+  return id;
+}
+
+export async function updateReview(
+  admin: AdminApi,
+  id: string,
+  data: ReviewFormData,
+) {
+  const existing = await getReview(admin, id);
+  if (!existing) throw new Error("Avaliação não encontrada.");
+
+  const status = data.status ?? existing.status;
+  const fields = buildMetaobjectFields({ ...data, status });
+  await metaobjectUpdate(admin, id, fields);
+
+  if (status === "approved" && existing.status !== "approved") {
+    await appendReviewReference(admin, data.placement, id, data.productId);
+  }
+  return id;
+}
+
+export async function deleteReview(admin: AdminApi, id: string) {
+  await admin.graphql(
+    `#graphql
+    mutation DeleteReview($id: ID!) {
+      metaobjectDelete(id: $id) {
+        deletedId
+        userErrors { message }
+      }
+    }`,
+    { variables: { id } },
+  );
+}
+
+async function createMetaobject(admin: AdminApi, data: ReviewFormData) {
   const fields = buildMetaobjectFields(data);
   const response = await admin.graphql(
     `#graphql
@@ -116,17 +222,14 @@ export async function createReview(admin: AdminApi, data: ReviewFormData) {
   if (userErrors.length) {
     throw new Error(userErrors.map((e: { message: string }) => e.message).join(", "));
   }
-  const metaobjectId = json.data?.metaobjectCreate?.metaobject?.id as string;
-  await appendReviewReference(admin, data.placement, metaobjectId, data.productId);
-  return metaobjectId;
+  return json.data?.metaobjectCreate?.metaobject?.id as string;
 }
 
-export async function updateReview(
+async function metaobjectUpdate(
   admin: AdminApi,
   id: string,
-  data: ReviewFormData,
+  fields: Array<{ key: string; value: string }>,
 ) {
-  const fields = buildMetaobjectFields(data);
   const response = await admin.graphql(
     `#graphql
     mutation UpdateReview($id: ID!, $metaobject: MetaobjectUpdateInput!) {
@@ -136,10 +239,7 @@ export async function updateReview(
       }
     }`,
     {
-      variables: {
-        id,
-        metaobject: { fields },
-      },
+      variables: { id, metaobject: { fields } },
     },
   );
   const json = await response.json();
@@ -147,23 +247,31 @@ export async function updateReview(
   if (userErrors.length) {
     throw new Error(userErrors.map((e: { message: string }) => e.message).join(", "));
   }
-  return id;
 }
 
-export async function deleteReview(admin: AdminApi, id: string) {
-  await admin.graphql(
-    `#graphql
-    mutation DeleteReview($id: ID!) {
-      metaobjectDelete(id: $id) {
-        deletedId
-        userErrors { message }
-      }
-    }`,
-    { variables: { id } },
-  );
+async function updateMetaobjectStatus(
+  admin: AdminApi,
+  id: string,
+  status: ReviewStatus,
+  review: ReviewRecord,
+) {
+  const fields = buildMetaobjectFields({
+    rating: review.rating,
+    verified_buyer: review.verified_buyer,
+    title: review.title,
+    body: review.body,
+    author: review.author,
+    time: review.time,
+    placement: review.placement,
+    productId: review.productId,
+    imageFileIds: review.images,
+    status,
+  });
+  await metaobjectUpdate(admin, id, fields);
 }
 
 function buildMetaobjectFields(data: ReviewFormData) {
+  const status = data.status ?? "approved";
   const fields: Array<{ key: string; value: string }> = [
     { key: "rating", value: String(data.rating) },
     { key: "verified_buyer", value: data.verified_buyer ? "true" : "false" },
@@ -171,11 +279,11 @@ function buildMetaobjectFields(data: ReviewFormData) {
     { key: "body", value: data.body },
     { key: "author", value: data.author },
     { key: "time", value: data.time || "" },
+    { key: "status", value: status },
+    { key: "placement", value: data.placement },
+    { key: "product_id", value: data.productId || "" },
+    { key: "images", value: JSON.stringify(data.imageFileIds || []) },
   ];
-  fields.push({
-    key: "images",
-    value: JSON.stringify(data.imageFileIds || []),
-  });
   return fields;
 }
 
@@ -216,45 +324,9 @@ export async function getReviewPlacement(
   admin: AdminApi,
   reviewId: string,
 ): Promise<{ placement: ReviewPlacement; productId?: string }> {
-  const shopGid = await getShopGid(admin);
-  const shopRes = await admin.graphql(
-    `#graphql
-    query ShopReviews($id: ID!, $namespace: String!, $key: String!) {
-      shop {
-        metafield(namespace: $namespace, key: $key) { value }
-      }
-    }`,
-    {
-      variables: {
-        id: shopGid,
-        namespace: SHOP_REVIEWS_METAFIELD.namespace,
-        key: SHOP_REVIEWS_METAFIELD.key,
-      },
-    },
-  );
-  const shopJson = await shopRes.json();
-  const shopList = parseMetafieldIdList(shopJson.data?.shop?.metafield?.value);
-  if (shopList.includes(reviewId)) {
-    return { placement: "homepage" };
-  }
-
-  const productsRes = await admin.graphql(
-    `#graphql
-    query ProductsWithReviews {
-      products(first: 100) {
-        nodes {
-          id
-          metafield(namespace: "custom", key: "reviews") { value }
-        }
-      }
-    }`,
-  );
-  const productsJson = await productsRes.json();
-  for (const product of productsJson.data?.products?.nodes || []) {
-    const list = parseMetafieldIdList(product.metafield?.value);
-    if (list.includes(reviewId)) {
-      return { placement: "product", productId: product.id };
-    }
+  const review = await getReview(admin, reviewId);
+  if (review?.placement) {
+    return { placement: review.placement, productId: review.productId };
   }
   return { placement: "homepage" };
 }

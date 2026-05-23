@@ -106,7 +106,7 @@ export default function SetupPage() {
                 <List type="bullet">
                   <List.Item>
                     Metaobject <strong>review</strong> — rating, verified_buyer, title,
-                    body, author, time, images
+                    body, author, time, status, placement, images
                   </List.Item>
                   <List.Item>
                     Metafield <strong>custom.reviews</strong> na loja (homepage)

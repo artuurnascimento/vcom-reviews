@@ -22,6 +22,7 @@ export default function AppLayout() {
           Painel
         </Link>
         <Link to="/app/reviews">Avaliações</Link>
+        <Link to="/app/reviews/pending">Pendentes</Link>
         <Link to="/app/setup">Configuração</Link>
       </NavMenu>
       <Outlet />

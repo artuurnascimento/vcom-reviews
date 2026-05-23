@@ -58,6 +58,16 @@ export default function AppHome() {
           </Banner>
         ) : null}
 
+        {stats.pendingCount > 0 ? (
+          <Banner
+            tone="warning"
+            title={`${stats.pendingCount} avaliação(ões) aguardando aprovação`}
+            action={{ content: "Moderar", url: "/app/reviews/pending" }}
+          >
+            <p>Clientes enviaram reviews pela loja. Aprove para publicar na vitrine.</p>
+          </Banner>
+        ) : null}
+
         {stats.totalReviews === 0 ? (
           <Banner tone="info" title="Comece por aqui">
             <p>
