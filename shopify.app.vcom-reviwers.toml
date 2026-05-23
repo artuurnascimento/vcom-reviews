@@ -27,6 +27,56 @@ redirect_urls = [
 [pos]
 embedded = false
 
+[metaobjects.app.review]
+name = "Review"
+description = "Avaliações VCOM (homepage e produto)"
+access.admin = "merchant_read_write"
+access.storefront = "public_read"
+display_name_field = "author"
+
+[metaobjects.app.review.fields.rating]
+name = "Rating"
+type = "number_decimal"
+required = true
+
+[metaobjects.app.review.fields.verified_buyer]
+name = "Verified buyer"
+type = "boolean"
+
+[metaobjects.app.review.fields.title]
+name = "Title"
+type = "single_line_text_field"
+
+[metaobjects.app.review.fields.body]
+name = "Body"
+type = "multi_line_text_field"
+required = true
+
+[metaobjects.app.review.fields.author]
+name = "Author"
+type = "single_line_text_field"
+required = true
+
+[metaobjects.app.review.fields.time]
+name = "Time"
+type = "single_line_text_field"
+
+[metaobjects.app.review.fields.status]
+name = "Status"
+type = "single_line_text_field"
+
+[metaobjects.app.review.fields.placement]
+name = "Placement"
+type = "single_line_text_field"
+
+[metaobjects.app.review.fields.product_id]
+name = "Product ID"
+type = "single_line_text_field"
+
+[metaobjects.app.review.fields.images]
+name = "Images"
+type = "list.file_reference"
+
 [app_proxy]
 url = "https://vcom-reviews-production.up.railway.app/app_proxy"
 subpath = "vcom-reviews"

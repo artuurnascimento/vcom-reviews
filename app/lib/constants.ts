@@ -1,5 +1,5 @@
-/** Metaobject type — fonte única de dados (sem metafields na loja/produto) */
-export const REVIEW_METAOBJECT_TYPE = "review";
+/** App-owned metaobject — prefixo $app: obrigatório para access.admin na definição */
+export const REVIEW_METAOBJECT_TYPE = "$app:review";
 
 export type ReviewPlacement = "homepage" | "product";
 export type ReviewStatus = "approved" | "pending" | "rejected";

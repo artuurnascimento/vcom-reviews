@@ -50,7 +50,7 @@ export default function SetupPage() {
             {justRan ? (
               success ? (
                 <Banner tone="success" title="Configuração concluída">
-                  Metaobject e metafields prontos para uso.
+                  Metaobject review pronto para uso.
                 </Banner>
               ) : (
                 <Banner tone="critical" title="Erros na configuração">
