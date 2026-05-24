@@ -25,9 +25,10 @@ type Props = {
   product: ProductPreview | null;
   loading?: boolean;
   onChangeProduct?: () => void;
+  emptyHint?: string;
 };
 
-export function ProductHeroCard({ product, loading, onChangeProduct }: Props) {
+export function ProductHeroCard({ product, loading, onChangeProduct, emptyHint }: Props) {
   if (loading) {
     return (
       <Box
@@ -61,7 +62,8 @@ export function ProductHeroCard({ product, loading, onChangeProduct }: Props) {
             Nenhum produto selecionado
           </Text>
           <Text as="p" variant="bodySm" tone="subdued" alignment="center">
-            Use a busca acima para encontrar um produto. A IA vai ler título, descrição e fotos.
+            {emptyHint ||
+              "Use a busca para escolher um produto. A IA usa título, descrição e fotos."}
           </Text>
         </BlockStack>
       </Box>

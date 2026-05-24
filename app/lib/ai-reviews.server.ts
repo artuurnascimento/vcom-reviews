@@ -45,9 +45,18 @@ function buildPrompt(
   const productType = resolveProductType(input);
   const toneLabel = labelForOption(AI_TONES, input.tone);
   const { min, max } = normalizeRatingRange(input.ratingMin, input.ratingMax);
+  const isHomepage = input.placement === "homepage";
   const productLine = input.productTitle
-    ? `Produto: "${input.productTitle}"`
-    : "Produto: genérico da loja (sem nome específico)";
+    ? isHomepage
+      ? `Produto de referência (inspiração para a homepage): "${input.productTitle}"`
+      : `Produto: "${input.productTitle}"`
+    : isHomepage
+      ? "Loja: avaliações gerais sobre a experiência com a marca (sem produto específico)"
+      : "Produto: genérico da loja (sem nome específico)";
+  const shopLine = input.shopName?.trim() ? `- Loja: ${input.shopName.trim()}` : "";
+  const placementLine = isHomepage
+    ? `- Destino: PÁGINA INICIAL (carrossel/grid de avaliações da loja — NÃO é review de ficha de produto)`
+    : `- Destino: página de PRODUTO (avaliação direta sobre o item)`;
   const descriptionLine = input.productDescription?.trim()
     ? `Descrição do produto: ${input.productDescription.trim().slice(0, 800)}`
     : "";
@@ -73,19 +82,28 @@ function buildPrompt(
     .map((r, i) => `- Avaliação ${i + 1}: nota ${r.toFixed(1)}`)
     .join("\n");
 
+  const homepageRules = isHomepage
+    ? `
+9. Escreva como cliente da LOJA na homepage: experiência de compra, entrega, atendimento, qualidade geral.
+10. Se houver produto de referência, cite-o de forma natural (ex.: "comprei a jaqueta…") mas NÃO como review técnica de página de produto.
+11. Evite frases de ficha técnica ("especificação", "SKU", "nesta página do produto").`
+    : "";
+
   const visualRules = hasImages
     ? `
-9. IMAGENS DO PRODUTO anexadas: analise cor, material, embalagem, acabamento e detalhes visíveis.
-10. Mencione 1–2 detalhes visuais de forma natural (como quem recebeu/usou o produto), sem listar como catálogo.
-11. Não diga "na foto" ou "na imagem" — escreva como experiência real ("a cor é linda", "chegou bem embalado").`
+${isHomepage ? "12" : "9"}. IMAGENS anexadas: analise cor, material, embalagem e detalhes visíveis.
+${isHomepage ? "13" : "10"}. Mencione 1–2 detalhes visuais de forma natural, sem listar como catálogo.
+${isHomepage ? "14" : "11"}. Não diga "na foto" ou "na imagem".`
     : "";
 
   return `Você gera rascunhos de avaliações de clientes para uma loja online revisar antes de publicar.
 
 Contexto:
-- Tipo de produto: ${productType}
+${shopLine}
+- Tipo de produto / nicho: ${productType}
 - ${productLine}
 ${descriptionLine ? `- ${descriptionLine}` : ""}
+${placementLine}
 - Idioma: ${input.locale}
 - Tom: ${toneLabel}
 - Persona do autor: ${persona}
@@ -103,7 +121,7 @@ Regras:
 5. Corpo: 2–5 frases naturais; evite clichês repetidos ("super recomendo", "mudou minha vida", "nota 10").
 6. Campo "time": relativo em idioma ${input.locale} (ex.: "há 2 dias", "há 1 semana", "há 3 semanas").
 7. NÃO mencione IA, simulação, loja fictícia ou hashtags.
-8. NÃO repita frases entre as avaliações.${visualRules}
+8. NÃO repita frases entre as avaliações.${homepageRules}${visualRules}
 
 Retorne JSON com exatamente ${input.count} item(ns) no array "reviews".`;
 }

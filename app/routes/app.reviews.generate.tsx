@@ -8,6 +8,7 @@ import {
   BlockStack,
   Box,
   Button,
+  ButtonGroup,
   Checkbox,
   Divider,
   FormLayout,
@@ -83,10 +84,13 @@ type SearchProductsResult =
   | { ok: false; error: string };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
+  const { admin } = await authenticate.admin(request);
+  const shopRes = await admin.graphql(`#graphql query { shop { name } }`);
+  const shopJson = await shopRes.json();
   return {
     geminiConfigured: isGeminiConfigured(),
     geminiModel: process.env.GEMINI_MODEL || "gemini-2.0-flash",
+    shopName: (shopJson.data?.shop?.name as string) || "Sua loja",
   };
 };
 
@@ -104,7 +108,7 @@ function parseGenerateInput(form: FormData) {
     ratingMin: parseFloat(String(form.get("ratingMin") || "4.6")) || 4.6,
     ratingMax: parseFloat(String(form.get("ratingMax") || "5")) || 5,
     count: Math.min(10, Math.max(1, parseInt(String(form.get("count") || "3"), 10) || 3)),
-    placement: (String(form.get("placement") || "product") as ReviewPlacement),
+    placement: (String(form.get("placement") || "homepage") as ReviewPlacement),
     verifiedBuyer: form.get("verifiedBuyer") === "true",
     saveAsPending: form.get("saveAsPending") !== "false",
     useProductImages: form.get("useProductImages") !== "false",
@@ -205,39 +209,50 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   const payload = parseGenerateInput(form);
 
-  if (!payload.productId) {
+  if (payload.placement === "product" && !payload.productId) {
     return json({
       ok: false,
-      error: "Selecione um produto Shopify para gerar avaliações.",
+      error: "Selecione um produto para gerar avaliações da página de produto.",
     } satisfies GenerateResult);
   }
 
-  const product = await getProductDetails(admin, payload.productId);
-  if (!product) {
-    return json({ ok: false, error: "Produto não encontrado." } satisfies GenerateResult);
+  let product: Awaited<ReturnType<typeof getProductDetails>> = null;
+  if (payload.productId) {
+    product = await getProductDetails(admin, payload.productId);
+    if (!product) {
+      return json({ ok: false, error: "Produto não encontrado." } satisfies GenerateResult);
+    }
   }
 
-  const productDescription = [
-    product.description,
-    product.productType,
-    product.vendor,
-    ...(product.tags || []),
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const productDescription = product
+    ? [product.description, product.productType, product.vendor, ...(product.tags || [])]
+        .filter(Boolean)
+        .join(" · ")
+    : "";
 
   const productImageUrls =
-    payload.useProductImages && product.images.length > 0
+    product && payload.useProductImages && product.images.length > 0
       ? product.images.map((img) => img.url)
       : [];
 
-  if (payload.useProductImages && productImageUrls.length === 0) {
+  if (payload.useProductImages && payload.productId && productImageUrls.length === 0) {
     return json({
       ok: false,
       error:
         'Este produto não tem imagens. Adicione fotos no Shopify ou desmarque "Analisar imagens".',
     } satisfies GenerateResult);
   }
+
+  if (payload.useProductImages && !payload.productId) {
+    return json({
+      ok: false,
+      error: "Para analisar imagens, selecione um produto de referência na aba Produto.",
+    } satisfies GenerateResult);
+  }
+
+  const shopRes = await admin.graphql(`#graphql query { shop { name } }`);
+  const shopJson = await shopRes.json();
+  const shopName = (shopJson.data?.shop?.name as string) || "Sua loja";
 
   const { min: ratingMin, max: ratingMax } = normalizeRatingRange(
     payload.ratingMin,
@@ -248,9 +263,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const reviews = await generateReviewsWithGemini({
       productType: payload.productType,
       customProductType: payload.customProductType,
-      productTitle: product.title,
+      productTitle: product?.title,
       productDescription,
       productImageUrls,
+      placement: payload.placement,
+      shopName,
       gender: payload.gender,
       ageRange: payload.ageRange,
       tone: payload.tone,
@@ -269,7 +286,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       ratingMax,
       placement: payload.placement,
       productId: payload.productId,
-      productTitle: product.title,
+      productTitle: product?.title,
       usedImages: productImageUrls.length > 0,
     } satisfies GenerateResult);
   } catch (e) {
@@ -279,13 +296,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 const TABS = [
-  { id: "product", content: "Produto" },
+  { id: "product", content: "Referência" },
   { id: "style", content: "Estilo" },
-  { id: "publish", content: "Publicação" },
+  { id: "publish", content: "Quantidade" },
 ];
 
 export default function GenerateReviewsPage() {
-  const { geminiConfigured, geminiModel } = useLoaderData<typeof loader>();
+  const { geminiConfigured, geminiModel, shopName } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const generateFetcher = useFetcher<typeof action>();
   const productFetcher = useFetcher<typeof action>();
@@ -309,7 +326,7 @@ export default function GenerateReviewsPage() {
   const [ratingMin, setRatingMin] = useState(4.6);
   const [ratingMax, setRatingMax] = useState(5);
   const [count, setCount] = useState("3");
-  const [placement, setPlacement] = useState<ReviewPlacement>("product");
+  const [placement, setPlacement] = useState<ReviewPlacement>("homepage");
   const [verifiedBuyer, setVerifiedBuyer] = useState(false);
   const [saveAsPending, setSaveAsPending] = useState(true);
   const [useProductImages, setUseProductImages] = useState(true);
@@ -482,22 +499,62 @@ export default function GenerateReviewsPage() {
       : null;
   const error = generateError || saveError;
 
-  const canGenerate = geminiConfigured && Boolean(productId);
+  const isHomepage = placement === "homepage";
+  const isProductPage = placement === "product";
+
+  const canGenerate =
+    geminiConfigured && (isHomepage || Boolean(productId));
+
+  const handlePlacementChange = useCallback((value: ReviewPlacement) => {
+    setPlacement(value);
+    setPreview([]);
+  }, []);
 
   const parsedCount = Math.min(10, Math.max(1, parseInt(count, 10) || 3));
 
   const summaryBadges = useMemo(
     () => [
+      isHomepage ? "Página inicial" : "Página de produto",
       `${count} avaliações`,
       formatRatingRange(ratingMin, ratingMax),
       AI_TONES.find((t) => t.value === tone)?.label || tone,
       labelForOption(AI_LOCALES, locale) || locale,
     ],
-    [count, ratingMin, ratingMax, tone, locale],
+    [isHomepage, count, ratingMin, ratingMax, tone, locale],
+  );
+
+  const destinationSelector = (
+    <Box padding="400" borderRadius="300" background="bg-surface-secondary" borderWidth="025" borderColor="border">
+      <BlockStack gap="300">
+        <Text as="h3" variant="headingSm">
+          Onde as avaliações vão aparecer
+        </Text>
+        <ButtonGroup variant="segmented" fullWidth>
+          <Button
+            pressed={isHomepage}
+            onClick={() => handlePlacementChange("homepage")}
+          >
+            Página inicial
+          </Button>
+          <Button
+            pressed={isProductPage}
+            onClick={() => handlePlacementChange("product")}
+          >
+            Página de produto
+          </Button>
+        </ButtonGroup>
+        <Text as="p" variant="bodySm" tone="subdued">
+          {isHomepage
+            ? `Textos para o carrossel da homepage de ${shopName}. O produto abaixo é opcional — só inspira a IA.`
+            : "Textos para a ficha do produto. Selecione o produto na aba Referência."}
+        </Text>
+      </BlockStack>
+    </Box>
   );
 
   const productTab = (
     <BlockStack gap="400">
+      {destinationSelector}
       <ProductSearchPicker
         selectedId={productId}
         selectedTitle={selectedProductTitle}
@@ -507,10 +564,20 @@ export default function GenerateReviewsPage() {
         onSelect={handleSelectProduct}
         onClear={handleClearProduct}
       />
+      <Text as="p" variant="bodySm" tone="subdued">
+        {isHomepage
+          ? "Opcional: use um produto real para a IA citar nome, categoria e fotos. Sem produto, usa só o tipo de produto da aba Estilo."
+          : "Obrigatório: escolha o produto que receberá as avaliações."}
+      </Text>
       <ProductHeroCard
         product={productPreview}
         loading={isLoadingProduct}
         onChangeProduct={handleClearProduct}
+        emptyHint={
+          isHomepage
+            ? "Opcional na homepage — sem produto, a IA usa o tipo de produto da aba Estilo."
+            : "Selecione o produto que receberá as avaliações."
+        }
       />
       <Box padding="400" borderRadius="300" background="bg-surface" borderWidth="025" borderColor="border">
         <BlockStack gap="300">
@@ -521,7 +588,12 @@ export default function GenerateReviewsPage() {
             label="Analisar fotos do produto (Gemini Vision)"
             checked={useProductImages}
             onChange={setUseProductImages}
-            helpText="Até 3 imagens são enviadas para gerar textos com detalhes visuais."
+            disabled={!productId}
+            helpText={
+              productId
+                ? "Até 3 imagens são enviadas para gerar textos com detalhes visuais."
+                : "Selecione um produto de referência para usar imagens."
+            }
           />
           <Checkbox
             label="Anexar foto do produto em cada avaliação salva"
@@ -610,15 +682,6 @@ export default function GenerateReviewsPage() {
         autoComplete="off"
         helpText="Máximo 10 por geração (limite da API gratuita)."
       />
-      <Select
-        label="Onde exibir"
-        options={[
-          { label: "Página de produto", value: "product" },
-          { label: "Página inicial", value: "homepage" },
-        ]}
-        value={placement}
-        onChange={(v) => setPlacement(v as ReviewPlacement)}
-      />
       <Checkbox
         label="Salvar como pendente (revisar antes de publicar)"
         checked={saveAsPending}
@@ -636,7 +699,7 @@ export default function GenerateReviewsPage() {
   return (
     <Page
       title="Gerar avaliações com IA"
-      subtitle="Busque um produto, personalize o estilo e gere rascunhos prontos para revisar"
+      subtitle="Gere avaliações para a homepage ou para a página de um produto"
       backAction={{ url: "/app/reviews" }}
       primaryAction={{
         content: isGenerating ? "Gerando…" : "Gerar avaliações",
@@ -660,7 +723,12 @@ export default function GenerateReviewsPage() {
           <Badge tone={geminiConfigured ? "success" : "warning"}>
             {geminiConfigured ? `Gemini · ${geminiModel}` : "API key pendente"}
           </Badge>
-          {productPreview ? <Badge tone="info">{productPreview.title}</Badge> : null}
+          {isHomepage ? (
+            <Badge tone="success">Homepage</Badge>
+          ) : (
+            <Badge tone="info">Produto</Badge>
+          )}
+          {productPreview ? <Badge>{productPreview.title}</Badge> : null}
           {summaryBadges.map((label) => (
             <Badge key={label}>{label}</Badge>
           ))}
@@ -684,11 +752,21 @@ export default function GenerateReviewsPage() {
           </Banner>
         ) : null}
 
-        {generateResult?.ok && generateResult.usedImages ? (
+        {generateResult?.ok && generateResult.usedImages && generateResult.productTitle ? (
           <Banner tone="success" title="Imagens analisadas">
             <p>
-              Fotos de <strong>{generateResult.productTitle}</strong> usadas para enriquecer os
-              textos.
+              Fotos de <strong>{generateResult.productTitle}</strong> usadas como referência visual.
+            </p>
+          </Banner>
+        ) : null}
+
+        {generateResult?.ok && isHomepage ? (
+          <Banner tone="info" title="Avaliações para a homepage">
+            <p>
+              Ao salvar, as avaliações vão para a <strong>página inicial</strong>
+              {generateResult.productTitle
+                ? ` (inspiradas em ${generateResult.productTitle}, sem vínculo à página do produto).`
+                : ` de ${shopName}.`}
             </p>
           </Banner>
         ) : null}
@@ -774,11 +852,23 @@ export default function GenerateReviewsPage() {
                         Nenhum rascunho ainda
                       </Text>
                       <Text as="p" variant="bodySm" tone="subdued" alignment="center">
-                        1. Busque e selecione um produto
-                        <br />
-                        2. Ajuste tom, persona e quantidade
-                        <br />
-                        3. Clique em Gerar avaliações
+                        {isHomepage ? (
+                          <>
+                            1. Escolha &quot;Página inicial&quot; acima
+                            <br />
+                            2. (Opcional) produto de referência + estilo
+                            <br />
+                            3. Clique em Gerar avaliações
+                          </>
+                        ) : (
+                          <>
+                            1. Escolha &quot;Página de produto&quot;
+                            <br />
+                            2. Selecione o produto na aba Referência
+                            <br />
+                            3. Clique em Gerar avaliações
+                          </>
+                        )}
                       </Text>
                     </BlockStack>
                   </Box>

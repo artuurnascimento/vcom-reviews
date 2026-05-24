@@ -207,6 +207,9 @@ export type AiReviewGenerateInput = {
   ratingMin: number;
   ratingMax: number;
   count: number;
+  /** homepage = vitrine inicial; product = página do produto */
+  placement: "homepage" | "product";
+  shopName?: string;
   /** URLs públicas das imagens do produto (para visão multimodal) */
   productImageUrls?: string[];
 };
