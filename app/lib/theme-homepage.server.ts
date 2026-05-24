@@ -174,6 +174,9 @@ async function readIndexTemplate(
               ... on OnlineStoreThemeFileBodyText {
                 content
               }
+              ... on OnlineStoreThemeFileBodyBase64 {
+                contentBase64
+              }
             }
           }
         }
@@ -187,18 +190,91 @@ async function readIndexTemplate(
     return { content: null, errors: gqlErrors.map((e) => e.message) };
   }
   const node = json.data?.theme?.files?.nodes?.[0];
-  const content = node?.body?.content as string | undefined;
+  const body = node?.body as
+    | { content?: string; contentBase64?: string }
+    | undefined;
+  let content = body?.content;
+  if (!content && body?.contentBase64) {
+    try {
+      content = Buffer.from(body.contentBase64, "base64").toString("utf8");
+    } catch {
+      return { content: null, errors: ["Não foi possível decodificar index.json (base64)."] };
+    }
+  }
   return { content: content ?? null, errors: [] };
 }
 
+function stripBom(raw: string): string {
+  return raw.charCodeAt(0) === 0xfeff ? raw.slice(1) : raw;
+}
+
+/** Remove comentários de linha e bloco preservando strings (JSONC do Theme Editor). */
+function stripJsonComments(json: string): string {
+  let out = "";
+  let i = 0;
+  let inString = false;
+  let escape = false;
+
+  while (i < json.length) {
+    const c = json[i];
+    if (inString) {
+      out += c;
+      if (escape) escape = false;
+      else if (c === "\\") escape = true;
+      else if (c === '"') inString = false;
+      i++;
+      continue;
+    }
+    if (c === '"') {
+      inString = true;
+      out += c;
+      i++;
+      continue;
+    }
+    if (c === "/" && json[i + 1] === "/") {
+      i += 2;
+      while (i < json.length && json[i] !== "\n") i++;
+      continue;
+    }
+    if (c === "/" && json[i + 1] === "*") {
+      i += 2;
+      while (i < json.length && !(json[i] === "*" && json[i + 1] === "/")) i++;
+      i += 2;
+      continue;
+    }
+    out += c;
+    i++;
+  }
+  return out;
+}
+
+function stripTrailingCommas(json: string): string {
+  return json.replace(/,(\s*[}\]])/g, "$1");
+}
+
 function parseIndexJson(raw: string): IndexTemplate | null {
+  const cleaned = stripTrailingCommas(stripJsonComments(stripBom(raw.trim())));
+  let parsed: unknown;
   try {
-    const parsed = JSON.parse(raw) as IndexTemplate;
-    if (!parsed.sections || !Array.isArray(parsed.order)) return null;
-    return parsed;
+    parsed = JSON.parse(cleaned);
   } catch {
     return null;
   }
+  if (!parsed || typeof parsed !== "object") return null;
+
+  const obj = parsed as Record<string, unknown>;
+  const sections = obj.sections;
+  if (!sections || typeof sections !== "object" || Array.isArray(sections)) return null;
+
+  let order = obj.order;
+  if (!Array.isArray(order)) {
+    order = Object.keys(sections as Record<string, unknown>);
+  }
+
+  return {
+    sections: sections as IndexTemplate["sections"],
+    order: order as string[],
+  };
 }
 
 async function upsertIndexTemplate(

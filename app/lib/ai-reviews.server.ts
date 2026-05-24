@@ -41,20 +41,19 @@ export function formatGeminiErrorMessage(message: string): string {
 
   if (/limit:\s*0/i.test(message)) {
     return (
-      `Este modelo Gemini não tem cota no plano gratuito da sua chave (limite 0). ` +
-      `No Railway, use GEMINI_MODEL=gemini-2.5-flash ou ative faturamento em ` +
-      `https://aistudio.google.com — o app tenta modelos alternativos automaticamente.${retryHint}`
+      `Cota da geração com IA esgotada para o modelo configurado (limite 0). ` +
+      `O app tenta modelos alternativos automaticamente; se persistir, ajuste as variáveis no servidor.${retryHint}`
     );
   }
 
   if (isGeminiQuotaError(message)) {
     return (
-      `Limite da API Gemini atingido (plano gratuito).${retryHint} ` +
-      `Consulte https://ai.dev/rate-limit ou reduza a quantidade de avaliações por vez.`
+      `Limite da geração com IA atingido.${retryHint} ` +
+      `Reduza a quantidade de avaliações por vez ou tente novamente mais tarde.`
     );
   }
 
-  return message;
+  return message.replace(/gemini/gi, "IA").replace(/GEMINI_API_KEY/g, "chave da API");
 }
 
 type GeminiInlinePart = {
@@ -67,7 +66,7 @@ function getApiKey(): string {
   const key = process.env.GEMINI_API_KEY?.trim();
   if (!key) {
     throw new Error(
-      "GEMINI_API_KEY não configurada. Adicione a chave no Railway ou no arquivo .env.",
+      "Chave da API de geração não configurada no servidor.",
     );
   }
   return key;
@@ -265,6 +264,9 @@ function parseGeneratedReviews(
 export function isGeminiConfigured(): boolean {
   return Boolean(process.env.GEMINI_API_KEY?.trim());
 }
+
+/** Alias para rotas — não expõe o provedor na UI. */
+export const isAiGenerationConfigured = isGeminiConfigured;
 
 type GeminiResponseJson = {
   error?: { message?: string };

@@ -42,8 +42,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
   const result = await runAutomaticInfrastructureSetup(admin, session.shop);
   return {
-    ok: result.ok,
-    errors: result.errors,
+    ok: result.ok && result.themeOk,
+    errors: [...result.errors, ...result.themeErrors],
     theme: result.theme,
   };
 };
@@ -54,8 +54,9 @@ export default function SetupPage() {
   const submit = useSubmit();
   const justRan = actionData !== undefined;
   const success = actionData?.ok === true;
-  const autoRanOk = autoSetup?.ok === true;
-  const autoRanFailed = autoSetup != null && !autoSetup.ok;
+  const autoRanOk = autoSetup != null && autoSetup.themeOk && items.every((i) => i.ready);
+  const autoRanFailed =
+    autoSetup != null && (!autoSetup.themeOk || !items.every((i) => i.ready));
 
   return (
     <Page
@@ -107,7 +108,7 @@ export default function SetupPage() {
                 title="Configuração automática incompleta"
                 action={{ content: "Abrir Theme Editor", url: themeDeepLink, target: "_blank" }}
               >
-                {autoSetup.errors.join(" · ")}
+                {[...autoSetup.errors, ...autoSetup.themeErrors].filter(Boolean).join(" · ")}
                 {autoSetup.theme.accessDenied
                   ? " Reinstale o app para aceitar o escopo write_themes."
                   : ""}

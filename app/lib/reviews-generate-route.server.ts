@@ -9,8 +9,7 @@ import {
 import {
   formatGeminiErrorMessage,
   generateReviewsWithGemini,
-  getDefaultGeminiModel,
-  isGeminiConfigured,
+  isAiGenerationConfigured,
 } from "./ai-reviews.server";
 import type { ReviewPlacement } from "./constants";
 import { createReview, getProductDetails, searchProducts } from "./reviews.server";
@@ -65,16 +64,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
 
     return json({
-      geminiConfigured: isGeminiConfigured(),
-      geminiModel: getDefaultGeminiModel(),
+      aiConfigured: isAiGenerationConfigured(),
       shopName: shopJson.data?.shop?.name || "Sua loja",
     } satisfies GenerateLoaderData);
   } catch (error) {
     if (error instanceof Response) throw error;
     console.error("[vcom-reviews] generate loader", error);
     return json({
-      geminiConfigured: isGeminiConfigured(),
-      geminiModel: getDefaultGeminiModel(),
+      aiConfigured: isAiGenerationConfigured(),
       shopName: "Sua loja",
       loaderError:
         error instanceof Error ? error.message : "Não foi possível carregar a página.",
@@ -172,10 +169,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return redirect(`/app/reviews${status === "pending" ? "/pending" : ""}`);
     }
 
-    if (!isGeminiConfigured()) {
+    if (!isAiGenerationConfigured()) {
       return json({
         ok: false,
-        error: "Configure GEMINI_API_KEY no Railway ou .env para usar a geração com IA.",
+        error: "Geração com IA indisponível. Configure a chave da API no servidor (Railway).",
       } satisfies GenerateResult);
     }
 

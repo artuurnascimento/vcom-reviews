@@ -92,8 +92,7 @@ export function ErrorBoundary() {
 }
 
 export default function GenerateReviewsPage() {
-  const { geminiConfigured, geminiModel, shopName, loaderError } =
-    useLoaderData<GenerateLoaderData>();
+  const { aiConfigured, shopName, loaderError } = useLoaderData<GenerateLoaderData>();
   const actionData = useActionData<GenerateResult>();
   const generateFetcher = useFetcher<GenerateResult>();
   const productFetcher = useFetcher<ProductLoadResult>();
@@ -298,7 +297,7 @@ export default function GenerateReviewsPage() {
   const isProductPage = placement === "product";
 
   const canGenerate =
-    geminiConfigured && (isHomepage || Boolean(productId));
+    aiConfigured && (isHomepage || Boolean(productId));
 
   const handlePlacementChange = useCallback((value: ReviewPlacement) => {
     setPlacement(value);
@@ -356,10 +355,10 @@ export default function GenerateReviewsPage() {
       <Box padding="400" borderRadius="300" background="bg-surface" borderWidth="025" borderColor="border">
         <BlockStack gap="300">
           <Text as="h3" variant="headingSm">
-            Análise visual com IA
+            Análise visual
           </Text>
           <Checkbox
-            label="Analisar fotos do produto (Gemini Vision)"
+            label="Analisar fotos do produto"
             checked={useProductImages}
             onChange={setUseProductImages}
             disabled={!productId}
@@ -496,9 +495,6 @@ export default function GenerateReviewsPage() {
     >
       <BlockStack gap="500">
         <InlineStack gap="200" wrap>
-          <Badge tone={geminiConfigured ? "success" : "warning"}>
-            {geminiConfigured ? `Gemini · ${geminiModel}` : "API key pendente"}
-          </Badge>
           {isHomepage ? (
             <Badge tone="success">Homepage</Badge>
           ) : (
@@ -510,14 +506,11 @@ export default function GenerateReviewsPage() {
           ))}
         </InlineStack>
 
-        {!geminiConfigured ? (
-          <Banner tone="warning" title="Configure a API key">
+        {!aiConfigured ? (
+          <Banner tone="warning" title="Geração com IA indisponível">
             <p>
-              Adicione <strong>GEMINI_API_KEY</strong> no Railway. Chave gratuita em{" "}
-              <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">
-                Google AI Studio
-              </a>
-              .
+              A chave da API ainda não está configurada no servidor. Peça ao administrador
+              para adicionar a variável de ambiente no Railway.
             </p>
           </Banner>
         ) : null}

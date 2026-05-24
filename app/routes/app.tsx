@@ -18,12 +18,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     apiKey: process.env.SHOPIFY_API_KEY || "",
     setupOk: setup.ok,
     setupErrors: setup.errors,
+    themeWarning:
+      !setup.themeOk && setup.themeErrors.length
+        ? setup.themeErrors.join(" · ")
+        : null,
     themeAccessDenied: setup.theme.accessDenied,
   };
 };
 
 export default function AppLayout() {
-  const { apiKey, setupOk, setupErrors, themeAccessDenied } = useLoaderData<typeof loader>();
+  const { apiKey, setupOk, setupErrors, themeWarning, themeAccessDenied } =
+    useLoaderData<typeof loader>();
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
       {!setupOk ? (
@@ -38,12 +43,24 @@ export default function AppLayout() {
             }}
           >
             <strong>Configuração necessária:</strong>{" "}
-            {setupErrors?.join(" · ") ||
-              "Infraestrutura ainda não está pronta."}{" "}
-            {themeAccessDenied
-              ? "Reinstale o app para aceitar write_themes. "
-              : null}
-            <a href="/app/setup">Ver detalhes</a>
+            {setupErrors?.join(" · ") || "O metaobject de avaliações ainda não existe."}{" "}
+            <a href="/app/setup">Abrir configuração</a>
+          </div>
+        </div>
+      ) : themeWarning ? (
+        <div style={{ padding: "12px 16px" }}>
+          <div
+            style={{
+              padding: "12px 16px",
+              background: "#f3f4f6",
+              border: "1px solid #d1d5db",
+              borderRadius: 8,
+              fontSize: 14,
+            }}
+          >
+            <strong>Homepage:</strong> {themeWarning}
+            {themeAccessDenied ? " Reinstale o app para aceitar write_themes." : null}{" "}
+            <a href="/app/setup">Configuração</a>
           </div>
         </div>
       ) : null}

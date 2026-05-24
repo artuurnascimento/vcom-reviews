@@ -35,8 +35,7 @@ export type SearchProductsResult =
   | { ok: false; error: string };
 
 export type GenerateLoaderData = {
-  geminiConfigured: boolean;
-  geminiModel: string;
+  aiConfigured: boolean;
   shopName: string;
   loaderError?: string;
 };

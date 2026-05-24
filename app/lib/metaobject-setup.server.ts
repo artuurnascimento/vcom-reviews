@@ -102,8 +102,10 @@ export async function runAutomaticInfrastructureSetup(
   const infra = await ensureReviewInfrastructure(admin);
   const theme = await ensureHomepageReviewsThemeBlock(admin, shopDomain);
   return {
-    ok: infra.ok && theme.ok,
-    errors: [...infra.errors, ...theme.errors],
+    ok: infra.ok,
+    errors: infra.errors,
+    themeErrors: theme.errors,
+    themeOk: theme.ok,
     theme,
   };
 }
