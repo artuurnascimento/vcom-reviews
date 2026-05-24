@@ -1,6 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 import { useLoaderData, useSubmit } from "@remix-run/react";
+import { useCallback } from "react";
 import {
   Page,
   Layout,
@@ -13,12 +14,22 @@ import {
   InlineGrid,
   BlockStack,
   InlineStack,
+  Banner,
+  Box,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
-import { deleteReview, listReviews } from "../lib/reviews.server";
+import {
+  approveAllPendingReviews,
+  approveReview,
+  deleteReview,
+  listReviews,
+  rejectAllPendingReviews,
+  rejectReview,
+} from "../lib/reviews.server";
 import { getDashboardStats } from "../lib/dashboard.server";
 import { StatCard } from "../components/StatCard";
 import { ReviewStars } from "../components/ReviewStars";
+import { ReviewModerationActions } from "../components/ReviewModerationActions";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
@@ -32,11 +43,29 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
   const form = await request.formData();
-  const intent = form.get("intent");
-  const id = form.get("id") as string;
-  if (intent === "delete" && id) {
+  const intent = String(form.get("intent") || "");
+  const id = String(form.get("id") || "");
+
+  if (intent === "approveAll") {
+    await approveAllPendingReviews(admin);
+    return redirect("/app/reviews");
+  }
+
+  if (intent === "rejectAll") {
+    await rejectAllPendingReviews(admin);
+    return redirect("/app/reviews");
+  }
+
+  if (!id) return redirect("/app/reviews");
+
+  if (intent === "approve") {
+    await approveReview(admin, id);
+  } else if (intent === "reject") {
+    await rejectReview(admin, id);
+  } else if (intent === "delete") {
     await deleteReview(admin, id);
   }
+
   return redirect("/app/reviews");
 };
 
@@ -50,17 +79,43 @@ export default function ReviewsIndex() {
   const { reviews, stats } = useLoaderData<typeof loader>();
   const submit = useSubmit();
 
+  const post = useCallback(
+    (data: Record<string, string>) => {
+      submit(data, { method: "post" });
+    },
+    [submit],
+  );
+
+  const handleApproveAll = useCallback(() => {
+    if (
+      !window.confirm(
+        `Aprovar todas as ${stats.pendingCount} avaliações pendentes? Elas passarão a aparecer na vitrine.`,
+      )
+    ) {
+      return;
+    }
+    post({ intent: "approveAll" });
+  }, [post, stats.pendingCount]);
+
+  const handleRejectAll = useCallback(() => {
+    if (
+      !window.confirm(
+        `Rejeitar todas as ${stats.pendingCount} avaliações pendentes? Esta ação não publica na loja.`,
+      )
+    ) {
+      return;
+    }
+    post({ intent: "rejectAll" });
+  }, [post, stats.pendingCount]);
+
   return (
     <Page
       title="Avaliações"
-      subtitle={`${stats.totalReviews} no total · média ${stats.averageRating}`}
+      subtitle={`${stats.totalReviews} publicadas · ${stats.pendingCount} pendentes · média ${stats.averageRating}`}
       backAction={{ url: "/app" }}
       primaryAction={{ content: "Nova avaliação", url: "/app/reviews/new" }}
       secondaryActions={[
-        {
-          content: "Gerar com IA",
-          url: "/app/reviews/generate",
-        },
+        { content: "Gerar com IA", url: "/app/reviews/generate" },
         {
           content: `Pendentes (${stats.pendingCount})`,
           url: "/app/reviews/pending",
@@ -69,11 +124,36 @@ export default function ReviewsIndex() {
     >
       <BlockStack gap="500">
         <InlineGrid columns={{ xs: 2, sm: 4 }} gap="400">
-          <StatCard label="Total" value={stats.totalReviews} />
+          <StatCard label="Publicadas" value={stats.totalReviews} />
+          <StatCard label="Pendentes" value={stats.pendingCount} />
           <StatCard label="Média" value={stats.averageRating} />
           <StatCard label="Homepage" value={stats.homepagePublished} />
-          <StatCard label="Com fotos" value={stats.withImagesCount} />
         </InlineGrid>
+
+        {stats.pendingCount > 0 ? (
+          <Banner
+            title={`${stats.pendingCount} avaliação(ões) aguardando aprovação`}
+            tone="warning"
+            action={{
+              content: "Ver só pendentes",
+              url: "/app/reviews/pending",
+            }}
+          >
+            <BlockStack gap="300">
+              <p>
+                Use <strong>Aprovar</strong> em cada linha ou aprove/rejeite todas de uma vez.
+              </p>
+              <InlineStack gap="200" wrap>
+                <Button variant="primary" onClick={handleApproveAll}>
+                  Aprovar todas ({stats.pendingCount})
+                </Button>
+                <Button tone="critical" onClick={handleRejectAll}>
+                  Rejeitar todas ({stats.pendingCount})
+                </Button>
+              </InlineStack>
+            </BlockStack>
+          </Banner>
+        ) : null}
 
         <Layout>
           <Layout.Section>
@@ -90,100 +170,92 @@ export default function ReviewsIndex() {
                 </p>
               </EmptyState>
             ) : (
-              <Card padding="0">
-                <IndexTable
-                  itemCount={reviews.length}
-                  headings={[
-                    { title: "Autor" },
-                    { title: "Avaliação" },
-                    { title: "Nota" },
-                    { title: "Status" },
-                    { title: "Extras" },
-                    { title: "Ações" },
-                  ]}
-                  selectable={false}
-                >
-                  {reviews.map((r, i) => (
-                    <IndexTable.Row id={r.id} key={r.id} position={i}>
-                      <IndexTable.Cell>
-                        <BlockStack gap="100">
-                          <Text as="span" variant="bodyMd" fontWeight="semibold">
-                            {r.author}
-                          </Text>
-                          {r.time ? (
+              <Box overflowX="scroll">
+                <Card padding="0">
+                  <IndexTable
+                    itemCount={reviews.length}
+                    headings={[
+                      { title: "Autor / nota" },
+                      { title: "Avaliação" },
+                      { title: "Status" },
+                      { title: "Ações", alignment: "end" },
+                    ]}
+                    selectable={false}
+                  >
+                    {reviews.map((r, i) => (
+                      <IndexTable.Row id={r.id} key={r.id} position={i}>
+                        <IndexTable.Cell>
+                          <BlockStack gap="100">
+                            <Text as="span" variant="bodyMd" fontWeight="semibold">
+                              {r.author}
+                            </Text>
+                            {r.time ? (
+                              <Text as="span" variant="bodySm" tone="subdued">
+                                {r.time}
+                              </Text>
+                            ) : null}
+                            <InlineStack gap="150" blockAlign="center">
+                              <ReviewStars rating={r.rating} size={14} />
+                              <Text as="span" variant="bodySm">
+                                {r.rating}
+                              </Text>
+                            </InlineStack>
+                          </BlockStack>
+                        </IndexTable.Cell>
+                        <IndexTable.Cell>
+                          <BlockStack gap="100">
+                            {r.title ? (
+                              <Text as="span" variant="bodyMd" fontWeight="medium">
+                                {truncate(r.title, 50)}
+                              </Text>
+                            ) : null}
                             <Text as="span" variant="bodySm" tone="subdued">
-                              {r.time}
+                              {truncate(r.body, 100)}
                             </Text>
-                          ) : null}
-                        </BlockStack>
-                      </IndexTable.Cell>
-                      <IndexTable.Cell>
-                        <BlockStack gap="100">
-                          {r.title ? (
-                            <Text as="span" variant="bodyMd" fontWeight="medium">
-                              {truncate(r.title, 50)}
-                            </Text>
-                          ) : null}
-                          <Text as="span" variant="bodySm" tone="subdued">
-                            {truncate(r.body, 90)}
-                          </Text>
-                        </BlockStack>
-                      </IndexTable.Cell>
-                      <IndexTable.Cell>
-                        <InlineStack gap="200" blockAlign="center">
-                          <ReviewStars rating={r.rating} size={16} />
-                          <Text as="span" variant="bodySm">
-                            {r.rating}
-                          </Text>
-                        </InlineStack>
-                      </IndexTable.Cell>
-                      <IndexTable.Cell>
-                        <Badge
-                          tone={
-                            r.status === "approved"
-                              ? "success"
-                              : r.status === "pending"
-                                ? "attention"
-                                : "critical"
-                          }
-                        >
-                          {r.status === "approved"
-                            ? "Publicada"
-                            : r.status === "pending"
-                              ? "Pendente"
-                              : "Rejeitada"}
-                        </Badge>
-                      </IndexTable.Cell>
-                      <IndexTable.Cell>
-                        <InlineStack gap="200">
-                          {r.verified_buyer ? (
-                            <Badge tone="success">Verified</Badge>
-                          ) : null}
-                          {r.images.length > 0 ? (
-                            <Badge tone="info">{r.images.length} foto(s)</Badge>
-                          ) : null}
-                        </InlineStack>
-                      </IndexTable.Cell>
-                      <IndexTable.Cell>
-                        <InlineStack gap="200">
-                          <Button url={`/app/reviews/${encodeURIComponent(r.id)}`} size="slim">
-                            Editar
-                          </Button>
-                          <Button
-                            tone="critical"
-                            size="slim"
-                            onClick={() =>
-                              submit({ intent: "delete", id: r.id }, { method: "post" })
+                            <InlineStack gap="150" wrap>
+                              {r.verified_buyer ? (
+                                <Badge tone="success">Verified</Badge>
+                              ) : null}
+                              {r.images.length > 0 ? (
+                                <Badge tone="info">{`${r.images.length} foto(s)`}</Badge>
+                              ) : null}
+                              {r.placement === "product" ? (
+                                <Badge tone="info">Produto</Badge>
+                              ) : null}
+                            </InlineStack>
+                          </BlockStack>
+                        </IndexTable.Cell>
+                        <IndexTable.Cell>
+                          <Badge
+                            tone={
+                              r.status === "approved"
+                                ? "success"
+                                : r.status === "pending"
+                                  ? "attention"
+                                  : "critical"
                             }
                           >
-                            Apagar
-                          </Button>
-                        </InlineStack>
-                      </IndexTable.Cell>
-                    </IndexTable.Row>
-                  ))}
-                </IndexTable>
-              </Card>
+                            {r.status === "approved"
+                              ? "Publicada"
+                              : r.status === "pending"
+                                ? "Pendente"
+                                : "Rejeitada"}
+                          </Badge>
+                        </IndexTable.Cell>
+                        <IndexTable.Cell>
+                          <ReviewModerationActions
+                            reviewId={r.id}
+                            status={r.status}
+                            editUrl={`/app/reviews/${encodeURIComponent(r.id)}`}
+                            onSubmit={post}
+                            compact
+                          />
+                        </IndexTable.Cell>
+                      </IndexTable.Row>
+                    ))}
+                  </IndexTable>
+                </Card>
+              </Box>
             )}
           </Layout.Section>
         </Layout>

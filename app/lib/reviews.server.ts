@@ -185,6 +185,22 @@ export async function rejectReview(admin: AdminApi, id: string) {
   return id;
 }
 
+export async function approveAllPendingReviews(admin: AdminApi): Promise<number> {
+  const pending = await listPendingReviews(admin);
+  for (const review of pending) {
+    await approveReview(admin, review.id);
+  }
+  return pending.length;
+}
+
+export async function rejectAllPendingReviews(admin: AdminApi): Promise<number> {
+  const pending = await listPendingReviews(admin);
+  for (const review of pending) {
+    await rejectReview(admin, review.id);
+  }
+  return pending.length;
+}
+
 export async function updateReview(
   admin: AdminApi,
   id: string,
