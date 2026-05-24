@@ -16,7 +16,7 @@ api_version = "2026-04"
   uri = "/webhooks/app/uninstalled"
 
 [access_scopes]
-scopes = "read_metaobject_definitions,write_metaobject_definitions,read_metaobjects,write_metaobjects,read_files,write_files,read_products,read_themes"
+scopes = "read_metaobject_definitions,write_metaobject_definitions,read_metaobjects,write_metaobjects,read_metafields,write_metafields,read_metafield_definitions,write_metafield_definitions,read_files,write_files,read_products,read_themes"
 
 [auth]
 redirect_urls = [
@@ -26,13 +26,6 @@ redirect_urls = [
 
 [pos]
 embedded = false
-
-[app.metafields.app.storefront_settings]
-name = "Storefront settings"
-description = "VCOM Reviews — cores, textos e layout da vitrine"
-type = "json"
-access.admin = "merchant_read_write"
-access.storefront = "public_read"
 
 [metaobjects.app.review]
 name = "Review"

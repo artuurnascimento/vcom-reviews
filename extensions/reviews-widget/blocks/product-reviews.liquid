@@ -1,9 +1,9 @@
 {%- comment -%}
-  VCOM Reviews — configurações via app (app.metafields.app.storefront_settings)
+  VCOM Reviews — configurações via app (shop.metafields.vcom_reviews.storefront_settings)
 {%- endcomment -%}
 
 {%- assign bid = block.id -%}
-{%- assign cfg = app.metafields.app.storefront_settings.value -%}
+{%- assign cfg = shop.metafields.vcom_reviews.storefront_settings.value -%}
 
 {%- assign ds = cfg.data_source | default: 'auto' -%}
 {%- assign s_background = cfg.background | default: '#ffffff' -%}
