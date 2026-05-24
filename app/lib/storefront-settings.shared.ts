@@ -94,6 +94,14 @@ export interface StorefrontSettings {
   footer_total: string;
   footer_suffix: string;
   footer_text_color: string;
+  footer_trustpilot_show: boolean;
+  footer_trustpilot_logo_height: number;
+  footer_trustpilot_stars_color: string;
+  footer_trustpilot_text_color: string;
+  footer_trustpilot_muted_color: string;
+  footer_trustpilot_score_label: string;
+  footer_trustpilot_reviews_word: string;
+  footer_trustpilot_fallback_count: number;
 }
 
 export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
@@ -181,6 +189,14 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   footer_total: "11 customers",
   footer_suffix: ".",
   footer_text_color: "#000000",
+  footer_trustpilot_show: false,
+  footer_trustpilot_logo_height: 20,
+  footer_trustpilot_stars_color: "",
+  footer_trustpilot_text_color: "#191919",
+  footer_trustpilot_muted_color: "#6b6b6b",
+  footer_trustpilot_score_label: "TrustScore",
+  footer_trustpilot_reviews_word: "reviews",
+  footer_trustpilot_fallback_count: 0,
 };
 
 function num(value: unknown, fallback: number): number {
@@ -323,5 +339,13 @@ export function coerceStorefrontSettings(
     footer_total: str(r.footer_total, d.footer_total),
     footer_suffix: str(r.footer_suffix, d.footer_suffix),
     footer_text_color: str(r.footer_text_color, d.footer_text_color),
+    footer_trustpilot_show: bool(r.footer_trustpilot_show, d.footer_trustpilot_show),
+    footer_trustpilot_logo_height: num(r.footer_trustpilot_logo_height, d.footer_trustpilot_logo_height),
+    footer_trustpilot_stars_color: str(r.footer_trustpilot_stars_color, d.footer_trustpilot_stars_color),
+    footer_trustpilot_text_color: str(r.footer_trustpilot_text_color, d.footer_trustpilot_text_color),
+    footer_trustpilot_muted_color: str(r.footer_trustpilot_muted_color, d.footer_trustpilot_muted_color),
+    footer_trustpilot_score_label: str(r.footer_trustpilot_score_label, d.footer_trustpilot_score_label),
+    footer_trustpilot_reviews_word: str(r.footer_trustpilot_reviews_word, d.footer_trustpilot_reviews_word),
+    footer_trustpilot_fallback_count: num(r.footer_trustpilot_fallback_count, d.footer_trustpilot_fallback_count),
   };
 }

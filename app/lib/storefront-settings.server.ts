@@ -265,5 +265,13 @@ export function parseStorefrontSettingsForm(form: FormData): StorefrontSettings 
     footer_total: str("footer_total"),
     footer_suffix: str("footer_suffix"),
     footer_text_color: str("footer_text_color"),
+    footer_trustpilot_show: bool("footer_trustpilot_show"),
+    footer_trustpilot_logo_height: num("footer_trustpilot_logo_height", 20),
+    footer_trustpilot_stars_color: str("footer_trustpilot_stars_color"),
+    footer_trustpilot_text_color: str("footer_trustpilot_text_color"),
+    footer_trustpilot_muted_color: str("footer_trustpilot_muted_color"),
+    footer_trustpilot_score_label: str("footer_trustpilot_score_label"),
+    footer_trustpilot_reviews_word: str("footer_trustpilot_reviews_word"),
+    footer_trustpilot_fallback_count: num("footer_trustpilot_fallback_count", 0),
   });
 }

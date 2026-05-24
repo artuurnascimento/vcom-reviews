@@ -702,6 +702,88 @@ export default function AppearancePage() {
                       </BlockStack>
                     </Card>
                     <Card>
+                      <BlockStack gap="400">
+                        <Text as="h3" variant="headingSm">
+                          Trustpilot no rodapé do tema
+                        </Text>
+                        <Text as="p" tone="subdued">
+                          Badge abaixo dos ícones de redes sociais no rodapé da loja (logo, estrelas e TrustScore).
+                        </Text>
+                        <Checkbox
+                          label="Mostrar Trustpilot no rodapé"
+                          name="footer_trustpilot_show"
+                          checked={settings.footer_trustpilot_show}
+                          onChange={(v) => set("footer_trustpilot_show", v)}
+                        />
+                        <InlineGrid columns={2} gap="400">
+                          <TextField
+                            label="Altura da logo (px)"
+                            name="footer_trustpilot_logo_height"
+                            type="number"
+                            value={String(settings.footer_trustpilot_logo_height)}
+                            onChange={(v) =>
+                              set("footer_trustpilot_logo_height", parseInt(v, 10) || 20)
+                            }
+                            autoComplete="off"
+                          />
+                          <TextField
+                            label="Nota fallback"
+                            name="footer_rating"
+                            value={settings.footer_rating}
+                            onChange={(v) => set("footer_rating", v)}
+                            autoComplete="off"
+                            helpText="Usada se não houver reviews na homepage"
+                          />
+                          <TextField
+                            label="Reviews fallback (número)"
+                            name="footer_trustpilot_fallback_count"
+                            type="number"
+                            value={String(settings.footer_trustpilot_fallback_count)}
+                            onChange={(v) =>
+                              set("footer_trustpilot_fallback_count", parseInt(v, 10) || 0)
+                            }
+                            autoComplete="off"
+                          />
+                          <TextField
+                            label="Label TrustScore"
+                            name="footer_trustpilot_score_label"
+                            value={settings.footer_trustpilot_score_label}
+                            onChange={(v) => set("footer_trustpilot_score_label", v)}
+                            autoComplete="off"
+                          />
+                          <TextField
+                            label="Palavra reviews"
+                            name="footer_trustpilot_reviews_word"
+                            value={settings.footer_trustpilot_reviews_word}
+                            onChange={(v) => set("footer_trustpilot_reviews_word", v)}
+                            autoComplete="off"
+                          />
+                          <TextField
+                            label="Cor das estrelas"
+                            name="footer_trustpilot_stars_color"
+                            value={settings.footer_trustpilot_stars_color}
+                            onChange={(v) => set("footer_trustpilot_stars_color", v)}
+                            autoComplete="off"
+                            placeholder={settings.stars_color || "#00B67A"}
+                          />
+                          <TextField
+                            label="Cor do texto"
+                            name="footer_trustpilot_text_color"
+                            value={settings.footer_trustpilot_text_color}
+                            onChange={(v) => set("footer_trustpilot_text_color", v)}
+                            autoComplete="off"
+                          />
+                          <TextField
+                            label="Cor secundária"
+                            name="footer_trustpilot_muted_color"
+                            value={settings.footer_trustpilot_muted_color}
+                            onChange={(v) => set("footer_trustpilot_muted_color", v)}
+                            autoComplete="off"
+                          />
+                        </InlineGrid>
+                      </BlockStack>
+                    </Card>
+                    <Card>
                       <Checkbox
                         label="Mostrar mensagem quando não há reviews"
                         name="show_empty_message"
