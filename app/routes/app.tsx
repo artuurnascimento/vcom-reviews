@@ -48,6 +48,7 @@ export default function AppLayout() {
           Painel
         </Link>
         <Link to="/app/reviews">Avaliações</Link>
+        <Link to="/app/reviews/generate">Gerar com IA</Link>
         <Link to="/app/reviews/pending">Pendentes</Link>
         <Link to="/app/appearance">Aparência</Link>
         <Link to="/app/setup">Configuração</Link>

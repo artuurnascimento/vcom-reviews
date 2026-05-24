@@ -7,6 +7,45 @@ type AdminApi = {
 
 const MAX_IMAGES = 6;
 
+export async function createShopifyFilesFromUrls(
+  admin: AdminApi,
+  urls: string[],
+): Promise<Record<string, string>> {
+  const unique = [...new Set(urls.filter(Boolean))].slice(0, MAX_IMAGES);
+  if (unique.length === 0) return {};
+
+  const created = await admin.graphql(
+    `#graphql
+    mutation FileCreateFromUrls($files: [FileCreateInput!]!) {
+      fileCreate(files: $files) {
+        files { id originalFileSize }
+        userErrors { message }
+      }
+    }`,
+    {
+      variables: {
+        files: unique.map((url) => ({
+          originalSource: url,
+          contentType: "IMAGE",
+        })),
+      },
+    },
+  );
+  const createdJson = await created.json();
+  const fileErrors = createdJson.data?.fileCreate?.userErrors || [];
+  if (fileErrors.length) {
+    throw new Error(fileErrors.map((e: { message: string }) => e.message).join(", "));
+  }
+
+  const out: Record<string, string> = {};
+  const files = createdJson.data?.fileCreate?.files || [];
+  for (let i = 0; i < unique.length; i++) {
+    const fileId = files[i]?.id;
+    if (fileId) out[unique[i]] = fileId;
+  }
+  return out;
+}
+
 export async function uploadReviewImages(
   admin: AdminApi,
   files: File[],

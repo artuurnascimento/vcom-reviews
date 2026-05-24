@@ -358,3 +358,68 @@ export async function searchProducts(admin: AdminApi, query: string) {
   const json = await response.json();
   return json.data?.products?.nodes || [];
 }
+
+export async function getProductDetails(admin: AdminApi, id: string) {
+  const response = await admin.graphql(
+    `#graphql
+    query GetProductDetails($id: ID!) {
+      product(id: $id) {
+        id
+        title
+        description
+        descriptionHtml
+        productType
+        tags
+        vendor
+        featuredMedia {
+          preview {
+            image { url altText }
+          }
+        }
+        media(first: 8) {
+          nodes {
+            ... on MediaImage {
+              image { url altText }
+            }
+          }
+        }
+      }
+    }`,
+    { variables: { id } },
+  );
+  const json = await response.json();
+  const product = json.data?.product;
+  if (!product) return null;
+
+  const images: Array<{ url: string; altText: string }> = [];
+  const seen = new Set<string>();
+
+  const pushImage = (url?: string | null, altText?: string | null) => {
+    if (!url || seen.has(url)) return;
+    seen.add(url);
+    images.push({ url, altText: altText || "" });
+  };
+
+  pushImage(
+    product.featuredMedia?.preview?.image?.url,
+    product.featuredMedia?.preview?.image?.altText,
+  );
+
+  for (const node of product.media?.nodes || []) {
+    pushImage(node?.image?.url, node?.image?.altText);
+  }
+
+  return {
+    id: product.id as string,
+    title: product.title as string,
+    description: (product.description as string) || stripHtml(product.descriptionHtml || ""),
+    productType: (product.productType as string) || "",
+    vendor: (product.vendor as string) || "",
+    tags: (product.tags as string[]) || [],
+    images,
+  };
+}
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}

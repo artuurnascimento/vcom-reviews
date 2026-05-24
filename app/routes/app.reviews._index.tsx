@@ -58,6 +58,10 @@ export default function ReviewsIndex() {
       primaryAction={{ content: "Nova avaliação", url: "/app/reviews/new" }}
       secondaryActions={[
         {
+          content: "Gerar com IA",
+          url: "/app/reviews/generate",
+        },
+        {
           content: `Pendentes (${stats.pendingCount})`,
           url: "/app/reviews/pending",
         },
