@@ -1,10 +1,15 @@
 {%- comment -%}
-  VCOM Reviews App — lê metaobjects review (shop.metaobjects.review), sem metafields
+  VCOM Reviews App — metaobject app-owned $app:review (prefixo $app na theme extension)
 {%- endcomment -%}
 
 {%- assign bid = block.id -%}
 {%- assign ds = block.settings.data_source | default: 'auto' -%}
-{%- assign all_reviews = shop.metaobjects.review.values | default: nil -%}
+{%- assign all_reviews = nil -%}
+{%- if shop.metaobjects["$app:review"] -%}
+  {%- assign all_reviews = shop.metaobjects["$app:review"].values -%}
+{%- elsif shop.metaobjects.review -%}
+  {%- assign all_reviews = shop.metaobjects.review.values -%}
+{%- endif -%}
 
 {%- assign reviews_context = 'homepage' -%}
 {%- if ds == 'product' -%}
