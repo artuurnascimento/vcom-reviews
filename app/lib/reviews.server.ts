@@ -345,18 +345,52 @@ export async function getReviewPlacement(
   return { placement: "homepage" };
 }
 
-export async function searchProducts(admin: AdminApi, query: string) {
+export async function searchProducts(
+  admin: AdminApi,
+  query: string,
+  { first = 10 }: { first?: number } = {},
+) {
+  const searchQuery = query.trim() || "status:active";
   const response = await admin.graphql(
     `#graphql
-    query SearchProducts($query: String!) {
-      products(first: 10, query: $query) {
-        nodes { id title handle }
+    query SearchProducts($query: String!, $first: Int!) {
+      products(first: $first, query: $query) {
+        nodes {
+          id
+          title
+          handle
+          productType
+          status
+          featuredMedia {
+            preview {
+              image { url altText }
+            }
+          }
+        }
       }
     }`,
-    { variables: { query } },
+    { variables: { query: searchQuery, first } },
   );
   const json = await response.json();
-  return json.data?.products?.nodes || [];
+  const nodes = json.data?.products?.nodes || [];
+  return nodes.map(
+    (node: {
+      id: string;
+      title: string;
+      handle: string;
+      productType?: string;
+      status?: string;
+      featuredMedia?: { preview?: { image?: { url?: string; altText?: string } } };
+    }) => ({
+      id: node.id,
+      title: node.title,
+      handle: node.handle,
+      productType: node.productType || "",
+      status: node.status || "",
+      imageUrl: node.featuredMedia?.preview?.image?.url || "",
+      imageAlt: node.featuredMedia?.preview?.image?.altText || node.title,
+    }),
+  );
 }
 
 export async function getProductDetails(admin: AdminApi, id: string) {

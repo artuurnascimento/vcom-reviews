@@ -1,21 +1,23 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { useActionData, useFetcher, useLoaderData, useSubmit } from "@remix-run/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Badge,
   Banner,
   BlockStack,
+  Box,
   Button,
-  Card,
   Checkbox,
+  Divider,
   FormLayout,
   InlineGrid,
   InlineStack,
   Page,
   Select,
+  Tabs,
   Text,
   TextField,
-  Thumbnail,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import {
@@ -34,6 +36,12 @@ import {
 import type { ReviewPlacement } from "../lib/constants";
 import { createReview, getProductDetails, searchProducts } from "../lib/reviews.server";
 import { createShopifyFilesFromUrls } from "../lib/upload.server";
+import { AiReviewPreviewCard } from "../components/AiReviewPreviewCard";
+import {
+  ProductSearchPicker,
+  type ProductSearchResult,
+} from "../components/ProductSearchPicker";
+import { ProductHeroCard } from "../components/ProductHeroCard";
 import { StarRatingPicker } from "../components/StarRatingPicker";
 import { ReviewStars } from "../components/ReviewStars";
 
@@ -58,22 +66,19 @@ type GenerateSuccess = {
 };
 
 type GenerateError = { ok: false; error: string };
-
 type GenerateResult = GenerateSuccess | GenerateError;
 
 type ProductLoadResult =
   | { ok: true; product: ProductPreview | null }
   | { ok: false; error: string };
 
+type SearchProductsResult =
+  | { ok: true; results: ProductSearchResult[] }
+  | { ok: false; error: string };
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { admin } = await authenticate.admin(request);
-  const products = (await searchProducts(admin, "")) as Array<{
-    id: string;
-    title: string;
-    handle: string;
-  }>;
+  await authenticate.admin(request);
   return {
-    products,
     geminiConfigured: isGeminiConfigured(),
     geminiModel: process.env.GEMINI_MODEL || "gemini-2.0-flash",
   };
@@ -100,25 +105,28 @@ function parseGenerateInput(form: FormData) {
   };
 }
 
-async function resolveProductContext(
-  admin: Parameters<typeof getProductDetails>[0],
-  productId: string,
-) {
-  if (!productId) return null;
-  return getProductDetails(admin, productId);
-}
-
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
   const form = await request.formData();
   const intent = String(form.get("intent") || "generate");
+
+  if (intent === "searchProducts") {
+    const query = String(form.get("query") || "");
+    try {
+      const results = await searchProducts(admin, query, { first: 15 });
+      return json({ ok: true, results } satisfies SearchProductsResult);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Erro ao buscar produtos.";
+      return json({ ok: false, error: msg } satisfies SearchProductsResult);
+    }
+  }
 
   if (intent === "loadProduct") {
     const productId = String(form.get("productId") || "").trim();
     if (!productId) {
       return json({ ok: true, product: null } satisfies ProductLoadResult);
     }
-    const product = await resolveProductContext(admin, productId);
+    const product = await getProductDetails(admin, productId);
     return json({ ok: true, product } satisfies ProductLoadResult);
   }
 
@@ -193,16 +201,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (!payload.productId) {
     return json({
       ok: false,
-      error: "Selecione um produto Shopify para gerar avaliações com base nas informações e imagens.",
+      error: "Selecione um produto Shopify para gerar avaliações.",
     } satisfies GenerateResult);
   }
 
-  const product = await resolveProductContext(admin, payload.productId);
+  const product = await getProductDetails(admin, payload.productId);
   if (!product) {
     return json({ ok: false, error: "Produto não encontrado." } satisfies GenerateResult);
   }
 
-  const productTitle = product.title;
   const productDescription = [
     product.description,
     product.productType,
@@ -220,7 +227,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   if (payload.useProductImages && productImageUrls.length === 0) {
     return json({
       ok: false,
-      error: "Este produto não tem imagens. Adicione fotos no Shopify ou desmarque \"Usar imagens do produto\".",
+      error:
+        'Este produto não tem imagens. Adicione fotos no Shopify ou desmarque "Analisar imagens".',
     } satisfies GenerateResult);
   }
 
@@ -228,7 +236,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const reviews = await generateReviewsWithGemini({
       productType: payload.productType,
       customProductType: payload.customProductType,
-      productTitle,
+      productTitle: product.title,
       productDescription,
       productImageUrls,
       gender: payload.gender,
@@ -256,12 +264,24 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 };
 
+const TABS = [
+  { id: "product", content: "Produto" },
+  { id: "style", content: "Estilo" },
+  { id: "publish", content: "Publicação" },
+];
+
 export default function GenerateReviewsPage() {
-  const { products, geminiConfigured, geminiModel } = useLoaderData<typeof loader>();
+  const { geminiConfigured, geminiModel } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const generateFetcher = useFetcher<typeof action>();
   const productFetcher = useFetcher<typeof action>();
+  const searchFetcher = useFetcher<typeof action>();
   const saveSubmit = useSubmit();
+
+  const [selectedTab, setSelectedTab] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<ProductSearchResult[]>([]);
+  const [selectedProductTitle, setSelectedProductTitle] = useState("");
 
   const [productType, setProductType] = useState("moda");
   const [customProductType, setCustomProductType] = useState("");
@@ -296,6 +316,24 @@ export default function GenerateReviewsPage() {
   }, [generateResult]);
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      const fd = new FormData();
+      fd.set("intent", "searchProducts");
+      fd.set("query", searchQuery);
+      searchFetcher.submit(fd, { method: "post" });
+    }, 280);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const data = searchFetcher.data as SearchProductsResult | undefined;
+    if (data?.ok) {
+      setSearchResults(data.results);
+    }
+  }, [searchFetcher.data]);
+
+  useEffect(() => {
     if (!productId) {
       setProductPreview(null);
       return;
@@ -309,9 +347,10 @@ export default function GenerateReviewsPage() {
 
   useEffect(() => {
     const data = productFetcher.data as ProductLoadResult | undefined;
-    if (data?.ok) {
+    if (data?.ok && data.product) {
       setProductPreview(data.product);
-      if (data.product?.productType) {
+      setSelectedProductTitle(data.product.title);
+      if (data.product.productType) {
         const shopifyType = data.product.productType.toLowerCase();
         const match = AI_PRODUCT_TYPES.find(
           (t) => shopifyType.includes(t.value) || t.label.toLowerCase().includes(shopifyType),
@@ -320,8 +359,23 @@ export default function GenerateReviewsPage() {
           setProductType(match.value);
         }
       }
+    } else if (data?.ok && !data.product) {
+      setProductPreview(null);
     }
   }, [productFetcher.data]);
+
+  const handleSelectProduct = useCallback((product: ProductSearchResult) => {
+    setProductId(product.id);
+    setSelectedProductTitle(product.title);
+    setPreview([]);
+  }, []);
+
+  const handleClearProduct = useCallback(() => {
+    setProductId("");
+    setSelectedProductTitle("");
+    setProductPreview(null);
+    setPreview([]);
+  }, []);
 
   const buildFormData = useCallback(
     (intent: "generate" | "save") => {
@@ -377,14 +431,19 @@ export default function GenerateReviewsPage() {
     saveSubmit(buildFormData("save"), { method: "post" });
   }, [saveSubmit, buildFormData]);
 
-  const updatePreview = useCallback((index: number, field: keyof GeneratedAiReview, value: string) => {
-    setPreview((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
-    );
-  }, []);
+  const updatePreview = useCallback(
+    (index: number, field: keyof GeneratedAiReview, value: string) => {
+      setPreview((prev) =>
+        prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
+      );
+    },
+    [],
+  );
 
   const isGenerating = generateFetcher.state !== "idle";
-  const isLoadingProduct = productFetcher.state !== "idle";
+  const isLoadingProduct = productFetcher.state !== "idle" && Boolean(productId);
+  const isSearching = searchFetcher.state !== "idle";
+
   const generateError =
     generateResult && !generateResult.ok ? generateResult.error : null;
   const saveError =
@@ -393,18 +452,174 @@ export default function GenerateReviewsPage() {
       : null;
   const error = generateError || saveError;
 
+  const canGenerate = geminiConfigured && Boolean(productId);
+
+  const summaryBadges = useMemo(
+    () => [
+      `${count} avaliações`,
+      `${rating}★`,
+      AI_TONES.find((t) => t.value === tone)?.label || tone,
+      AI_LOCALES.find((l) => l.value === locale)?.label || locale,
+    ],
+    [count, rating, tone, locale],
+  );
+
+  const productTab = (
+    <BlockStack gap="400">
+      <ProductSearchPicker
+        selectedId={productId}
+        selectedTitle={selectedProductTitle}
+        results={searchResults}
+        loading={isSearching}
+        onQueryChange={setSearchQuery}
+        onSelect={handleSelectProduct}
+        onClear={handleClearProduct}
+      />
+      <ProductHeroCard
+        product={productPreview}
+        loading={isLoadingProduct}
+        onChangeProduct={handleClearProduct}
+      />
+      <Box padding="400" borderRadius="300" background="bg-surface" borderWidth="025" borderColor="border">
+        <BlockStack gap="300">
+          <Text as="h3" variant="headingSm">
+            Análise visual com IA
+          </Text>
+          <Checkbox
+            label="Analisar fotos do produto (Gemini Vision)"
+            checked={useProductImages}
+            onChange={setUseProductImages}
+            helpText="Até 3 imagens são enviadas para gerar textos com detalhes visuais."
+          />
+          <Checkbox
+            label="Anexar foto do produto em cada avaliação salva"
+            checked={attachProductImages}
+            onChange={setAttachProductImages}
+            disabled={!useProductImages}
+          />
+        </BlockStack>
+      </Box>
+    </BlockStack>
+  );
+
+  const styleTab = (
+    <BlockStack gap="400">
+      <InlineGrid columns={{ xs: 1, sm: 2 }} gap="400">
+        <Select
+          label="Tipo de produto"
+          options={[...AI_PRODUCT_TYPES]}
+          value={productType}
+          onChange={setProductType}
+        />
+        <Select label="Tom" options={[...AI_TONES]} value={tone} onChange={setTone} />
+        <Select label="Gênero" options={[...AI_GENDERS]} value={gender} onChange={setGender} />
+        <Select
+          label="Faixa etária"
+          options={[...AI_AGE_RANGES]}
+          value={ageRange}
+          onChange={setAgeRange}
+        />
+        <Select label="Idioma" options={[...AI_LOCALES]} value={locale} onChange={setLocale} />
+        <Select label="País" options={[...AI_COUNTRIES]} value={country} onChange={setCountry} />
+      </InlineGrid>
+      {productType === "outro" ? (
+        <TextField
+          label="Tipo personalizado"
+          value={customProductType}
+          onChange={setCustomProductType}
+          autoComplete="off"
+        />
+      ) : null}
+      <TextField
+        label="Cidade (opcional)"
+        value={city}
+        onChange={setCity}
+        placeholder="Ex.: São Paulo, Lisboa, Miami"
+        autoComplete="off"
+      />
+      <Box padding="400" borderRadius="300" background="bg-surface-secondary" borderWidth="025" borderColor="border">
+        <BlockStack gap="200">
+          <Text as="p" variant="bodyMd" fontWeight="semibold">
+            Nota das avaliações
+          </Text>
+          <StarRatingPicker value={rating} onChange={setRating} />
+        </BlockStack>
+      </Box>
+    </BlockStack>
+  );
+
+  const publishTab = (
+    <FormLayout>
+      <TextField
+        label="Quantidade de avaliações"
+        type="number"
+        value={count}
+        onChange={setCount}
+        min={1}
+        max={10}
+        autoComplete="off"
+        helpText="Máximo 10 por geração (limite da API gratuita)."
+      />
+      <Select
+        label="Onde exibir"
+        options={[
+          { label: "Página de produto", value: "product" },
+          { label: "Página inicial", value: "homepage" },
+        ]}
+        value={placement}
+        onChange={(v) => setPlacement(v as ReviewPlacement)}
+      />
+      <Checkbox
+        label="Salvar como pendente (revisar antes de publicar)"
+        checked={saveAsPending}
+        onChange={setSaveAsPending}
+      />
+      <Checkbox
+        label="Marcar como Verified Buyer"
+        checked={verifiedBuyer}
+        onChange={setVerifiedBuyer}
+        helpText="Desmarque para rascunhos gerados por IA."
+      />
+    </FormLayout>
+  );
+
   return (
     <Page
       title="Gerar avaliações com IA"
-      subtitle={`Gemini Flash (${geminiModel}) — usa título, descrição e fotos do produto`}
+      subtitle="Busque um produto, personalize o estilo e gere rascunhos prontos para revisar"
       backAction={{ url: "/app/reviews" }}
+      primaryAction={{
+        content: isGenerating ? "Gerando…" : "Gerar avaliações",
+        onAction: handleGenerate,
+        disabled: !canGenerate,
+        loading: isGenerating,
+      }}
+      secondaryActions={
+        preview.length > 0
+          ? [
+              {
+                content: `Salvar ${preview.length}`,
+                onAction: handleSave,
+              },
+            ]
+          : undefined
+      }
     >
       <BlockStack gap="500">
+        <InlineStack gap="200" wrap>
+          <Badge tone={geminiConfigured ? "success" : "warning"}>
+            {geminiConfigured ? `Gemini · ${geminiModel}` : "API key pendente"}
+          </Badge>
+          {productPreview ? <Badge tone="info">{productPreview.title}</Badge> : null}
+          {summaryBadges.map((label) => (
+            <Badge key={label}>{label}</Badge>
+          ))}
+        </InlineStack>
+
         {!geminiConfigured ? (
-          <Banner tone="warning" title="API key necessária">
+          <Banner tone="warning" title="Configure a API key">
             <p>
-              Adicione <strong>GEMINI_API_KEY</strong> no Railway (Variables) ou no{" "}
-              <code>.env</code> local. Obtenha a chave gratuita em{" "}
+              Adicione <strong>GEMINI_API_KEY</strong> no Railway. Chave gratuita em{" "}
               <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">
                 Google AI Studio
               </a>
@@ -422,196 +637,66 @@ export default function GenerateReviewsPage() {
         {generateResult?.ok && generateResult.usedImages ? (
           <Banner tone="success" title="Imagens analisadas">
             <p>
-              A IA analisou as fotos de <strong>{generateResult.productTitle}</strong> para
-              gerar textos mais específicos.
+              Fotos de <strong>{generateResult.productTitle}</strong> usadas para enriquecer os
+              textos.
             </p>
           </Banner>
         ) : null}
 
-        <InlineGrid columns={{ xs: 1, md: "1fr 1fr" }} gap="400">
+        <InlineGrid columns={{ xs: 1, lg: "5fr 7fr" }} gap="500">
           <BlockStack gap="400">
-            <Card>
-              <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">
-                  Produto
-                </Text>
-                <FormLayout>
-                  <Select
-                    label="Produto Shopify"
-                    options={[
-                      { label: "Selecione um produto…", value: "" },
-                      ...products.map((p) => ({ label: p.title, value: p.id })),
-                    ]}
-                    value={productId}
-                    onChange={setProductId}
-                    helpText="Obrigatório — a IA lê título, descrição e imagens do produto."
-                  />
-                  {productPreview ? (
-                    <BlockStack gap="200">
-                      <Text as="p" variant="bodySm" tone="subdued">
-                        {productPreview.productType || "Sem tipo"}
-                        {productPreview.vendor ? ` · ${productPreview.vendor}` : ""}
-                        {productPreview.tags.length
-                          ? ` · ${productPreview.tags.slice(0, 4).join(", ")}`
-                          : ""}
-                      </Text>
-                      {productPreview.description ? (
-                        <Text as="p" variant="bodySm">
-                          {productPreview.description.slice(0, 220)}
-                          {productPreview.description.length > 220 ? "…" : ""}
-                        </Text>
-                      ) : null}
-                      {productPreview.images.length > 0 ? (
-                        <InlineStack gap="200">
-                          {productPreview.images.slice(0, 4).map((img) => (
-                            <Thumbnail
-                              key={img.url}
-                              source={img.url}
-                              alt={img.altText || productPreview.title}
-                              size="large"
-                            />
-                          ))}
-                        </InlineStack>
-                      ) : (
-                        <Banner tone="warning">
-                          Este produto não tem imagens cadastradas.
-                        </Banner>
-                      )}
-                    </BlockStack>
-                  ) : isLoadingProduct && productId ? (
-                    <Text as="p" tone="subdued">
-                      Carregando produto…
-                    </Text>
-                  ) : null}
-                  <Checkbox
-                    label="Analisar imagens do produto com IA (visão)"
-                    checked={useProductImages}
-                    onChange={setUseProductImages}
-                    helpText="Gemini Flash vê até 3 fotos para mencionar cor, acabamento, embalagem etc."
-                  />
-                  <Checkbox
-                    label="Anexar foto do produto na avaliação salva"
-                    checked={attachProductImages}
-                    onChange={setAttachProductImages}
-                    disabled={!useProductImages}
-                  />
-                </FormLayout>
-              </BlockStack>
-            </Card>
-
-            <Card>
-              <BlockStack gap="400">
-                <Text as="h2" variant="headingMd">
-                  Persona e estilo
-                </Text>
-                <FormLayout>
-                  <Select
-                    label="Tipo de produto (contexto extra)"
-                    options={[...AI_PRODUCT_TYPES]}
-                    value={productType}
-                    onChange={setProductType}
-                  />
-                  {productType === "outro" ? (
-                    <TextField
-                      label="Tipo personalizado"
-                      value={customProductType}
-                      onChange={setCustomProductType}
-                      autoComplete="off"
-                    />
-                  ) : null}
-                  <Select
-                    label="Gênero do autor"
-                    options={[...AI_GENDERS]}
-                    value={gender}
-                    onChange={setGender}
-                  />
-                  <Select
-                    label="Faixa etária"
-                    options={[...AI_AGE_RANGES]}
-                    value={ageRange}
-                    onChange={setAgeRange}
-                  />
-                  <Select
-                    label="Tom"
-                    options={[...AI_TONES]}
-                    value={tone}
-                    onChange={setTone}
-                  />
-                  <Select
-                    label="Idioma"
-                    options={[...AI_LOCALES]}
-                    value={locale}
-                    onChange={setLocale}
-                  />
-                  <Select
-                    label="País"
-                    options={[...AI_COUNTRIES]}
-                    value={country}
-                    onChange={setCountry}
-                  />
-                  <TextField
-                    label="Cidade (opcional)"
-                    value={city}
-                    onChange={setCity}
-                    placeholder="Ex.: São Paulo, Lisboa, Miami"
-                    autoComplete="off"
-                  />
-                  <TextField
-                    label="Quantidade"
-                    type="number"
-                    value={count}
-                    onChange={setCount}
-                    min={1}
-                    max={10}
-                    autoComplete="off"
-                    helpText="Máximo 10 por geração."
-                  />
-                  <div>
-                    <Text as="p" variant="bodyMd">
-                      Nota
-                    </Text>
-                    <StarRatingPicker value={rating} onChange={setRating} />
-                  </div>
-                  <Select
-                    label="Onde exibir"
-                    options={[
-                      { label: "Página de produto", value: "product" },
-                      { label: "Página inicial", value: "homepage" },
-                    ]}
-                    value={placement}
-                    onChange={(v) => setPlacement(v as ReviewPlacement)}
-                  />
-                  <Checkbox
-                    label="Marcar como Verified Buyer"
-                    checked={verifiedBuyer}
-                    onChange={setVerifiedBuyer}
-                    helpText="Desmarque para rascunhos gerados por IA (recomendado)."
-                  />
-                  <Checkbox
-                    label="Salvar como pendente (revisar antes de publicar)"
-                    checked={saveAsPending}
-                    onChange={setSaveAsPending}
-                  />
-                </FormLayout>
+            <Box
+              padding="400"
+              borderRadius="300"
+              background="bg-surface"
+              borderWidth="025"
+              borderColor="border"
+              shadow="100"
+            >
+              <Tabs tabs={TABS} selected={selectedTab} onSelect={setSelectedTab}>
+                <Box paddingBlockStart="400">
+                  {selectedTab === 0 ? productTab : null}
+                  {selectedTab === 1 ? styleTab : null}
+                  {selectedTab === 2 ? publishTab : null}
+                </Box>
+              </Tabs>
+              <Divider />
+              <Box paddingBlockStart="400">
                 <Button
                   variant="primary"
+                  fullWidth
+                  size="large"
                   onClick={handleGenerate}
                   loading={isGenerating}
-                  disabled={!geminiConfigured || !productId}
+                  disabled={!canGenerate}
                 >
-                  Gerar com IA
+                  {isGenerating ? "Gerando com IA…" : "Gerar avaliações"}
                 </Button>
-              </BlockStack>
-            </Card>
+              </Box>
+            </Box>
           </BlockStack>
 
-          <BlockStack gap="400">
-            <Card>
-              <BlockStack gap="300">
+          <div style={{ position: "sticky", top: 16, alignSelf: "start" }}>
+            <Box
+              padding="400"
+              borderRadius="300"
+              background="bg-surface"
+              borderWidth="025"
+              borderColor="border"
+              shadow="200"
+            >
+              <BlockStack gap="400">
                 <InlineStack align="space-between" blockAlign="center">
-                  <Text as="h2" variant="headingMd">
-                    Preview ({preview.length})
-                  </Text>
+                  <BlockStack gap="050">
+                    <Text as="h2" variant="headingMd">
+                      Preview
+                    </Text>
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      {preview.length
+                        ? `${preview.length} rascunho(s) — edite antes de salvar`
+                        : "Os rascunhos aparecem aqui após gerar"}
+                    </Text>
+                  </BlockStack>
                   {preview.length > 0 ? (
                     <InlineStack gap="200" blockAlign="center">
                       <ReviewStars rating={rating} size={16} />
@@ -623,71 +708,53 @@ export default function GenerateReviewsPage() {
                 </InlineStack>
 
                 {preview.length === 0 ? (
-                  <Text as="p" tone="subdued">
-                    Selecione um produto com fotos, configure persona/tom e clique em
-                    &quot;Gerar com IA&quot;. Edite os textos antes de salvar.
-                  </Text>
+                  <Box
+                    padding="800"
+                    borderRadius="300"
+                    background="bg-surface-secondary"
+                    borderWidth="025"
+                    borderColor="border"
+                  >
+                    <BlockStack gap="200" inlineAlign="center">
+                      <Text as="p" variant="headingSm" alignment="center">
+                        Nenhum rascunho ainda
+                      </Text>
+                      <Text as="p" variant="bodySm" tone="subdued" alignment="center">
+                        1. Busque e selecione um produto
+                        <br />
+                        2. Ajuste tom, persona e quantidade
+                        <br />
+                        3. Clique em Gerar avaliações
+                      </Text>
+                    </BlockStack>
+                  </Box>
                 ) : (
-                  preview.map((review, index) => (
-                    <Card key={`preview-${index}`}>
-                      <BlockStack gap="200">
-                        {review.imageUrl ? (
-                          <InlineStack gap="200" blockAlign="center">
-                            <Thumbnail
-                              source={review.imageUrl}
-                              alt="Imagem do produto"
-                              size="large"
-                            />
-                            <Text as="span" variant="bodySm" tone="subdued">
-                              Foto anexada na vitrine
-                            </Text>
-                          </InlineStack>
-                        ) : null}
-                        <TextField
-                          label="Título"
-                          value={review.title}
-                          onChange={(v) => updatePreview(index, "title", v)}
-                          autoComplete="off"
-                        />
-                        <TextField
-                          label="Texto"
-                          value={review.body}
-                          onChange={(v) => updatePreview(index, "body", v)}
-                          multiline={3}
-                          autoComplete="off"
-                        />
-                        <InlineGrid columns={2} gap="200">
-                          <TextField
-                            label="Autor"
-                            value={review.author}
-                            onChange={(v) => updatePreview(index, "author", v)}
-                            autoComplete="off"
-                          />
-                          <TextField
-                            label="Quando"
-                            value={review.time}
-                            onChange={(v) => updatePreview(index, "time", v)}
-                            autoComplete="off"
-                          />
-                        </InlineGrid>
-                      </BlockStack>
-                    </Card>
-                  ))
+                  <BlockStack gap="300">
+                    {preview.map((review, index) => (
+                      <AiReviewPreviewCard
+                        key={`preview-${index}`}
+                        review={review}
+                        index={index}
+                        rating={rating}
+                        onChange={(field, value) => updatePreview(index, field, value)}
+                      />
+                    ))}
+                  </BlockStack>
                 )}
 
                 {preview.length > 0 ? (
                   <InlineStack gap="200">
-                    <Button variant="primary" onClick={handleSave}>
+                    <Button variant="primary" onClick={handleSave} fullWidth>
                       {`Salvar ${preview.length} avaliação(ões)`}
                     </Button>
-                    <Button onClick={handleGenerate} loading={isGenerating}>
+                    <Button onClick={handleGenerate} loading={isGenerating} fullWidth>
                       Regenerar
                     </Button>
                   </InlineStack>
                 ) : null}
               </BlockStack>
-            </Card>
-          </BlockStack>
+            </Box>
+          </div>
         </InlineGrid>
       </BlockStack>
     </Page>
