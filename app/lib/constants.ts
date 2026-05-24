@@ -1,5 +1,7 @@
-/** App-owned metaobject — prefixo $app: obrigatório para access.admin na definição */
-export const REVIEW_METAOBJECT_TYPE = "$app:review";
+/** Merchant-owned — legível na vitrine via shop.metaobjects.review */
+export const REVIEW_METAOBJECT_TYPE = "review";
+/** Legado app-owned (migrado automaticamente para review) */
+export const LEGACY_REVIEW_METAOBJECT_TYPE = "$app:review";
 
 export type ReviewPlacement = "homepage" | "product";
 export type ReviewStatus = "approved" | "pending" | "rejected";

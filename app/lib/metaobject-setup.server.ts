@@ -4,7 +4,10 @@ type AdminApi = {
     options?: { variables?: Record<string, unknown> },
   ) => Promise<Response>;
 };
-import { REVIEW_METAOBJECT_TYPE } from "./constants";
+import {
+  REVIEW_METAOBJECT_TYPE,
+  LEGACY_REVIEW_METAOBJECT_TYPE,
+} from "./constants";
 
 const REVIEW_FIELD_DEFINITIONS = [
   { key: "rating", name: "Rating", type: "number_decimal", required: true },
@@ -52,7 +55,6 @@ export async function ensureReviewInfrastructure(admin: AdminApi) {
             name: "Review",
             type: REVIEW_METAOBJECT_TYPE,
             access: {
-              admin: "MERCHANT_READ_WRITE",
               storefront: "PUBLIC_READ",
             },
             fieldDefinitions: REVIEW_FIELD_DEFINITIONS.map((f) => ({
@@ -72,7 +74,73 @@ export async function ensureReviewInfrastructure(admin: AdminApi) {
     }
   }
 
+  if (errors.length === 0) {
+    try {
+      await migrateLegacyAppReviews(admin);
+    } catch (error) {
+      console.error("[vcom-reviews] legacy migration error", error);
+    }
+  }
+
   return { ok: errors.length === 0, errors };
+}
+
+async function fetchMetaobjectNodes(admin: AdminApi, type: string) {
+  const response = await admin.graphql(
+    `#graphql
+    query LegacyReviews($type: String!) {
+      metaobjects(type: $type, first: 250) {
+        nodes {
+          handle
+          fields { key value }
+        }
+      }
+    }`,
+    { variables: { type } },
+  );
+  const json = await response.json();
+  return (json.data?.metaobjects?.nodes || []) as Array<{
+    handle: string;
+    fields: Array<{ key: string; value: string | null }>;
+  }>;
+}
+
+async function migrateLegacyAppReviews(admin: AdminApi) {
+  const legacy = await fetchMetaobjectNodes(admin, LEGACY_REVIEW_METAOBJECT_TYPE);
+  if (!legacy.length) return;
+
+  const current = await fetchMetaobjectNodes(admin, REVIEW_METAOBJECT_TYPE);
+  const handles = new Set(current.map((node) => node.handle));
+
+  for (const node of legacy) {
+    if (handles.has(node.handle)) continue;
+
+    const create = await admin.graphql(
+      `#graphql
+      mutation MigrateReview($metaobject: MetaobjectCreateInput!) {
+        metaobjectCreate(metaobject: $metaobject) {
+          metaobject { id }
+          userErrors { field message }
+        }
+      }`,
+      {
+        variables: {
+          metaobject: {
+            type: REVIEW_METAOBJECT_TYPE,
+            handle: node.handle,
+            fields: node.fields
+              .filter((f) => f.value != null && f.value !== "")
+              .map((f) => ({ key: f.key, value: f.value as string })),
+          },
+        },
+      },
+    );
+    const createJson = await create.json();
+    const userErrors = createJson.data?.metaobjectCreate?.userErrors || [];
+    if (userErrors.length) {
+      console.error("[vcom-reviews] migrate review failed", node.handle, userErrors);
+    }
+  }
 }
 
 /** Garante que o tipo review existe antes de criar/listar avaliações */
@@ -85,6 +153,11 @@ export async function ensureReviewDefinitionReady(admin: AdminApi) {
   );
   const checkJson = await check.json();
   if (checkJson.data?.metaobjectDefinitionByType?.id) {
+    try {
+      await migrateLegacyAppReviews(admin);
+    } catch (error) {
+      console.error("[vcom-reviews] legacy migration error", error);
+    }
     return { ok: true, errors: [] as string[] };
   }
   return ensureReviewInfrastructure(admin);

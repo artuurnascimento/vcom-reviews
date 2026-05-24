@@ -5,10 +5,14 @@
 {%- assign bid = block.id -%}
 {%- assign ds = block.settings.data_source | default: 'auto' -%}
 {%- assign all_reviews = nil -%}
-{%- if shop.metaobjects["$app:review"] -%}
-  {%- assign all_reviews = shop.metaobjects["$app:review"].values -%}
-{%- elsif shop.metaobjects.review -%}
+{%- if shop.metaobjects.review -%}
   {%- assign all_reviews = shop.metaobjects.review.values -%}
+{%- elsif shop.metaobjects["$app:review"] -%}
+  {%- assign all_reviews = shop.metaobjects["$app:review"].values -%}
+{%- endif -%}
+{%- assign use_proxy_reviews = false -%}
+{%- if all_reviews == blank -%}
+  {%- assign use_proxy_reviews = true -%}
 {%- endif -%}
 
 {%- assign reviews_context = 'homepage' -%}
@@ -86,7 +90,7 @@
 
       {%- if has_reviews -%}
         <style>#vcom-reviews-{{ bid }} .product-reviews__wrap{display:grid;grid-auto-flow:column;grid-auto-columns:85%;overflow-x:auto;scroll-snap-type:x mandatory;gap:16px;padding:8px 0;-webkit-overflow-scrolling:touch;scrollbar-width:thin}#vcom-reviews-{{ bid }} .product-reviews__card{scroll-snap-align:start;border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:20px 24px;background:#fff;text-align:left}#vcom-reviews-{{ bid }} .product-reviews__stars{display:flex;gap:6px;margin-bottom:8px}#vcom-reviews-{{ bid }} .product-reviews__stars svg{width:24px;height:24px;flex:0 0 auto}#vcom-reviews-{{ bid }} .product-reviews__verified{display:flex;align-items:center;gap:6px;margin:6px 0 10px;font-size:12px;font-weight:700;color:{{ verified_color }}}#vcom-reviews-{{ bid }} .product-reviews__title{margin:0 0 8px;font-size:16px;line-height:1.3;font-weight:700;color:#111}#vcom-reviews-{{ bid }} .product-reviews__text{margin:0 0 10px;font-size:14px;line-height:1.5;color:#333}#vcom-reviews-{{ bid }} .product-reviews__images{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}#vcom-reviews-{{ bid }} .product-reviews__image-link{display:block;border-radius:8px;overflow:hidden;border:1px solid rgba(0,0,0,.08);cursor:pointer;background:none;padding:0;margin:0;font:inherit;text-align:left}#vcom-reviews-{{ bid }} .product-reviews__image{width:80px;height:80px;object-fit:cover;display:block;pointer-events:none}#vcom-reviews-{{ bid }} .product-reviews__image-more{width:80px;height:80px;min-width:80px;min-height:80px;border-radius:8px;border:1px solid rgba(0,0,0,.08);background:rgba(0,0,0,.06);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#555;transition:background .2s,color .2s}#vcom-reviews-{{ bid }} .product-reviews__image-more:hover{background:rgba(0,0,0,.1);color:#111}#vcom-reviews-{{ bid }} .product-reviews__image-link--hidden{display:none}#vcom-reviews-{{ bid }} .product-reviews__images.is-expanded .product-reviews__image-link--hidden{display:block}#vcom-reviews-{{ bid }} .product-reviews__images.is-expanded .product-reviews__image-see-more{display:none!important}#vcom-reviews-{{ bid }} .product-reviews__images.is-expanded .product-reviews__image-see-less{display:inline-block!important}#vcom-reviews-{{ bid }} .product-reviews__image-see-less{display:none;width:100%}#vcom-reviews-{{ bid }} .product-reviews__image-see-more:hover,#vcom-reviews-{{ bid }} .product-reviews__image-see-less:hover{background:rgba(0,0,0,.1);color:#111}#vcom-reviews-{{ bid }} .product-reviews__text-wrap{margin:0 0 10px}#vcom-reviews-{{ bid }} .product-reviews__text-more,#vcom-reviews-{{ bid }} .product-reviews__text-less{background:none;border:none;padding:0;font-size:13px;font-weight:600;color:{{ block.settings.stars_color | default: '#1d8a42' }};cursor:pointer;margin-top:4px;text-decoration:underline}#vcom-reviews-{{ bid }} .product-reviews__text-more:hover,#vcom-reviews-{{ bid }} .product-reviews__text-less:hover{opacity:.85}#vcom-reviews-{{ bid }} .product-reviews__image-modal{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:24px;opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s}#vcom-reviews-{{ bid }} .product-reviews__image-modal.is-open{opacity:1;visibility:visible}#vcom-reviews-{{ bid }} .product-reviews__image-modal-inner{position:relative;max-width:90vw;max-height:90vh}#vcom-reviews-{{ bid }} .product-reviews__image-modal img{max-width:100%;max-height:85vh;width:auto;height:auto;object-contain;display:block;border-radius:8px}#vcom-reviews-{{ bid }} .product-reviews__image-modal-close{position:absolute;top:-44px;right:0;width:36px;height:36px;border:none;background:rgba(255,255,255,.2);color:#fff;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:24px;line-height:1;padding:0;transition:background .2s}#vcom-reviews-{{ bid }} .product-reviews__image-modal-close:hover{background:rgba(255,255,255,.35)}#vcom-reviews-{{ bid }} .product-reviews__meta{font-size:12px;color:#888}@media (min-width:992px){#vcom-reviews-{{ bid }} .product-reviews__wrap{display:grid;grid-template-columns:repeat(3,1fr);overflow:visible;scroll-snap-type:none;grid-auto-flow:initial;grid-auto-columns:initial}}</style>
-        <div class="product-reviews__wrap" id="vcom-reviews-grid-{{ block.id }}">
+        <div class="product-reviews__wrap" id="vcom-reviews-grid-{{ block.id }}" data-proxy-url="/apps/vcom-reviews/reviews?placement={{ submit_placement }}&product_id={{ submit_product_id | replace: 'gid://shopify/Product/', '' }}">
           
           {%- assign approved_index = 0 -%}
           {%- for review in all_reviews -%}
@@ -231,11 +235,71 @@
           </script>
         {%- endif -%}
       {%- else -%}
+        <style>#vcom-reviews-{{ bid }} .product-reviews__wrap{display:grid;grid-auto-flow:column;grid-auto-columns:85%;overflow-x:auto;scroll-snap-type:x mandatory;gap:16px;padding:8px 0}#vcom-reviews-{{ bid }} .product-reviews__card{scroll-snap-align:start;border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:20px 24px;background:#fff;text-align:left}#vcom-reviews-{{ bid }} .product-reviews__stars{display:flex;gap:6px;margin-bottom:8px}#vcom-reviews-{{ bid }} .product-reviews__stars svg{width:24px;height:24px}#vcom-reviews-{{ bid }} .product-reviews__verified{display:flex;align-items:center;gap:6px;margin:6px 0 10px;font-size:12px;font-weight:700;color:{{ verified_color }}}#vcom-reviews-{{ bid }} .product-reviews__title{margin:0 0 8px;font-size:16px;font-weight:700;color:#111}#vcom-reviews-{{ bid }} .product-reviews__text{margin:0 0 10px;font-size:14px;line-height:1.5;color:#333}#vcom-reviews-{{ bid }} .product-reviews__meta{font-size:12px;color:#888}@media (min-width:992px){#vcom-reviews-{{ bid }} .product-reviews__wrap{display:grid;grid-template-columns:repeat(3,1fr);overflow:visible;grid-auto-flow:initial;grid-auto-columns:initial}}</style>
+        <div class="product-reviews__wrap" id="vcom-reviews-grid-{{ block.id }}" data-proxy-url="/apps/vcom-reviews/reviews?placement={{ submit_placement }}&product_id={{ submit_product_id | replace: 'gid://shopify/Product/', '' }}"></div>
         {%- if block.settings.show_empty_message -%}
-          <p class="product-reviews__empty" style="text-align:center;font-size:14px;color:#666;margin:0;">
-            {{ block.settings.empty_message | default: 'Adicione avaliações ao produto via metafield custom.reviews.' }}
+          <p class="product-reviews__empty vcom-reviews-proxy-empty" style="text-align:center;font-size:14px;color:#666;margin:0;">
+            {{ block.settings.empty_message | default: 'Adicione avaliações no app VCOM Reviews.' }}
           </p>
         {%- endif -%}
+      {%- endif -%}
+
+      {%- if use_proxy_reviews or has_reviews == false -%}
+        <script>
+          (function(){
+            var sid='{{ block.id }}';
+            var bid='{{ bid }}';
+            var grid=document.getElementById('vcom-reviews-grid-'+sid);
+            if(!grid)return;
+            var url=grid.getAttribute('data-proxy-url');
+            if(!url)return;
+            if(grid.querySelectorAll('.product-reviews__card').length>0)return;
+            var starColor='{{ star_color }}';
+            var starEmpty='{{ star_empty_color }}';
+            var verifiedColor='{{ verified_color }}';
+            var showVerified={{ block.settings.show_verified | default: true }};
+            var verifiedLabel={{ block.settings.verified_label | default: 'Verified Buyer' | json }};
+            var titleMax={{ title_max_chars }};
+            var textMax={{ text_max_chars }};
+            function starSvg(stars,i){
+              var idx=i+1;var min=idx-1;
+              if(stars>=idx)return '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="'+starColor+'"/><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="#fff"/></svg>';
+              if(stars>min){var w=Math.round((stars-min)*32);return '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="'+starEmpty+'"/><rect width="'+w+'" height="32" fill="'+starColor+'"/><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="#fff"/></svg>';}
+              return '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="'+starEmpty+'"/><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="#fff"/></svg>';
+            }
+            function esc(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+            fetch(url,{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(data){
+              if(!data||!data.ok||!data.reviews||!data.reviews.length)return;
+              var empty=document.querySelector('#vcom-reviews-'+bid+' .vcom-reviews-proxy-empty');
+              if(empty)empty.style.display='none';
+              var html='';
+              data.reviews.forEach(function(rv){
+                var stars=parseFloat(rv.rating)||5;
+                var starsHtml='';
+                for(var i=0;i<5;i++)starsHtml+=starSvg(stars,i);
+                var title=rv.title||'';
+                var body=rv.body||'';
+                var bodyShow=body.length>textMax?body.slice(0,textMax)+'...':body;
+                html+='<article class="product-reviews__card"><div class="product-reviews__stars" aria-hidden="true">'+starsHtml+'</div>';
+                if(showVerified&&rv.verified_buyer){html+='<div class="product-reviews__verified"><span>'+esc(verifiedLabel)+'</span></div>';}
+                if(title)html+='<h3 class="product-reviews__title">'+esc(title.length>titleMax?title.slice(0,titleMax)+'...':title)+'</h3>';
+                if(body)html+='<p class="product-reviews__text">'+esc(bodyShow)+'</p>';
+                html+='<div class="product-reviews__meta">';
+                if(rv.author)html+='<span>'+esc(rv.author)+'</span>';
+                if(rv.author&&rv.time)html+='<span> - </span>';
+                if(rv.time)html+='<span>'+esc(rv.time)+'</span>';
+                html+='</div></article>';
+              });
+              grid.innerHTML=html;
+              var footer=document.querySelector('#vcom-reviews-'+bid+' .product-reviews__footer');
+              if(footer&&data.count>0){
+                var strongs=footer.querySelectorAll('strong');
+                if(strongs[0])strongs[0].textContent=String(data.avg);
+                if(strongs[1])strongs[1].textContent=data.count+(data.count>=1000?'+':'')+' customers';
+              }
+            }).catch(function(){});
+          })();
+        </script>
       {%- endif -%}
 
       {%- comment -%} Schema aggregateRating para SEO {%- endcomment -%}
@@ -245,7 +309,7 @@
 
       {%- comment -%} Rodapé: calculado ou fallback {%- endcomment -%}
       {%- if block.settings.footer_show -%}
-        <p class="product-reviews__footer" style="margin-top:16px;font-size:14px;color:{{ block.settings.footer_text_color | default: '#000' }};">
+        <p class="product-reviews__footer" id="vcom-reviews-footer-{{ block.id }}" style="margin-top:16px;font-size:14px;color:{{ block.settings.footer_text_color | default: '#000' }};">
           {{ block.settings.footer_prefix | default: 'Rated' }}
           <strong>{%- if has_reviews -%}{{ rating_avg | round: 1 }}{%- else -%}{{ block.settings.footer_rating | default: '4.8' }}{%- endif -%}</strong>
           {{ block.settings.footer_middle | default: '/ 5 based on' }}

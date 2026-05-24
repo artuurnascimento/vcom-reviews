@@ -6,6 +6,7 @@ type AdminApi = {
 };
 import {
   REVIEW_METAOBJECT_TYPE,
+  LEGACY_REVIEW_METAOBJECT_TYPE,
   type ReviewFormData,
   type ReviewPlacement,
   type ReviewRecord,
@@ -53,8 +54,9 @@ function parseMetaobjectNode(node: {
   };
 }
 
-export async function listReviews(
+async function listReviewsByType(
   admin: AdminApi,
+  type: string,
   { first = 50, after }: { first?: number; after?: string } = {},
 ) {
   const response = await admin.graphql(
@@ -73,7 +75,7 @@ export async function listReviews(
       }
     }`,
     {
-      variables: { type: REVIEW_METAOBJECT_TYPE, first, after: after ?? null },
+      variables: { type, first, after: after ?? null },
     },
   );
   const json = await response.json();
@@ -83,6 +85,28 @@ export async function listReviews(
       parseMetaobjectNode(e.node),
     ),
     pageInfo: json.data?.metaobjects?.pageInfo,
+  };
+}
+
+export async function listReviews(
+  admin: AdminApi,
+  { first = 50, after }: { first?: number; after?: string } = {},
+) {
+  const [primary, legacy] = await Promise.all([
+    listReviewsByType(admin, REVIEW_METAOBJECT_TYPE, { first, after }),
+    listReviewsByType(admin, LEGACY_REVIEW_METAOBJECT_TYPE, { first, after }),
+  ]);
+
+  const seen = new Set<string>();
+  const reviews = [...primary.reviews, ...legacy.reviews].filter((review) => {
+    if (seen.has(review.handle)) return false;
+    seen.add(review.handle);
+    return true;
+  });
+
+  return {
+    reviews,
+    pageInfo: primary.pageInfo,
   };
 }
 
