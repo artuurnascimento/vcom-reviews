@@ -147,14 +147,9 @@ export default function AppearancePage() {
         {actionData ? (
           actionData.ok ? (
             <BlockStack gap="300">
-              <Banner tone="success" title="Configurações salvas">
-                As alterações aparecem na loja em alguns segundos.
+              <Banner tone="success" title="Alterações salvas com sucesso">
+                Suas configurações já estão sendo aplicadas na loja.
               </Banner>
-              {actionData.themeSync?.updated ? (
-                <Banner tone="success" title="Homepage sincronizada">
-                  templates/index.json atualizado automaticamente.
-                </Banner>
-              ) : null}
               {actionData.themeSync && !actionData.themeSync.ok ? (
                 <Banner
                   tone="warning"
