@@ -10,9 +10,52 @@ import {
   AI_TONES,
 } from "./ai-review-options";
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+/** Modelos com cota no plano gratuito (2.0-flash costuma ter limit: 0). */
+const GEMINI_MODEL_FALLBACKS = [
+  "gemini-2.5-flash",
+  "gemini-2.5-flash-lite",
+  "gemini-2.0-flash",
+] as const;
+
 const MAX_REVIEWS_PER_REQUEST = 10;
 const MAX_IMAGES_FOR_VISION = 3;
+
+export function getGeminiModelCandidates(): string[] {
+  const preferred = process.env.GEMINI_MODEL?.trim() || GEMINI_MODEL_FALLBACKS[0];
+  return [preferred, ...GEMINI_MODEL_FALLBACKS.filter((m) => m !== preferred)];
+}
+
+export function getDefaultGeminiModel(): string {
+  return getGeminiModelCandidates()[0];
+}
+
+function isGeminiQuotaError(message: string): boolean {
+  return /quota exceeded|limit:\s*0|RESOURCE_EXHAUSTED|rate.?limit/i.test(message);
+}
+
+export function formatGeminiErrorMessage(message: string): string {
+  const retryMatch = message.match(/retry in ([\d.]+)s/i);
+  const retryHint = retryMatch
+    ? ` Aguarde ~${Math.ceil(parseFloat(retryMatch[1]))} segundos e tente de novo.`
+    : "";
+
+  if (/limit:\s*0/i.test(message)) {
+    return (
+      `Este modelo Gemini não tem cota no plano gratuito da sua chave (limite 0). ` +
+      `No Railway, use GEMINI_MODEL=gemini-2.5-flash ou ative faturamento em ` +
+      `https://aistudio.google.com — o app tenta modelos alternativos automaticamente.${retryHint}`
+    );
+  }
+
+  if (isGeminiQuotaError(message)) {
+    return (
+      `Limite da API Gemini atingido (plano gratuito).${retryHint} ` +
+      `Consulte https://ai.dev/rate-limit ou reduza a quantidade de avaliações por vez.`
+    );
+  }
+
+  return message;
+}
 
 type GeminiInlinePart = {
   inlineData: { mimeType: string; data: string };
@@ -223,23 +266,19 @@ export function isGeminiConfigured(): boolean {
   return Boolean(process.env.GEMINI_API_KEY?.trim());
 }
 
-export async function generateReviewsWithGemini(
-  input: AiReviewGenerateInput,
-): Promise<GeneratedAiReview[]> {
-  const count = Math.min(Math.max(1, input.count), MAX_REVIEWS_PER_REQUEST);
-  const payload = { ...input, count };
-  const targetRatings = distributeRatings(count, input.ratingMin, input.ratingMax);
-  const imageUrls = (input.productImageUrls || []).filter(Boolean);
-  const visionParts = await loadVisionParts(imageUrls);
-  const hasImages = visionParts.length > 0;
+type GeminiResponseJson = {
+  error?: { message?: string };
+  candidates?: Array<{
+    content?: { parts?: Array<{ text?: string }> };
+  }>;
+};
 
-  const apiKey = getApiKey();
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`;
-
-  const parts: Array<GeminiTextPart | GeminiInlinePart> = [
-    ...visionParts,
-    { text: buildPrompt(payload, hasImages, targetRatings) },
-  ];
+async function callGeminiGenerateContent(
+  model: string,
+  apiKey: string,
+  parts: Array<GeminiTextPart | GeminiInlinePart>,
+): Promise<GeminiResponseJson> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
   const response = await fetch(url, {
     method: "POST",
@@ -274,38 +313,71 @@ export async function generateReviewsWithGemini(
     }),
   });
 
-  const json = (await response.json()) as {
-    error?: { message?: string };
-    candidates?: Array<{
-      content?: { parts?: Array<{ text?: string }> };
-    }>;
-  };
+  const json = (await response.json()) as GeminiResponseJson;
 
   if (!response.ok) {
     const msg =
       json.error?.message ||
-      `Erro na API Gemini (${response.status}). Verifique a chave e o modelo.`;
+      `Erro na API Gemini (${response.status}) com modelo ${model}.`;
     throw new Error(msg);
   }
 
-  const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) {
-    throw new Error("Resposta vazia da IA. Tente reduzir a quantidade ou alterar o tom.");
+  return json;
+}
+
+export async function generateReviewsWithGemini(
+  input: AiReviewGenerateInput,
+): Promise<GeneratedAiReview[]> {
+  const count = Math.min(Math.max(1, input.count), MAX_REVIEWS_PER_REQUEST);
+  const payload = { ...input, count };
+  const targetRatings = distributeRatings(count, input.ratingMin, input.ratingMax);
+  const imageUrls = (input.productImageUrls || []).filter(Boolean);
+  const visionParts = await loadVisionParts(imageUrls);
+  const hasImages = visionParts.length > 0;
+
+  const apiKey = getApiKey();
+  const parts: Array<GeminiTextPart | GeminiInlinePart> = [
+    ...visionParts,
+    { text: buildPrompt(payload, hasImages, targetRatings) },
+  ];
+
+  const models = getGeminiModelCandidates();
+  const quotaErrors: string[] = [];
+
+  for (const model of models) {
+    try {
+      const json = await callGeminiGenerateContent(model, apiKey, parts);
+      const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) {
+        throw new Error("Resposta vazia da IA. Tente reduzir a quantidade ou alterar o tom.");
+      }
+
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        throw new Error("Não foi possível interpretar a resposta da IA.");
+      }
+
+      const reviews = parseGeneratedReviews(
+        parsed,
+        count,
+        targetRatings,
+        input.ratingMin,
+        input.ratingMax,
+      );
+      return assignProductImages(reviews, imageUrls);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (isGeminiQuotaError(msg)) {
+        quotaErrors.push(`${model}: ${msg}`);
+        console.warn(`[vcom-reviews] Gemini quota on ${model}, trying next model…`);
+        continue;
+      }
+      throw new Error(formatGeminiErrorMessage(msg));
+    }
   }
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    throw new Error("Não foi possível interpretar a resposta da IA.");
-  }
-
-  const reviews = parseGeneratedReviews(
-    parsed,
-    count,
-    targetRatings,
-    input.ratingMin,
-    input.ratingMax,
-  );
-  return assignProductImages(reviews, imageUrls);
+  const last = quotaErrors[quotaErrors.length - 1] || "Cota esgotada.";
+  throw new Error(formatGeminiErrorMessage(last));
 }

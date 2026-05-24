@@ -7,7 +7,9 @@ import {
   type GeneratedAiReview,
 } from "./ai-review-options";
 import {
+  formatGeminiErrorMessage,
   generateReviewsWithGemini,
+  getDefaultGeminiModel,
   isGeminiConfigured,
 } from "./ai-reviews.server";
 import type { ReviewPlacement } from "./constants";
@@ -64,7 +66,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     return json({
       geminiConfigured: isGeminiConfigured(),
-      geminiModel: process.env.GEMINI_MODEL || "gemini-2.0-flash",
+      geminiModel: getDefaultGeminiModel(),
       shopName: shopJson.data?.shop?.name || "Sua loja",
     } satisfies GenerateLoaderData);
   } catch (error) {
@@ -72,7 +74,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     console.error("[vcom-reviews] generate loader", error);
     return json({
       geminiConfigured: isGeminiConfigured(),
-      geminiModel: process.env.GEMINI_MODEL || "gemini-2.0-flash",
+      geminiModel: getDefaultGeminiModel(),
       shopName: "Sua loja",
       loaderError:
         error instanceof Error ? error.message : "Não foi possível carregar a página.",
@@ -268,7 +270,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   } catch (error) {
     if (error instanceof Response) throw error;
     console.error("[vcom-reviews] generate action", error);
-    const msg = error instanceof Error ? error.message : "Erro ao processar o pedido.";
-    return json({ ok: false, error: msg } satisfies GenerateResult);
+    const raw = error instanceof Error ? error.message : "Erro ao processar o pedido.";
+    return json({
+      ok: false,
+      error: formatGeminiErrorMessage(raw),
+    } satisfies GenerateResult);
   }
 };
