@@ -45,7 +45,14 @@ function parseGenerateInput(form: FormData) {
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const { admin } = await authenticate.admin(request);
-    const shopRes = await admin.graphql(`#graphql query { shop { name } }`);
+    const shopRes = await admin.graphql(
+      `#graphql
+      query GeneratePageShop {
+        shop {
+          name
+        }
+      }`,
+    );
     const shopJson = (await shopRes.json()) as {
       data?: { shop?: { name?: string } };
       errors?: Array<{ message: string }>;
@@ -213,7 +220,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       } satisfies GenerateResult);
     }
 
-    const shopRes = await admin.graphql(`#graphql query { shop { name } }`);
+    const shopRes = await admin.graphql(
+      `#graphql
+      query GeneratePageShop {
+        shop {
+          name
+        }
+      }`,
+    );
     const shopJson = (await shopRes.json()) as { data?: { shop?: { name?: string } } };
     const shopName = shopJson.data?.shop?.name || "Sua loja";
 

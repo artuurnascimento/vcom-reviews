@@ -82,7 +82,14 @@ async function writeShopMetafieldSettings(
   admin: AdminApi,
   settings: StorefrontSettings,
 ): Promise<string[]> {
-  const shopRes = await admin.graphql(`#graphql query { shop { id } }`);
+  const shopRes = await admin.graphql(
+    `#graphql
+    query ShopIdForSettings {
+      shop {
+        id
+      }
+    }`,
+  );
   const shopJson = await shopRes.json();
   const ownerId = shopJson.data?.shop?.id;
   if (!ownerId) return ["Loja não encontrada."];

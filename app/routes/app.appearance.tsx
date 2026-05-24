@@ -40,7 +40,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const raw = await getStorefrontSettings(admin);
     const settings = coerceStorefrontSettings(raw);
-    const shopRes = await admin.graphql(`#graphql query { shop { name } }`);
+    const shopRes = await admin.graphql(
+      `#graphql
+      query AppearanceShop {
+        shop {
+          name
+        }
+      }`,
+    );
     const shopJson = await shopRes.json();
     const shopName = shopJson.data?.shop?.name ?? "Sua loja";
     return {
