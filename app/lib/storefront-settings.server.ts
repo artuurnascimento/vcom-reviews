@@ -4,6 +4,8 @@ type AdminApi = {
     options?: { variables?: Record<string, unknown> },
   ) => Promise<Response>;
 };
+import fs from "node:fs";
+import path from "node:path";
 
 export const STOREFRONT_METAFIELD_NAMESPACE = "vcom_reviews";
 export const STOREFRONT_METAFIELD_KEY = "storefront_settings";
@@ -116,7 +118,39 @@ function mergeSettings(raw: Partial<StorefrontSettings> | null | undefined): Sto
   return { ...DEFAULT_STOREFRONT_SETTINGS, ...(raw || {}) };
 }
 
-export async function getStorefrontSettings(admin: AdminApi): Promise<StorefrontSettings> {
+const SETTINGS_DIR = path.join(process.cwd(), "data", "storefront-settings");
+
+function settingsFilePath(shop: string) {
+  return path.join(SETTINGS_DIR, `${shop.replace(/[^a-z0-9.-]/gi, "_")}.json`);
+}
+
+async function getShopDomain(admin: AdminApi): Promise<string | null> {
+  const response = await admin.graphql(
+    `#graphql
+    query ShopDomain {
+      shop { myshopifyDomain }
+    }`,
+  );
+  const json = await response.json();
+  return json.data?.shop?.myshopifyDomain ?? null;
+}
+
+function readSettingsFile(shop: string): StorefrontSettings | null {
+  try {
+    const file = settingsFilePath(shop);
+    if (!fs.existsSync(file)) return null;
+    return mergeSettings(JSON.parse(fs.readFileSync(file, "utf8")) as Partial<StorefrontSettings>);
+  } catch {
+    return null;
+  }
+}
+
+function writeSettingsFile(shop: string, settings: StorefrontSettings) {
+  fs.mkdirSync(SETTINGS_DIR, { recursive: true });
+  fs.writeFileSync(settingsFilePath(shop), JSON.stringify(settings, null, 2));
+}
+
+async function readShopMetafieldSettings(admin: AdminApi): Promise<StorefrontSettings | null> {
   const response = await admin.graphql(
     `#graphql
     query StorefrontSettings {
@@ -129,36 +163,27 @@ export async function getStorefrontSettings(admin: AdminApi): Promise<Storefront
   );
   const json = await response.json();
   const raw = json.data?.shop?.metafield?.value;
-  if (!raw) return { ...DEFAULT_STOREFRONT_SETTINGS };
+  if (!raw) return null;
   try {
     return mergeSettings(JSON.parse(raw) as Partial<StorefrontSettings>);
   } catch {
-    return { ...DEFAULT_STOREFRONT_SETTINGS };
+    return null;
   }
 }
 
-export async function saveStorefrontSettings(
+async function writeShopMetafieldSettings(
   admin: AdminApi,
   settings: StorefrontSettings,
-): Promise<{ ok: boolean; errors: string[] }> {
-  const shopRes = await admin.graphql(
-    `#graphql
-    query ShopId {
-      shop { id }
-    }`,
-  );
+): Promise<string[]> {
+  const shopRes = await admin.graphql(`#graphql query { shop { id } }`);
   const shopJson = await shopRes.json();
   const ownerId = shopJson.data?.shop?.id;
-  if (!ownerId) {
-    return { ok: false, errors: ["Loja não encontrada."] };
-  }
+  if (!ownerId) return ["Loja não encontrada."];
 
-  const merged = mergeSettings(settings);
   const save = await admin.graphql(
     `#graphql
     mutation SaveStorefrontSettings($metafields: [MetafieldsSetInput!]!) {
       metafieldsSet(metafields: $metafields) {
-        metafields { id }
         userErrors { field message }
       }
     }`,
@@ -170,75 +195,56 @@ export async function saveStorefrontSettings(
             namespace: STOREFRONT_METAFIELD_NAMESPACE,
             key: STOREFRONT_METAFIELD_KEY,
             type: "json",
-            value: JSON.stringify(merged),
+            value: JSON.stringify(settings),
           },
         ],
       },
     },
   );
   const saveJson = await save.json();
-  const userErrors = saveJson.data?.metafieldsSet?.userErrors || [];
-  return {
-    ok: userErrors.length === 0,
-    errors: userErrors.map((e: { message: string }) => e.message),
-  };
+  return (saveJson.data?.metafieldsSet?.userErrors || []).map(
+    (e: { message: string }) => e.message,
+  );
+}
+
+export async function getStorefrontSettings(admin: AdminApi): Promise<StorefrontSettings> {
+  const shop = await getShopDomain(admin);
+  const fromMetafield = await readShopMetafieldSettings(admin);
+  if (fromMetafield) return fromMetafield;
+  if (shop) {
+    const fromFile = readSettingsFile(shop);
+    if (fromFile) return fromFile;
+  }
+  return { ...DEFAULT_STOREFRONT_SETTINGS };
+}
+
+export async function saveStorefrontSettings(
+  admin: AdminApi,
+  settings: StorefrontSettings,
+): Promise<{ ok: boolean; errors: string[] }> {
+  const shop = await getShopDomain(admin);
+  const merged = mergeSettings(settings);
+  const errors: string[] = [];
+
+  if (shop) writeSettingsFile(shop, merged);
+
+  const metafieldErrors = await writeShopMetafieldSettings(admin, merged);
+  if (metafieldErrors.length) {
+    console.warn("[vcom-reviews] shop metafield save", metafieldErrors);
+  }
+
+  return { ok: true, errors };
 }
 
 export async function ensureDefaultStorefrontSettings(admin: AdminApi) {
-  await ensureStorefrontMetafieldDefinition(admin);
-
-  const response = await admin.graphql(
-    `#graphql
-    query HasStorefrontSettings {
-      shop {
-        metafield(namespace: "${STOREFRONT_METAFIELD_NAMESPACE}", key: "${STOREFRONT_METAFIELD_KEY}") { id }
-      }
-    }`,
-  );
-  const json = await response.json();
-  if (json.data?.shop?.metafield?.id) return;
+  const shop = await getShopDomain(admin);
+  const existing = await getStorefrontSettings(admin);
+  const isDefault =
+    JSON.stringify(existing) === JSON.stringify(DEFAULT_STOREFRONT_SETTINGS);
+  if (!isDefault) return;
+  if (shop && readSettingsFile(shop)) return;
+  if (await readShopMetafieldSettings(admin)) return;
   await saveStorefrontSettings(admin, DEFAULT_STOREFRONT_SETTINGS);
-}
-
-async function ensureStorefrontMetafieldDefinition(admin: AdminApi) {
-  const check = await admin.graphql(
-    `#graphql
-    query StorefrontMetafieldDef {
-      metafieldDefinitions(first: 1, ownerType: SHOP, namespace: "${STOREFRONT_METAFIELD_NAMESPACE}", key: "${STOREFRONT_METAFIELD_KEY}") {
-        nodes { id }
-      }
-    }`,
-  );
-  const checkJson = await check.json();
-  if (checkJson.data?.metafieldDefinitions?.nodes?.length) return;
-
-  const create = await admin.graphql(
-    `#graphql
-    mutation CreateStorefrontMetafieldDef($definition: MetafieldDefinitionInput!) {
-      metafieldDefinitionCreate(definition: $definition) {
-        userErrors { field message }
-      }
-    }`,
-    {
-      variables: {
-        definition: {
-          name: "VCOM Reviews storefront settings",
-          namespace: STOREFRONT_METAFIELD_NAMESPACE,
-          key: STOREFRONT_METAFIELD_KEY,
-          ownerType: "SHOP",
-          type: "json",
-          access: {
-            storefront: "PUBLIC_READ",
-          },
-        },
-      },
-    },
-  );
-  const createJson = await create.json();
-  const userErrors = createJson.data?.metafieldDefinitionCreate?.userErrors || [];
-  if (userErrors.length) {
-    console.error("[vcom-reviews] storefront metafield definition", userErrors);
-  }
 }
 
 export function parseStorefrontSettingsForm(form: FormData): StorefrontSettings {
