@@ -16,6 +16,7 @@ export interface StorefrontSettings {
   /** aggregate = título + nota (imagem 1); shop_trusted = linha com nome da loja */
   header_style: "aggregate" | "shop_trusted";
   section_headline: string;
+  section_headline_font_size: number;
   header_rating_color: string;
   header_stars_color: string;
   header_summary_color: string;
@@ -47,6 +48,10 @@ export interface StorefrontSettings {
   reviews_text_max_chars: number;
   reviews_title_max_chars: number;
   reviews_per_page: number;
+  /** Colunas visíveis na grade (mobile ≤991px) */
+  reviews_columns_mobile: number;
+  /** Colunas visíveis na grade (desktop ≥992px) */
+  reviews_columns_desktop: number;
   pagination_active_color: string;
   pagination_inactive_color: string;
   show_empty_message: boolean;
@@ -98,6 +103,7 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   section_padding_sides: 16,
   header_style: "aggregate",
   section_headline: "TRUSTED BY THOUSANDS",
+  section_headline_font_size: 22,
   header_rating_color: "#1d8a42",
   header_stars_color: "#e8a317",
   header_summary_color: "#6b6b6b",
@@ -129,6 +135,8 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   reviews_text_max_chars: 150,
   reviews_title_max_chars: 80,
   reviews_per_page: 6,
+  reviews_columns_mobile: 1,
+  reviews_columns_desktop: 3,
   pagination_active_color: "#1d8a42",
   pagination_inactive_color: "#dcdce6",
   show_empty_message: false,
@@ -177,7 +185,7 @@ function num(value: unknown, fallback: number): number {
 }
 
 function str(value: unknown, fallback: string): string {
-  return typeof value === "string" ? value : fallback;
+  return typeof value === "string" && value.trim() !== "" ? value : fallback;
 }
 
 function bool(value: unknown, fallback: boolean): boolean {
@@ -205,6 +213,10 @@ export function coerceStorefrontSettings(
         ? r.header_style
         : d.header_style,
     section_headline: str(r.section_headline, d.section_headline),
+    section_headline_font_size: num(
+      r.section_headline_font_size,
+      d.section_headline_font_size,
+    ),
     header_rating_color: str(r.header_rating_color, d.header_rating_color),
     header_stars_color: str(r.header_stars_color, d.header_stars_color),
     header_summary_color: str(r.header_summary_color, d.header_summary_color),
@@ -236,6 +248,14 @@ export function coerceStorefrontSettings(
     reviews_text_max_chars: num(r.reviews_text_max_chars, d.reviews_text_max_chars),
     reviews_title_max_chars: num(r.reviews_title_max_chars, d.reviews_title_max_chars),
     reviews_per_page: num(r.reviews_per_page, d.reviews_per_page),
+    reviews_columns_mobile: Math.min(
+      2,
+      Math.max(1, num(r.reviews_columns_mobile, d.reviews_columns_mobile)),
+    ),
+    reviews_columns_desktop: Math.min(
+      4,
+      Math.max(1, num(r.reviews_columns_desktop, d.reviews_columns_desktop)),
+    ),
     pagination_active_color: str(r.pagination_active_color, d.pagination_active_color),
     pagination_inactive_color: str(r.pagination_inactive_color, d.pagination_inactive_color),
     show_empty_message: bool(r.show_empty_message, d.show_empty_message),

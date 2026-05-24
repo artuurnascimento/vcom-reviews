@@ -168,6 +168,10 @@ export async function ensureDefaultStorefrontSettings(admin: AdminApi) {
   await saveStorefrontSettings(admin, DEFAULT_STOREFRONT_SETTINGS);
 }
 
+export function parseStorefrontSettingsJson(raw: string): StorefrontSettings {
+  return coerceStorefrontSettings(JSON.parse(raw) as Partial<StorefrontSettings>);
+}
+
 export function parseStorefrontSettingsForm(form: FormData): StorefrontSettings {
   const num = (key: keyof StorefrontSettings, fallback: number) => {
     const v = parseInt(String(form.get(key) ?? ""), 10);
@@ -185,6 +189,7 @@ export function parseStorefrontSettingsForm(form: FormData): StorefrontSettings 
     section_padding_sides: num("section_padding_sides", 16),
     header_style: (str("header_style") || "aggregate") as StorefrontSettings["header_style"],
     section_headline: str("section_headline"),
+    section_headline_font_size: num("section_headline_font_size", 22),
     header_rating_color: str("header_rating_color"),
     header_stars_color: str("header_stars_color"),
     header_summary_color: str("header_summary_color"),
@@ -208,6 +213,8 @@ export function parseStorefrontSettingsForm(form: FormData): StorefrontSettings 
     reviews_text_max_chars: num("reviews_text_max_chars", 150),
     reviews_title_max_chars: num("reviews_title_max_chars", 80),
     reviews_per_page: num("reviews_per_page", 6),
+    reviews_columns_mobile: num("reviews_columns_mobile", 1),
+    reviews_columns_desktop: num("reviews_columns_desktop", 3),
     pagination_active_color: str("pagination_active_color"),
     pagination_inactive_color: str("pagination_inactive_color"),
     show_empty_message: bool("show_empty_message"),

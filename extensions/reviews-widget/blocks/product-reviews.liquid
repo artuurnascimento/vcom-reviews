@@ -15,6 +15,7 @@
 {%- assign s_trusted_show = cfg.trusted_show_header | default: true -%}
 {%- assign s_header_style = cfg.header_style | default: 'aggregate' -%}
 {%- assign s_section_headline = cfg.section_headline | default: 'TRUSTED BY THOUSANDS' -%}
+{%- assign s_section_headline_size = cfg.section_headline_font_size | default: 22 -%}
 {%- assign s_header_rating_color = cfg.header_rating_color | default: '#1d8a42' -%}
 {%- assign s_header_stars_color = cfg.header_stars_color | default: '#e8a317' -%}
 {%- assign s_header_summary_color = cfg.header_summary_color | default: '#6b6b6b' -%}
@@ -60,6 +61,12 @@
 {%- assign text_max_chars = cfg.reviews_text_max_chars | default: 150 -%}
 {%- assign title_max_chars = cfg.reviews_title_max_chars | default: 80 -%}
 {%- assign reviews_per_page = cfg.reviews_per_page | default: 6 -%}
+{%- assign s_cols_mobile = cfg.reviews_columns_mobile | default: 1 -%}
+{%- assign s_cols_desktop = cfg.reviews_columns_desktop | default: 3 -%}
+{%- if s_cols_mobile < 1 -%}{%- assign s_cols_mobile = 1 -%}{%- endif -%}
+{%- if s_cols_mobile > 2 -%}{%- assign s_cols_mobile = 2 -%}{%- endif -%}
+{%- if s_cols_desktop < 1 -%}{%- assign s_cols_desktop = 1 -%}{%- endif -%}
+{%- if s_cols_desktop > 4 -%}{%- assign s_cols_desktop = 4 -%}{%- endif -%}
 {%- assign s_pag_active = cfg.pagination_active_color | default: '#1d8a42' -%}
 {%- assign s_pag_inactive = cfg.pagination_inactive_color | default: '#dcdce6' -%}
 {%- assign s_show_empty = cfg.show_empty_message | default: false -%}
@@ -177,6 +184,47 @@
     #vcom-reviews-{{ bid }} .product-reviews__form-row input,#vcom-reviews-{{ bid }} .product-reviews__form-row textarea{border-color:{{ s_form_input_border }}}
     #vcom-reviews-{{ bid }} .product-reviews__form-success{background:{{ s_success_bg }};border:1px solid {{ s_success_border }};border-radius:{{ s_success_radius }}px;color:{{ s_success_text }};font-size:{{ s_success_font }}px}
     #vcom-reviews-{{ bid }} .product-reviews__form-success svg{stroke:{{ s_success_icon }}}
+    #vcom-reviews-{{ bid }} .product-reviews__section-title{font-size:{{ s_section_headline_size }}px}
+    @media (max-width:991px){
+      #vcom-reviews-{{ bid }}.vcom-layout--trustpilot_grid .product-reviews__wrap,
+      #vcom-reviews-{{ bid }}.vcom-layout--trustpilot_mosaic .product-reviews__wrap{
+        grid-template-columns:repeat({{ s_cols_mobile }},minmax(0,1fr));
+        grid-auto-flow:row;
+        overflow:visible;
+        scroll-snap-type:none;
+      }
+      {%- if s_cols_mobile == 1 -%}
+      #vcom-reviews-{{ bid }}.vcom-layout--trustpilot_carousel .product-reviews__wrap{
+        display:grid;
+        grid-auto-flow:column;
+        grid-auto-columns:85%;
+        grid-template-columns:unset;
+        overflow-x:auto;
+        scroll-snap-type:x mandatory;
+      }
+      {%- else -%}
+      #vcom-reviews-{{ bid }}.vcom-layout--trustpilot_carousel .product-reviews__wrap{
+        display:grid;
+        grid-template-columns:repeat({{ s_cols_mobile }},minmax(0,1fr));
+        grid-auto-flow:row;
+        grid-auto-columns:initial;
+        overflow:visible;
+        scroll-snap-type:none;
+      }
+      {%- endif -%}
+    }
+    @media (min-width:992px){
+      #vcom-reviews-{{ bid }}.vcom-layout--trustpilot_carousel .product-reviews__wrap,
+      #vcom-reviews-{{ bid }}.vcom-layout--trustpilot_grid .product-reviews__wrap,
+      #vcom-reviews-{{ bid }}.vcom-layout--trustpilot_mosaic .product-reviews__wrap{
+        display:grid;
+        grid-template-columns:repeat({{ s_cols_desktop }},minmax(0,1fr));
+        grid-auto-flow:row;
+        grid-auto-columns:initial;
+        overflow:visible;
+        scroll-snap-type:none;
+      }
+    }
   </style>
   <div class="vcom-reviews-container" style="max-width:1200px;margin:0 auto;padding:0 16px;">
     <div class="product-reviews__inner" style="padding:{{ s_pad_top }}px {{ s_pad_sides }}px {{ s_pad_bottom }}px;">

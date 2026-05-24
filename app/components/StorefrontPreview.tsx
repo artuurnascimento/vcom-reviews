@@ -97,7 +97,7 @@ export function StorefrontPreview({ settings, shopName = "Sua loja" }: Props) {
                 <h2
                   style={{
                     margin: "0 0 10px",
-                    fontSize: 20,
+                    fontSize: settings.section_headline_font_size,
                     fontWeight: 800,
                     letterSpacing: "0.06em",
                     textTransform: "uppercase",
@@ -262,19 +262,32 @@ function PreviewReviews({ settings }: { settings: StorefrontSettings }) {
 
   const gap = settings.cards_gap;
 
+  const previewCols = Math.max(
+    1,
+    Math.min(4, settings.reviews_columns_desktop || 3),
+  );
+
   const wrapStyle: CSSProperties = (() => {
     switch (layout) {
       case "trustpilot_grid":
-        return { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap };
+        return {
+          display: "grid",
+          gridTemplateColumns: `repeat(${previewCols}, 1fr)`,
+          gap,
+        };
       case "trustpilot_mosaic":
-        return { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap };
+        return {
+          display: "grid",
+          gridTemplateColumns: `repeat(${Math.min(2, previewCols)}, 1fr)`,
+          gap,
+        };
       case "trustpilot_list":
         return { display: "flex", flexDirection: "column", gap };
       case "trustpilot_carousel":
       default:
         return {
           display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
+          gridTemplateColumns: `repeat(${previewCols}, 1fr)`,
           gap,
         };
     }

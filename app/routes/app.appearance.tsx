@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { useActionData, useLoaderData, useRouteError } from "@remix-run/react";
 import { useEmbeddedSubmit } from "../hooks/useEmbeddedAppPath";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Page,
   Card,
@@ -22,7 +22,7 @@ import {
 import { authenticate } from "../shopify.server";
 import {
   getStorefrontSettings,
-  parseStorefrontSettingsForm,
+  parseStorefrontSettingsJson,
   saveStorefrontSettings,
 } from "../lib/storefront-settings.server";
 import {
@@ -71,8 +71,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
   const form = await request.formData();
-  const settings = parseStorefrontSettingsForm(form);
-  return saveStorefrontSettings(admin, settings, session.shop);
+  const raw = form.get("settings_json");
+  if (typeof raw !== "string" || !raw.trim()) {
+    return { ok: false, errors: ["Nenhuma configuração recebida. Tente salvar novamente."] };
+  }
+  try {
+    const settings = parseStorefrontSettingsJson(raw);
+    return saveStorefrontSettings(admin, settings, session.shop);
+  } catch {
+    return { ok: false, errors: ["Formato de configurações inválido. Recarregue a página e tente de novo."] };
+  }
 };
 
 const TABS = [
@@ -125,10 +133,17 @@ export default function AppearancePage() {
     [],
   );
 
-  const handleSave = () => {
-    const form = document.getElementById("storefront-settings-form") as HTMLFormElement;
-    if (form) submit(form, { method: "post" });
-  };
+  const handleSave = useCallback(() => {
+    const fd = new FormData();
+    fd.set("settings_json", JSON.stringify(settings));
+    submit(fd, { method: "post" });
+  }, [settings, submit]);
+
+  useEffect(() => {
+    if (actionData?.ok) {
+      setSettings(coerceStorefrontSettings(loaderData.settings));
+    }
+  }, [actionData?.ok, loaderData.settings]);
 
   return (
     <Page
@@ -209,6 +224,38 @@ export default function AppearancePage() {
                               onSelect={() => set("layout", layout.id)}
                             />
                           ))}
+                        </InlineGrid>
+                      </BlockStack>
+                    </Card>
+                    <Card>
+                      <BlockStack gap="400">
+                        <Text as="h2" variant="headingMd">
+                          Quantidade na vitrine
+                        </Text>
+                        <Text as="p" variant="bodySm" tone="subdued">
+                          Define quantos cards aparecem por linha no carrossel e na grade.
+                          Use &quot;Reviews por página&quot; em Cores &amp; estilo para a
+                          paginação (ex.: 3 colunas × 2 linhas = 6).
+                        </Text>
+                        <InlineGrid columns={2} gap="400">
+                          <RangeField
+                            label="Colunas no mobile"
+                            name="reviews_columns_mobile"
+                            value={settings.reviews_columns_mobile}
+                            min={1}
+                            max={2}
+                            suffix=" col."
+                            onChange={(v) => set("reviews_columns_mobile", v)}
+                          />
+                          <RangeField
+                            label="Colunas no desktop"
+                            name="reviews_columns_desktop"
+                            value={settings.reviews_columns_desktop}
+                            min={1}
+                            max={4}
+                            suffix=" col."
+                            onChange={(v) => set("reviews_columns_desktop", v)}
+                          />
                         </InlineGrid>
                       </BlockStack>
                     </Card>
@@ -436,6 +483,15 @@ export default function AppearancePage() {
                               autoComplete="off"
                               helpText="Ex.: TRUSTED BY THOUSANDS"
                             />
+                            <RangeField
+                              label="Tamanho do título"
+                              name="section_headline_font_size"
+                              value={settings.section_headline_font_size}
+                              min={14}
+                              max={48}
+                              suffix="px"
+                              onChange={(v) => set("section_headline_font_size", v)}
+                            />
                             <TextField
                               label="Prefixo do resumo"
                               name="header_based_on_prefix"
@@ -487,17 +543,19 @@ export default function AppearancePage() {
                             />
                           </InlineGrid>
                         )}
+                        {settings.header_style === "shop_trusted" ? (
+                          <RangeField
+                            label="Tamanho do texto trusted"
+                            name="trusted_font_size"
+                            value={settings.trusted_font_size}
+                            min={11}
+                            max={24}
+                            suffix="px"
+                            onChange={(v) => set("trusted_font_size", v)}
+                          />
+                        ) : null}
                         <RangeField
-                          label="Tamanho da fonte"
-                          name="trusted_font_size"
-                          value={settings.trusted_font_size}
-                          min={11}
-                          max={24}
-                          suffix="px"
-                          onChange={(v) => set("trusted_font_size", v)}
-                        />
-                        <RangeField
-                          label="Margem abaixo"
+                          label="Margem abaixo do cabeçalho"
                           name="trusted_margin_bottom"
                           value={settings.trusted_margin_bottom}
                           min={0}
@@ -556,12 +614,13 @@ export default function AppearancePage() {
                             autoComplete="off"
                           />
                           <TextField
-                            label="Reviews por página"
+                            label="Avaliações por página (paginação)"
                             name="reviews_per_page"
                             type="number"
                             value={String(settings.reviews_per_page)}
                             onChange={(v) => set("reviews_per_page", parseInt(v, 10) || 6)}
                             autoComplete="off"
+                            helpText="Total de cards por slide. Ex.: 3 colunas × 2 linhas = 6"
                           />
                         </InlineGrid>
                         <Checkbox
@@ -870,7 +929,7 @@ export default function AppearancePage() {
                   </Card>
                 ) : null}
 
-                <Button variant="primary" submit fullWidth>
+                <Button variant="primary" fullWidth onClick={handleSave}>
                   Salvar aparência
                 </Button>
               </BlockStack>
