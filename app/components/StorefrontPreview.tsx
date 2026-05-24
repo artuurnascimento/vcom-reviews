@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { Badge, BlockStack, Text } from "@shopify/polaris";
-import type { StorefrontSettings } from "../lib/storefront-settings.server";
+import type { StorefrontSettings } from "../lib/storefront-settings.shared";
 import { STOREFRONT_LAYOUTS } from "../lib/storefront-layouts";
 import { ReviewStars } from "./ReviewStars";
 

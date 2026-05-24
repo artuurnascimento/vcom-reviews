@@ -1,0 +1,198 @@
+import {
+  DEFAULT_STOREFRONT_LAYOUT,
+  normalizeStorefrontLayout,
+  type StorefrontLayoutId,
+} from "./storefront-layouts";
+
+export type { StorefrontLayoutId };
+
+export interface StorefrontSettings {
+  layout: StorefrontLayoutId;
+  data_source: "auto" | "homepage" | "product";
+  background: string;
+  section_padding_top: number;
+  section_padding_bottom: number;
+  section_padding_sides: number;
+  trusted_show_header: boolean;
+  trusted_text_after: string;
+  trusted_text_highlight: string;
+  trusted_highlight_color: string;
+  trusted_text_color: string;
+  trusted_checkmark_color: string;
+  trusted_font_size: number;
+  trusted_margin_bottom: number;
+  stars_color: string;
+  stars_empty_color: string;
+  show_verified: boolean;
+  verified_label: string;
+  verified_icon_color: string;
+  show_images: boolean;
+  reviews_text_max_chars: number;
+  reviews_title_max_chars: number;
+  reviews_per_page: number;
+  pagination_active_color: string;
+  pagination_inactive_color: string;
+  show_empty_message: boolean;
+  empty_message: string;
+  show_review_form: boolean;
+  review_form_success_message: string;
+  review_form_show_images: boolean;
+  review_form_images_max: number;
+  review_form_btn_text: string;
+  review_form_rating_label: string;
+  review_form_title_label: string;
+  review_form_title_placeholder: string;
+  review_form_body_label: string;
+  review_form_body_placeholder: string;
+  review_form_images_label: string;
+  review_form_images_btn_text: string;
+  review_form_author_label: string;
+  review_form_author_placeholder: string;
+  review_form_submit_text: string;
+  review_form_cancel_text: string;
+  footer_show: boolean;
+  footer_prefix: string;
+  footer_rating: string;
+  footer_middle: string;
+  footer_total: string;
+  footer_suffix: string;
+  footer_text_color: string;
+}
+
+export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
+  layout: DEFAULT_STOREFRONT_LAYOUT,
+  data_source: "auto",
+  background: "#ffffff",
+  section_padding_top: 24,
+  section_padding_bottom: 24,
+  section_padding_sides: 16,
+  trusted_show_header: true,
+  trusted_text_after: "is trusted by over",
+  trusted_text_highlight: "28k+",
+  trusted_highlight_color: "#1d8a42",
+  trusted_text_color: "#000000",
+  trusted_checkmark_color: "#1d8a42",
+  trusted_font_size: 15,
+  trusted_margin_bottom: 16,
+  stars_color: "#1d8a42",
+  stars_empty_color: "#dcdce6",
+  show_verified: true,
+  verified_label: "Verified Buyer",
+  verified_icon_color: "#1d8a42",
+  show_images: true,
+  reviews_text_max_chars: 150,
+  reviews_title_max_chars: 80,
+  reviews_per_page: 6,
+  pagination_active_color: "#1d8a42",
+  pagination_inactive_color: "#dcdce6",
+  show_empty_message: false,
+  empty_message: "Adicione avaliações no app VCOM Reviews.",
+  show_review_form: true,
+  review_form_success_message: "",
+  review_form_show_images: true,
+  review_form_images_max: 5,
+  review_form_btn_text: "",
+  review_form_rating_label: "",
+  review_form_title_label: "",
+  review_form_title_placeholder: "",
+  review_form_body_label: "",
+  review_form_body_placeholder: "",
+  review_form_images_label: "",
+  review_form_images_btn_text: "",
+  review_form_author_label: "",
+  review_form_author_placeholder: "",
+  review_form_submit_text: "",
+  review_form_cancel_text: "",
+  footer_show: true,
+  footer_prefix: "Rated",
+  footer_rating: "4.8",
+  footer_middle: "/ 5 based on",
+  footer_total: "11 customers",
+  footer_suffix: ".",
+  footer_text_color: "#000000",
+};
+
+function num(value: unknown, fallback: number): number {
+  const n = typeof value === "number" ? value : parseInt(String(value ?? ""), 10);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function str(value: unknown, fallback: string): string {
+  return typeof value === "string" ? value : fallback;
+}
+
+function bool(value: unknown, fallback: boolean): boolean {
+  return typeof value === "boolean" ? value : fallback;
+}
+
+/** Garante settings completos no loader e no estado React (evita crash no preview). */
+export function coerceStorefrontSettings(
+  raw: Partial<StorefrontSettings> | null | undefined,
+): StorefrontSettings {
+  const d = DEFAULT_STOREFRONT_SETTINGS;
+  const r = raw || {};
+  return {
+    layout: normalizeStorefrontLayout(str(r.layout, d.layout)),
+    data_source:
+      r.data_source === "homepage" || r.data_source === "product" || r.data_source === "auto"
+        ? r.data_source
+        : d.data_source,
+    background: str(r.background, d.background),
+    section_padding_top: num(r.section_padding_top, d.section_padding_top),
+    section_padding_bottom: num(r.section_padding_bottom, d.section_padding_bottom),
+    section_padding_sides: num(r.section_padding_sides, d.section_padding_sides),
+    trusted_show_header: bool(r.trusted_show_header, d.trusted_show_header),
+    trusted_text_after: str(r.trusted_text_after, d.trusted_text_after),
+    trusted_text_highlight: str(r.trusted_text_highlight, d.trusted_text_highlight),
+    trusted_highlight_color: str(r.trusted_highlight_color, d.trusted_highlight_color),
+    trusted_text_color: str(r.trusted_text_color, d.trusted_text_color),
+    trusted_checkmark_color: str(r.trusted_checkmark_color, d.trusted_checkmark_color),
+    trusted_font_size: num(r.trusted_font_size, d.trusted_font_size),
+    trusted_margin_bottom: num(r.trusted_margin_bottom, d.trusted_margin_bottom),
+    stars_color: str(r.stars_color, d.stars_color),
+    stars_empty_color: str(r.stars_empty_color, d.stars_empty_color),
+    show_verified: bool(r.show_verified, d.show_verified),
+    verified_label: str(r.verified_label, d.verified_label),
+    verified_icon_color: str(r.verified_icon_color, d.verified_icon_color),
+    show_images: bool(r.show_images, d.show_images),
+    reviews_text_max_chars: num(r.reviews_text_max_chars, d.reviews_text_max_chars),
+    reviews_title_max_chars: num(r.reviews_title_max_chars, d.reviews_title_max_chars),
+    reviews_per_page: num(r.reviews_per_page, d.reviews_per_page),
+    pagination_active_color: str(r.pagination_active_color, d.pagination_active_color),
+    pagination_inactive_color: str(r.pagination_inactive_color, d.pagination_inactive_color),
+    show_empty_message: bool(r.show_empty_message, d.show_empty_message),
+    empty_message: str(r.empty_message, d.empty_message),
+    show_review_form: bool(r.show_review_form, d.show_review_form),
+    review_form_success_message: str(r.review_form_success_message, d.review_form_success_message),
+    review_form_show_images: bool(r.review_form_show_images, d.review_form_show_images),
+    review_form_images_max: num(r.review_form_images_max, d.review_form_images_max),
+    review_form_btn_text: str(r.review_form_btn_text, d.review_form_btn_text),
+    review_form_rating_label: str(r.review_form_rating_label, d.review_form_rating_label),
+    review_form_title_label: str(r.review_form_title_label, d.review_form_title_label),
+    review_form_title_placeholder: str(
+      r.review_form_title_placeholder,
+      d.review_form_title_placeholder,
+    ),
+    review_form_body_label: str(r.review_form_body_label, d.review_form_body_label),
+    review_form_body_placeholder: str(
+      r.review_form_body_placeholder,
+      d.review_form_body_placeholder,
+    ),
+    review_form_images_label: str(r.review_form_images_label, d.review_form_images_label),
+    review_form_images_btn_text: str(r.review_form_images_btn_text, d.review_form_images_btn_text),
+    review_form_author_label: str(r.review_form_author_label, d.review_form_author_label),
+    review_form_author_placeholder: str(
+      r.review_form_author_placeholder,
+      d.review_form_author_placeholder,
+    ),
+    review_form_submit_text: str(r.review_form_submit_text, d.review_form_submit_text),
+    review_form_cancel_text: str(r.review_form_cancel_text, d.review_form_cancel_text),
+    footer_show: bool(r.footer_show, d.footer_show),
+    footer_prefix: str(r.footer_prefix, d.footer_prefix),
+    footer_rating: str(r.footer_rating, d.footer_rating),
+    footer_middle: str(r.footer_middle, d.footer_middle),
+    footer_total: str(r.footer_total, d.footer_total),
+    footer_suffix: str(r.footer_suffix, d.footer_suffix),
+    footer_text_color: str(r.footer_text_color, d.footer_text_color),
+  };
+}

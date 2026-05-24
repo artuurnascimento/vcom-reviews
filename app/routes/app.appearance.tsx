@@ -1,9 +1,8 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { useActionData, useLoaderData, useSubmit } from "@remix-run/react";
+import { useActionData, useLoaderData, useRouteError, useSubmit } from "@remix-run/react";
 import { useCallback, useState } from "react";
 import {
   Page,
-  Layout,
   Card,
   Text,
   BlockStack,
@@ -17,14 +16,18 @@ import {
   Tabs,
   InlineStack,
   Badge,
+  Box,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import {
   getStorefrontSettings,
   parseStorefrontSettingsForm,
   saveStorefrontSettings,
-  type StorefrontSettings,
 } from "../lib/storefront-settings.server";
+import {
+  coerceStorefrontSettings,
+  type StorefrontSettings,
+} from "../lib/storefront-settings.shared";
 import { STOREFRONT_LAYOUTS } from "../lib/storefront-layouts";
 import { buildThemeEditorDeepLink } from "../lib/theme-homepage.server";
 import { ColorPickerField } from "../components/ColorPickerField";
@@ -34,15 +37,26 @@ import { StorefrontPreview } from "../components/StorefrontPreview";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
-  const settings = await getStorefrontSettings(admin);
-  const shopRes = await admin.graphql(`#graphql query { shop { name } }`);
-  const shopJson = await shopRes.json();
-  const shopName = shopJson.data?.shop?.name ?? "Sua loja";
-  return {
-    settings,
-    shopName,
-    themeDeepLink: buildThemeEditorDeepLink(session.shop),
-  };
+  try {
+    const raw = await getStorefrontSettings(admin);
+    const settings = coerceStorefrontSettings(raw);
+    const shopRes = await admin.graphql(`#graphql query { shop { name } }`);
+    const shopJson = await shopRes.json();
+    const shopName = shopJson.data?.shop?.name ?? "Sua loja";
+    return {
+      settings,
+      shopName,
+      themeDeepLink: buildThemeEditorDeepLink(session.shop),
+    };
+  } catch (error) {
+    console.error("[vcom-reviews] appearance loader", error);
+    return {
+      settings: coerceStorefrontSettings(null),
+      shopName: "Sua loja",
+      themeDeepLink: buildThemeEditorDeepLink(session.shop),
+      loaderError: error instanceof Error ? error.message : "Erro ao carregar configurações",
+    };
+  }
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -59,12 +73,39 @@ const TABS = [
   { id: "form", content: "Formulário" },
 ];
 
+export function ErrorBoundary() {
+  const error = useRouteError();
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "object" && error && "message" in error
+        ? String((error as { message: unknown }).message)
+        : "Erro desconhecido na página de aparência";
+
+  return (
+    <Page title="Aparência da vitrine" backAction={{ url: "/app" }}>
+      <Banner tone="critical" title="Não foi possível abrir o editor">
+        <p>{message}</p>
+      </Banner>
+      <Box paddingBlockStart="400">
+        <Button url="/app">Voltar ao painel</Button>
+      </Box>
+    </Page>
+  );
+}
+
 export default function AppearancePage() {
-  const { settings: initial, shopName, themeDeepLink } = useLoaderData<typeof loader>();
+  const loaderData = useLoaderData<typeof loader>();
+  const { shopName, themeDeepLink, loaderError } = loaderData;
   const actionData = useActionData<typeof action>();
   const submit = useSubmit();
-  const [settings, setSettings] = useState(initial);
+  const [settings, setSettings] = useState(() =>
+    coerceStorefrontSettings(loaderData.settings),
+  );
   const [selectedTab, setSelectedTab] = useState(0);
+
+  const layoutLabel =
+    STOREFRONT_LAYOUTS.find((l) => l.id === settings.layout)?.name ?? "Layout";
 
   const set = useCallback(
     <K extends keyof StorefrontSettings>(key: K, value: StorefrontSettings[K]) => {
@@ -81,44 +122,61 @@ export default function AppearancePage() {
   return (
     <Page
       title="Aparência da vitrine"
-      subtitle="Editor visual com preview ao vivo — nada no Theme Editor"
+      subtitle="Editor visual com preview ao vivo"
       backAction={{ url: "/app" }}
       primaryAction={{ content: "Salvar alterações", onAction: handleSave }}
     >
-      <Layout>
-        <Layout.Section variant="oneHalf">
-          <BlockStack gap="400">
-            {actionData ? (
-              actionData.ok ? (
-                <BlockStack gap="300">
-                  <Banner tone="success" title="Configurações salvas">
-                    As alterações aparecem na loja em alguns segundos.
-                  </Banner>
-                  {actionData.themeSync?.updated ? (
-                    <Banner tone="success" title="Homepage sincronizada">
-                      templates/index.json atualizado automaticamente.
-                    </Banner>
-                  ) : null}
-                  {actionData.themeSync && !actionData.themeSync.ok ? (
-                    <Banner
-                      tone="warning"
-                      title="Sincronização do tema pendente"
-                      action={{ content: "Abrir Theme Editor", url: themeDeepLink, target: "_blank" }}
-                    >
-                      {actionData.themeSync.accessDenied
-                        ? "Reinstale o app para aceitar write_themes ou use o Theme Editor."
-                        : actionData.themeSync.errors.join(" · ")}
-                    </Banner>
-                  ) : null}
-                </BlockStack>
-              ) : (
-                <Banner tone="critical" title="Erro ao salvar">
-                  {actionData.errors?.join(" · ")}
-                </Banner>
-              )
-            ) : null}
+      <BlockStack gap="400">
+        {loaderError ? (
+          <Banner tone="warning" title="Configurações parciais">
+            {loaderError} — usando valores padrão até salvar novamente.
+          </Banner>
+        ) : null}
 
-            <Card padding="0">
+        {actionData ? (
+          actionData.ok ? (
+            <BlockStack gap="300">
+              <Banner tone="success" title="Configurações salvas">
+                As alterações aparecem na loja em alguns segundos.
+              </Banner>
+              {actionData.themeSync?.updated ? (
+                <Banner tone="success" title="Homepage sincronizada">
+                  templates/index.json atualizado automaticamente.
+                </Banner>
+              ) : null}
+              {actionData.themeSync && !actionData.themeSync.ok ? (
+                <Banner
+                  tone="warning"
+                  title="Sincronização do tema pendente"
+                  action={{
+                    content: "Abrir Theme Editor",
+                    url: themeDeepLink,
+                    external: true,
+                  }}
+                >
+                  {actionData.themeSync.accessDenied
+                    ? "Reinstale o app para aceitar write_themes ou use o Theme Editor."
+                    : actionData.themeSync.errors.join(" · ")}
+                </Banner>
+              ) : null}
+            </BlockStack>
+          ) : (
+            <Banner tone="critical" title="Erro ao salvar">
+              {actionData.errors?.join(" · ")}
+            </Banner>
+          )
+        ) : null}
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr) minmax(280px, 380px)",
+            gap: 20,
+            alignItems: "start",
+          }}
+        >
+          <BlockStack gap="400">
+            <Card>
               <Tabs tabs={TABS} selected={selectedTab} onSelect={setSelectedTab} fitted />
             </Card>
 
@@ -134,9 +192,9 @@ export default function AppearancePage() {
                           <Text as="h2" variant="headingMd">
                             Layout Trustpilot
                           </Text>
-                          <Badge>{STOREFRONT_LAYOUTS.find((l) => l.id === settings.layout)?.name}</Badge>
+                          <Badge tone="info">{layoutLabel}</Badge>
                         </InlineStack>
-                        <InlineGrid columns={{ xs: 1, sm: 2 }} gap="300">
+                        <InlineGrid columns={2} gap="300">
                           {STOREFRONT_LAYOUTS.map((layout) => (
                             <LayoutPickerCard
                               key={layout.id}
@@ -149,22 +207,19 @@ export default function AppearancePage() {
                       </BlockStack>
                     </Card>
                     <Card>
-                      <BlockStack gap="300">
-                        <Text as="h2" variant="headingMd">
-                          Fonte de dados
-                        </Text>
-                        <Select
-                          label="Onde mostrar avaliações"
-                          name="data_source"
-                          options={[
-                            { label: "Automático (home = shop, produto = product)", value: "auto" },
-                            { label: "Página inicial", value: "homepage" },
-                            { label: "Produto atual", value: "product" },
-                          ]}
-                          value={settings.data_source}
-                          onChange={(v) => set("data_source", v as StorefrontSettings["data_source"])}
-                        />
-                      </BlockStack>
+                      <Select
+                        label="Onde mostrar avaliações"
+                        name="data_source"
+                        options={[
+                          { label: "Automático (home = shop, produto = product)", value: "auto" },
+                          { label: "Página inicial", value: "homepage" },
+                          { label: "Produto atual", value: "product" },
+                        ]}
+                        value={settings.data_source}
+                        onChange={(v) =>
+                          set("data_source", v as StorefrontSettings["data_source"])
+                        }
+                      />
                     </Card>
                   </>
                 ) : null}
@@ -214,12 +269,42 @@ export default function AppearancePage() {
                           Paleta de cores
                         </Text>
                         <InlineGrid columns={2} gap="400">
-                          <ColorPickerField label="Estrelas preenchidas" name="stars_color" value={settings.stars_color} onChange={(v) => set("stars_color", v)} />
-                          <ColorPickerField label="Estrelas vazias" name="stars_empty_color" value={settings.stars_empty_color} onChange={(v) => set("stars_empty_color", v)} />
-                          <ColorPickerField label="Ícone verified" name="verified_icon_color" value={settings.verified_icon_color} onChange={(v) => set("verified_icon_color", v)} />
-                          <ColorPickerField label="Paginação ativa" name="pagination_active_color" value={settings.pagination_active_color} onChange={(v) => set("pagination_active_color", v)} />
-                          <ColorPickerField label="Paginação inativa" name="pagination_inactive_color" value={settings.pagination_inactive_color} onChange={(v) => set("pagination_inactive_color", v)} />
-                          <ColorPickerField label="Texto do rodapé" name="footer_text_color" value={settings.footer_text_color} onChange={(v) => set("footer_text_color", v)} />
+                          <ColorPickerField
+                            label="Estrelas preenchidas"
+                            name="stars_color"
+                            value={settings.stars_color}
+                            onChange={(v) => set("stars_color", v)}
+                          />
+                          <ColorPickerField
+                            label="Estrelas vazias"
+                            name="stars_empty_color"
+                            value={settings.stars_empty_color}
+                            onChange={(v) => set("stars_empty_color", v)}
+                          />
+                          <ColorPickerField
+                            label="Ícone verified"
+                            name="verified_icon_color"
+                            value={settings.verified_icon_color}
+                            onChange={(v) => set("verified_icon_color", v)}
+                          />
+                          <ColorPickerField
+                            label="Paginação ativa"
+                            name="pagination_active_color"
+                            value={settings.pagination_active_color}
+                            onChange={(v) => set("pagination_active_color", v)}
+                          />
+                          <ColorPickerField
+                            label="Paginação inativa"
+                            name="pagination_inactive_color"
+                            value={settings.pagination_inactive_color}
+                            onChange={(v) => set("pagination_inactive_color", v)}
+                          />
+                          <ColorPickerField
+                            label="Texto do rodapé"
+                            name="footer_text_color"
+                            value={settings.footer_text_color}
+                            onChange={(v) => set("footer_text_color", v)}
+                          />
                         </InlineGrid>
                       </BlockStack>
                     </Card>
@@ -228,14 +313,49 @@ export default function AppearancePage() {
                         <Text as="h2" variant="headingMd">
                           Linha trusted by
                         </Text>
-                        <Checkbox label="Mostrar linha" name="trusted_show_header" checked={settings.trusted_show_header} onChange={(v) => set("trusted_show_header", v)} />
+                        <Checkbox
+                          label="Mostrar linha"
+                          name="trusted_show_header"
+                          checked={settings.trusted_show_header}
+                          onChange={(v) => set("trusted_show_header", v)}
+                        />
                         <InlineGrid columns={2} gap="400">
-                          <ColorPickerField label="Destaque" name="trusted_highlight_color" value={settings.trusted_highlight_color} onChange={(v) => set("trusted_highlight_color", v)} />
-                          <ColorPickerField label="Texto" name="trusted_text_color" value={settings.trusted_text_color} onChange={(v) => set("trusted_text_color", v)} />
-                          <ColorPickerField label="Ícone check" name="trusted_checkmark_color" value={settings.trusted_checkmark_color} onChange={(v) => set("trusted_checkmark_color", v)} />
+                          <ColorPickerField
+                            label="Destaque"
+                            name="trusted_highlight_color"
+                            value={settings.trusted_highlight_color}
+                            onChange={(v) => set("trusted_highlight_color", v)}
+                          />
+                          <ColorPickerField
+                            label="Texto"
+                            name="trusted_text_color"
+                            value={settings.trusted_text_color}
+                            onChange={(v) => set("trusted_text_color", v)}
+                          />
+                          <ColorPickerField
+                            label="Ícone check"
+                            name="trusted_checkmark_color"
+                            value={settings.trusted_checkmark_color}
+                            onChange={(v) => set("trusted_checkmark_color", v)}
+                          />
                         </InlineGrid>
-                        <RangeField label="Tamanho da fonte" name="trusted_font_size" value={settings.trusted_font_size} min={11} max={24} suffix="px" onChange={(v) => set("trusted_font_size", v)} />
-                        <RangeField label="Margem abaixo" name="trusted_margin_bottom" value={settings.trusted_margin_bottom} min={0} max={48} onChange={(v) => set("trusted_margin_bottom", v)} />
+                        <RangeField
+                          label="Tamanho da fonte"
+                          name="trusted_font_size"
+                          value={settings.trusted_font_size}
+                          min={11}
+                          max={24}
+                          suffix="px"
+                          onChange={(v) => set("trusted_font_size", v)}
+                        />
+                        <RangeField
+                          label="Margem abaixo"
+                          name="trusted_margin_bottom"
+                          value={settings.trusted_margin_bottom}
+                          min={0}
+                          max={48}
+                          onChange={(v) => set("trusted_margin_bottom", v)}
+                        />
                       </BlockStack>
                     </Card>
                   </>
@@ -245,44 +365,135 @@ export default function AppearancePage() {
                   <>
                     <Card>
                       <BlockStack gap="400">
-                        <Text as="h2" variant="headingMd">
-                          Trusted by & cards
-                        </Text>
-                        <TextField label="Texto após o nome da loja" name="trusted_text_after" value={settings.trusted_text_after} onChange={(v) => set("trusted_text_after", v)} autoComplete="off" />
-                        <TextField label="Texto em destaque" name="trusted_text_highlight" value={settings.trusted_text_highlight} onChange={(v) => set("trusted_text_highlight", v)} autoComplete="off" />
-                        <TextField label="Texto verified" name="verified_label" value={settings.verified_label} onChange={(v) => set("verified_label", v)} autoComplete="off" />
+                        <TextField
+                          label="Texto após o nome da loja"
+                          name="trusted_text_after"
+                          value={settings.trusted_text_after}
+                          onChange={(v) => set("trusted_text_after", v)}
+                          autoComplete="off"
+                        />
+                        <TextField
+                          label="Texto em destaque"
+                          name="trusted_text_highlight"
+                          value={settings.trusted_text_highlight}
+                          onChange={(v) => set("trusted_text_highlight", v)}
+                          autoComplete="off"
+                        />
+                        <TextField
+                          label="Texto verified"
+                          name="verified_label"
+                          value={settings.verified_label}
+                          onChange={(v) => set("verified_label", v)}
+                          autoComplete="off"
+                        />
                         <InlineGrid columns={2} gap="400">
-                          <TextField label="Máx. chars texto" name="reviews_text_max_chars" type="number" value={String(settings.reviews_text_max_chars)} onChange={(v) => set("reviews_text_max_chars", parseInt(v, 10) || 150)} autoComplete="off" />
-                          <TextField label="Máx. chars título" name="reviews_title_max_chars" type="number" value={String(settings.reviews_title_max_chars)} onChange={(v) => set("reviews_title_max_chars", parseInt(v, 10) || 80)} autoComplete="off" />
-                          <TextField label="Reviews por página" name="reviews_per_page" type="number" value={String(settings.reviews_per_page)} onChange={(v) => set("reviews_per_page", parseInt(v, 10) || 6)} autoComplete="off" />
+                          <TextField
+                            label="Máx. chars texto"
+                            name="reviews_text_max_chars"
+                            type="number"
+                            value={String(settings.reviews_text_max_chars)}
+                            onChange={(v) =>
+                              set("reviews_text_max_chars", parseInt(v, 10) || 150)
+                            }
+                            autoComplete="off"
+                          />
+                          <TextField
+                            label="Máx. chars título"
+                            name="reviews_title_max_chars"
+                            type="number"
+                            value={String(settings.reviews_title_max_chars)}
+                            onChange={(v) =>
+                              set("reviews_title_max_chars", parseInt(v, 10) || 80)
+                            }
+                            autoComplete="off"
+                          />
+                          <TextField
+                            label="Reviews por página"
+                            name="reviews_per_page"
+                            type="number"
+                            value={String(settings.reviews_per_page)}
+                            onChange={(v) => set("reviews_per_page", parseInt(v, 10) || 6)}
+                            autoComplete="off"
+                          />
                         </InlineGrid>
-                        <Checkbox label="Mostrar Verified Buyer" name="show_verified" checked={settings.show_verified} onChange={(v) => set("show_verified", v)} />
-                        <Checkbox label="Mostrar imagens" name="show_images" checked={settings.show_images} onChange={(v) => set("show_images", v)} />
+                        <Checkbox
+                          label="Mostrar Verified Buyer"
+                          name="show_verified"
+                          checked={settings.show_verified}
+                          onChange={(v) => set("show_verified", v)}
+                        />
+                        <Checkbox
+                          label="Mostrar imagens"
+                          name="show_images"
+                          checked={settings.show_images}
+                          onChange={(v) => set("show_images", v)}
+                        />
                       </BlockStack>
                     </Card>
                     <Card>
                       <BlockStack gap="400">
-                        <Text as="h2" variant="headingMd">
-                          Rodapé
-                        </Text>
-                        <Checkbox label="Mostrar rodapé" name="footer_show" checked={settings.footer_show} onChange={(v) => set("footer_show", v)} />
+                        <Checkbox
+                          label="Mostrar rodapé"
+                          name="footer_show"
+                          checked={settings.footer_show}
+                          onChange={(v) => set("footer_show", v)}
+                        />
                         <InlineGrid columns={2} gap="400">
-                          <TextField label="Prefixo" name="footer_prefix" value={settings.footer_prefix} onChange={(v) => set("footer_prefix", v)} autoComplete="off" />
-                          <TextField label="Meio" name="footer_middle" value={settings.footer_middle} onChange={(v) => set("footer_middle", v)} autoComplete="off" />
-                          <TextField label="Sufixo" name="footer_suffix" value={settings.footer_suffix} onChange={(v) => set("footer_suffix", v)} autoComplete="off" />
-                          <TextField label="Nota fallback" name="footer_rating" value={settings.footer_rating} onChange={(v) => set("footer_rating", v)} autoComplete="off" />
-                          <TextField label="Total fallback" name="footer_total" value={settings.footer_total} onChange={(v) => set("footer_total", v)} autoComplete="off" />
+                          <TextField
+                            label="Prefixo"
+                            name="footer_prefix"
+                            value={settings.footer_prefix}
+                            onChange={(v) => set("footer_prefix", v)}
+                            autoComplete="off"
+                          />
+                          <TextField
+                            label="Meio"
+                            name="footer_middle"
+                            value={settings.footer_middle}
+                            onChange={(v) => set("footer_middle", v)}
+                            autoComplete="off"
+                          />
+                          <TextField
+                            label="Sufixo"
+                            name="footer_suffix"
+                            value={settings.footer_suffix}
+                            onChange={(v) => set("footer_suffix", v)}
+                            autoComplete="off"
+                          />
+                          <TextField
+                            label="Nota fallback"
+                            name="footer_rating"
+                            value={settings.footer_rating}
+                            onChange={(v) => set("footer_rating", v)}
+                            autoComplete="off"
+                          />
+                          <TextField
+                            label="Total fallback"
+                            name="footer_total"
+                            value={settings.footer_total}
+                            onChange={(v) => set("footer_total", v)}
+                            autoComplete="off"
+                          />
                         </InlineGrid>
                       </BlockStack>
                     </Card>
                     <Card>
-                      <BlockStack gap="300">
-                        <Text as="h2" variant="headingMd">
-                          Estado vazio
-                        </Text>
-                        <Checkbox label="Mostrar mensagem quando não há reviews" name="show_empty_message" checked={settings.show_empty_message} onChange={(v) => set("show_empty_message", v)} />
-                        <TextField label="Texto" name="empty_message" value={settings.empty_message} onChange={(v) => set("empty_message", v)} autoComplete="off" multiline={2} />
-                      </BlockStack>
+                      <Checkbox
+                        label="Mostrar mensagem quando não há reviews"
+                        name="show_empty_message"
+                        checked={settings.show_empty_message}
+                        onChange={(v) => set("show_empty_message", v)}
+                      />
+                      <Box paddingBlockStart="300">
+                        <TextField
+                          label="Texto vazio"
+                          name="empty_message"
+                          value={settings.empty_message}
+                          onChange={(v) => set("empty_message", v)}
+                          autoComplete="off"
+                          multiline={2}
+                        />
+                      </Box>
                     </Card>
                   </>
                 ) : null}
@@ -290,30 +501,119 @@ export default function AppearancePage() {
                 {selectedTab === 3 ? (
                   <Card>
                     <BlockStack gap="400">
-                      <Text as="h2" variant="headingMd">
-                        Formulário do cliente
-                      </Text>
-                      <Checkbox label="Mostrar botão de escrever avaliação" name="show_review_form" checked={settings.show_review_form} onChange={(v) => set("show_review_form", v)} />
-                      <Checkbox label="Permitir upload de imagens" name="review_form_show_images" checked={settings.review_form_show_images} onChange={(v) => set("review_form_show_images", v)} />
-                      <TextField label="Máx. imagens" name="review_form_images_max" type="number" value={String(settings.review_form_images_max)} onChange={(v) => set("review_form_images_max", parseInt(v, 10) || 5)} autoComplete="off" />
-                      <TextField label="Mensagem após envio" name="review_form_success_message" value={settings.review_form_success_message} onChange={(v) => set("review_form_success_message", v)} autoComplete="off" />
+                      <Checkbox
+                        label="Mostrar formulário"
+                        name="show_review_form"
+                        checked={settings.show_review_form}
+                        onChange={(v) => set("show_review_form", v)}
+                      />
+                      <Checkbox
+                        label="Upload de imagens"
+                        name="review_form_show_images"
+                        checked={settings.review_form_show_images}
+                        onChange={(v) => set("review_form_show_images", v)}
+                      />
+                      <TextField
+                        label="Máx. imagens"
+                        name="review_form_images_max"
+                        type="number"
+                        value={String(settings.review_form_images_max)}
+                        onChange={(v) => set("review_form_images_max", parseInt(v, 10) || 5)}
+                        autoComplete="off"
+                      />
+                      <TextField
+                        label="Mensagem após envio"
+                        name="review_form_success_message"
+                        value={settings.review_form_success_message}
+                        onChange={(v) => set("review_form_success_message", v)}
+                        autoComplete="off"
+                      />
                       <Divider />
-                      <Text as="p" variant="bodySm" tone="subdued">
-                        Labels opcionais — deixe vazio para usar a tradução padrão
-                      </Text>
                       <InlineGrid columns={2} gap="400">
-                        <TextField label="Botão escrever" name="review_form_btn_text" value={settings.review_form_btn_text} onChange={(v) => set("review_form_btn_text", v)} autoComplete="off" />
-                        <TextField label="Label nota" name="review_form_rating_label" value={settings.review_form_rating_label} onChange={(v) => set("review_form_rating_label", v)} autoComplete="off" />
-                        <TextField label="Label título" name="review_form_title_label" value={settings.review_form_title_label} onChange={(v) => set("review_form_title_label", v)} autoComplete="off" />
-                        <TextField label="Placeholder título" name="review_form_title_placeholder" value={settings.review_form_title_placeholder} onChange={(v) => set("review_form_title_placeholder", v)} autoComplete="off" />
-                        <TextField label="Label texto" name="review_form_body_label" value={settings.review_form_body_label} onChange={(v) => set("review_form_body_label", v)} autoComplete="off" />
-                        <TextField label="Placeholder texto" name="review_form_body_placeholder" value={settings.review_form_body_placeholder} onChange={(v) => set("review_form_body_placeholder", v)} autoComplete="off" />
-                        <TextField label="Label imagens" name="review_form_images_label" value={settings.review_form_images_label} onChange={(v) => set("review_form_images_label", v)} autoComplete="off" />
-                        <TextField label="Botão imagens" name="review_form_images_btn_text" value={settings.review_form_images_btn_text} onChange={(v) => set("review_form_images_btn_text", v)} autoComplete="off" />
-                        <TextField label="Label nome" name="review_form_author_label" value={settings.review_form_author_label} onChange={(v) => set("review_form_author_label", v)} autoComplete="off" />
-                        <TextField label="Placeholder nome" name="review_form_author_placeholder" value={settings.review_form_author_placeholder} onChange={(v) => set("review_form_author_placeholder", v)} autoComplete="off" />
-                        <TextField label="Botão enviar" name="review_form_submit_text" value={settings.review_form_submit_text} onChange={(v) => set("review_form_submit_text", v)} autoComplete="off" />
-                        <TextField label="Botão cancelar" name="review_form_cancel_text" value={settings.review_form_cancel_text} onChange={(v) => set("review_form_cancel_text", v)} autoComplete="off" />
+                        <TextField
+                          label="Botão escrever"
+                          name="review_form_btn_text"
+                          value={settings.review_form_btn_text}
+                          onChange={(v) => set("review_form_btn_text", v)}
+                          autoComplete="off"
+                        />
+                        <TextField
+                          label="Label nota"
+                          name="review_form_rating_label"
+                          value={settings.review_form_rating_label}
+                          onChange={(v) => set("review_form_rating_label", v)}
+                          autoComplete="off"
+                        />
+                        <TextField
+                          label="Label título"
+                          name="review_form_title_label"
+                          value={settings.review_form_title_label}
+                          onChange={(v) => set("review_form_title_label", v)}
+                          autoComplete="off"
+                        />
+                        <TextField
+                          label="Placeholder título"
+                          name="review_form_title_placeholder"
+                          value={settings.review_form_title_placeholder}
+                          onChange={(v) => set("review_form_title_placeholder", v)}
+                          autoComplete="off"
+                        />
+                        <TextField
+                          label="Label texto"
+                          name="review_form_body_label"
+                          value={settings.review_form_body_label}
+                          onChange={(v) => set("review_form_body_label", v)}
+                          autoComplete="off"
+                        />
+                        <TextField
+                          label="Placeholder texto"
+                          name="review_form_body_placeholder"
+                          value={settings.review_form_body_placeholder}
+                          onChange={(v) => set("review_form_body_placeholder", v)}
+                          autoComplete="off"
+                        />
+                        <TextField
+                          label="Label imagens"
+                          name="review_form_images_label"
+                          value={settings.review_form_images_label}
+                          onChange={(v) => set("review_form_images_label", v)}
+                          autoComplete="off"
+                        />
+                        <TextField
+                          label="Botão imagens"
+                          name="review_form_images_btn_text"
+                          value={settings.review_form_images_btn_text}
+                          onChange={(v) => set("review_form_images_btn_text", v)}
+                          autoComplete="off"
+                        />
+                        <TextField
+                          label="Label nome"
+                          name="review_form_author_label"
+                          value={settings.review_form_author_label}
+                          onChange={(v) => set("review_form_author_label", v)}
+                          autoComplete="off"
+                        />
+                        <TextField
+                          label="Placeholder nome"
+                          name="review_form_author_placeholder"
+                          value={settings.review_form_author_placeholder}
+                          onChange={(v) => set("review_form_author_placeholder", v)}
+                          autoComplete="off"
+                        />
+                        <TextField
+                          label="Botão enviar"
+                          name="review_form_submit_text"
+                          value={settings.review_form_submit_text}
+                          onChange={(v) => set("review_form_submit_text", v)}
+                          autoComplete="off"
+                        />
+                        <TextField
+                          label="Botão cancelar"
+                          name="review_form_cancel_text"
+                          value={settings.review_form_cancel_text}
+                          onChange={(v) => set("review_form_cancel_text", v)}
+                          autoComplete="off"
+                        />
                       </InlineGrid>
                     </BlockStack>
                   </Card>
@@ -325,16 +625,14 @@ export default function AppearancePage() {
               </BlockStack>
             </form>
           </BlockStack>
-        </Layout.Section>
 
-        <Layout.Section variant="oneHalf">
           <div style={{ position: "sticky", top: 16 }}>
             <Card>
               <StorefrontPreview settings={settings} shopName={shopName} />
             </Card>
           </div>
-        </Layout.Section>
-      </Layout>
+        </div>
+      </BlockStack>
     </Page>
   );
 }
