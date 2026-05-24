@@ -13,6 +13,15 @@ export interface StorefrontSettings {
   section_padding_top: number;
   section_padding_bottom: number;
   section_padding_sides: number;
+  /** aggregate = título + nota (imagem 1); shop_trusted = linha com nome da loja */
+  header_style: "aggregate" | "shop_trusted";
+  section_headline: string;
+  header_rating_color: string;
+  header_stars_color: string;
+  header_summary_color: string;
+  header_based_on_prefix: string;
+  review_title_color: string;
+  review_body_color: string;
   trusted_show_header: boolean;
   trusted_text_after: string;
   trusted_text_highlight: string;
@@ -66,6 +75,14 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   section_padding_top: 24,
   section_padding_bottom: 24,
   section_padding_sides: 16,
+  header_style: "aggregate",
+  section_headline: "TRUSTED BY THOUSANDS",
+  header_rating_color: "#1d8a42",
+  header_stars_color: "#e8a317",
+  header_summary_color: "#6b6b6b",
+  header_based_on_prefix: "Based on",
+  review_title_color: "#000000",
+  review_body_color: "#6b6b6b",
   trusted_show_header: true,
   trusted_text_after: "is trusted by over",
   trusted_text_highlight: "28k+",
@@ -141,6 +158,17 @@ export function coerceStorefrontSettings(
     section_padding_top: num(r.section_padding_top, d.section_padding_top),
     section_padding_bottom: num(r.section_padding_bottom, d.section_padding_bottom),
     section_padding_sides: num(r.section_padding_sides, d.section_padding_sides),
+    header_style:
+      r.header_style === "shop_trusted" || r.header_style === "aggregate"
+        ? r.header_style
+        : d.header_style,
+    section_headline: str(r.section_headline, d.section_headline),
+    header_rating_color: str(r.header_rating_color, d.header_rating_color),
+    header_stars_color: str(r.header_stars_color, d.header_stars_color),
+    header_summary_color: str(r.header_summary_color, d.header_summary_color),
+    header_based_on_prefix: str(r.header_based_on_prefix, d.header_based_on_prefix),
+    review_title_color: str(r.review_title_color, d.review_title_color),
+    review_body_color: str(r.review_body_color, d.review_body_color),
     trusted_show_header: bool(r.trusted_show_header, d.trusted_show_header),
     trusted_text_after: str(r.trusted_text_after, d.trusted_text_after),
     trusted_text_highlight: str(r.trusted_text_highlight, d.trusted_text_highlight),

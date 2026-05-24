@@ -312,40 +312,108 @@ export default function AppearancePage() {
                             value={settings.footer_text_color}
                             onChange={(v) => set("footer_text_color", v)}
                           />
+                          <ColorPickerField
+                            label="Título da avaliação (cards)"
+                            name="review_title_color"
+                            value={settings.review_title_color}
+                            onChange={(v) => set("review_title_color", v)}
+                          />
+                          <ColorPickerField
+                            label="Texto / resumo (cards)"
+                            name="review_body_color"
+                            value={settings.review_body_color}
+                            onChange={(v) => set("review_body_color", v)}
+                          />
                         </InlineGrid>
                       </BlockStack>
                     </Card>
                     <Card>
                       <BlockStack gap="400">
                         <Text as="h2" variant="headingMd">
-                          Linha trusted by
+                          Cabeçalho da seção
                         </Text>
+                        <input type="hidden" name="header_style" value={settings.header_style} />
+                        <Select
+                          label="Estilo do cabeçalho"
+                          options={[
+                            {
+                              label: "Título + nota (ex.: TRUSTED BY THOUSANDS)",
+                              value: "aggregate",
+                            },
+                            { label: "Nome da loja + trusted by", value: "shop_trusted" },
+                          ]}
+                          value={settings.header_style}
+                          onChange={(v) =>
+                            set("header_style", v as StorefrontSettings["header_style"])
+                          }
+                        />
                         <Checkbox
-                          label="Mostrar linha"
+                          label="Mostrar cabeçalho"
                           name="trusted_show_header"
                           checked={settings.trusted_show_header}
                           onChange={(v) => set("trusted_show_header", v)}
                         />
-                        <InlineGrid columns={2} gap="400">
-                          <ColorPickerField
-                            label="Destaque"
-                            name="trusted_highlight_color"
-                            value={settings.trusted_highlight_color}
-                            onChange={(v) => set("trusted_highlight_color", v)}
-                          />
-                          <ColorPickerField
-                            label="Texto"
-                            name="trusted_text_color"
-                            value={settings.trusted_text_color}
-                            onChange={(v) => set("trusted_text_color", v)}
-                          />
-                          <ColorPickerField
-                            label="Ícone check"
-                            name="trusted_checkmark_color"
-                            value={settings.trusted_checkmark_color}
-                            onChange={(v) => set("trusted_checkmark_color", v)}
-                          />
-                        </InlineGrid>
+                        {settings.header_style === "aggregate" ? (
+                          <>
+                            <TextField
+                              label="Título principal (maiúsculas)"
+                              name="section_headline"
+                              value={settings.section_headline}
+                              onChange={(v) => set("section_headline", v)}
+                              autoComplete="off"
+                              helpText="Ex.: TRUSTED BY THOUSANDS"
+                            />
+                            <TextField
+                              label="Prefixo do resumo"
+                              name="header_based_on_prefix"
+                              value={settings.header_based_on_prefix}
+                              onChange={(v) => set("header_based_on_prefix", v)}
+                              autoComplete="off"
+                              helpText='Ex.: "Based on" → Based on 120 reviews'
+                            />
+                            <InlineGrid columns={3} gap="300">
+                              <ColorPickerField
+                                label="Cor da nota"
+                                name="header_rating_color"
+                                value={settings.header_rating_color}
+                                onChange={(v) => set("header_rating_color", v)}
+                              />
+                              <ColorPickerField
+                                label="Estrelas do cabeçalho"
+                                name="header_stars_color"
+                                value={settings.header_stars_color}
+                                onChange={(v) => set("header_stars_color", v)}
+                              />
+                              <ColorPickerField
+                                label="Texto do resumo"
+                                name="header_summary_color"
+                                value={settings.header_summary_color}
+                                onChange={(v) => set("header_summary_color", v)}
+                              />
+                            </InlineGrid>
+                          </>
+                        ) : (
+                          <InlineGrid columns={2} gap="400">
+                            <ColorPickerField
+                              label="Destaque"
+                              name="trusted_highlight_color"
+                              value={settings.trusted_highlight_color}
+                              onChange={(v) => set("trusted_highlight_color", v)}
+                            />
+                            <ColorPickerField
+                              label="Texto"
+                              name="trusted_text_color"
+                              value={settings.trusted_text_color}
+                              onChange={(v) => set("trusted_text_color", v)}
+                            />
+                            <ColorPickerField
+                              label="Ícone check"
+                              name="trusted_checkmark_color"
+                              value={settings.trusted_checkmark_color}
+                              onChange={(v) => set("trusted_checkmark_color", v)}
+                            />
+                          </InlineGrid>
+                        )}
                         <RangeField
                           label="Tamanho da fonte"
                           name="trusted_font_size"

@@ -13,6 +13,14 @@
 {%- assign s_pad_bottom = cfg.section_padding_bottom | default: 24 -%}
 {%- assign s_pad_sides = cfg.section_padding_sides | default: 16 -%}
 {%- assign s_trusted_show = cfg.trusted_show_header | default: true -%}
+{%- assign s_header_style = cfg.header_style | default: 'aggregate' -%}
+{%- assign s_section_headline = cfg.section_headline | default: 'TRUSTED BY THOUSANDS' -%}
+{%- assign s_header_rating_color = cfg.header_rating_color | default: '#1d8a42' -%}
+{%- assign s_header_stars_color = cfg.header_stars_color | default: '#e8a317' -%}
+{%- assign s_header_summary_color = cfg.header_summary_color | default: '#6b6b6b' -%}
+{%- assign s_header_based_on_prefix = cfg.header_based_on_prefix | default: 'Based on' -%}
+{%- assign s_review_title_color = cfg.review_title_color | default: '#000000' -%}
+{%- assign s_review_body_color = cfg.review_body_color | default: '#6b6b6b' -%}
 {%- assign s_trusted_after = cfg.trusted_text_after | default: 'is trusted by over' -%}
 {%- assign s_trusted_highlight = cfg.trusted_text_highlight | default: '28k+' -%}
 {%- assign s_trusted_highlight_color = cfg.trusted_highlight_color | default: '#1d8a42' -%}
@@ -135,17 +143,51 @@
 {%- if total_pages < 1 -%}{%- assign total_pages = 1 -%}{%- endif -%}
 
 <div id="vcom-reviews-{{ bid }}" class="product-reviews vcom-reviews-app-block vcom-layout--{{ s_layout }}" style="background:{{ s_background}};scroll-margin-top:96px;" data-layout="{{ s_layout }}">
+  <style>#vcom-reviews-{{ bid }} .product-reviews__title{color:{{ s_review_title_color }};font-weight:800}#vcom-reviews-{{ bid }} .product-reviews__text{color:{{ s_review_body_color }};font-weight:400}</style>
   <div class="vcom-reviews-container" style="max-width:1200px;margin:0 auto;padding:0 16px;">
     <div class="product-reviews__inner" style="padding:{{ s_pad_top }}px {{ s_pad_sides }}px {{ s_pad_bottom }}px;">
 
       {%- if s_trusted_show -%}
-        <div class="product-reviews__trusted" style="display:flex;justify-content:center;align-items:center;gap:6px;font-size:{{ s_trusted_font_size }}px;color:{{ s_trusted_text_color}};text-align:center;flex-wrap:wrap;margin-bottom:{{ s_trusted_mb }}px;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="{{ s_trusted_check_color}}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M22 12c0-5.5228-4.4772-10-10-10S2 6.4772 2 12s4.4772 10 10 10 10-4.4772 10-10Zm-5.2929-3.7071a1 1 0 0 1 0 1.4142l-6 6a1 1 0 0 1-1.4142 0l-3-3a1 1 0 1 1 1.4142-1.4142L11 13.5858l5.2929-5.2929a1 1 0 0 1 1.4142 0Z"/></svg>
-          <span style="display:inline-flex;align-items:center;flex-wrap:wrap;justify-content:center;">
-            {{ shop.name }} {{ s_trusted_after}}
-            <span style="color:{{ s_trusted_highlight_color}};margin-left:4px;">{{ s_trusted_highlight}}</span>
-          </span>
-        </div>
+        {%- if s_header_style == 'aggregate' -%}
+          {%- assign display_rating = s_footer_rating -%}
+          {%- if has_reviews -%}{%- assign display_rating = rating_avg | round: 1 -%}{%- endif -%}
+          {%- assign header_stars = display_rating | plus: 0.0 -%}
+          <header class="product-reviews__section-head" style="margin-bottom:{{ s_trusted_mb }}px;">
+            <h2 class="product-reviews__section-title">{{ s_section_headline }}</h2>
+            <div class="product-reviews__section-summary">
+              <span class="product-reviews__section-score" style="color:{{ s_header_rating_color }};">{{ display_rating }}</span>
+              <div class="product-reviews__section-stars" aria-hidden="true">
+                {%- for i in (1..5) -%}
+                  {%- assign star_min = i | minus: 1 | times: 1.0 -%}
+                  {%- if header_stars >= i -%}
+                    <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="{{ s_header_stars_color }}"/><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="#fff"/></svg>
+                  {%- elsif header_stars > star_min -%}
+                    {%- assign pct = header_stars | minus: star_min -%}
+                    {%- assign fill_width = pct | times: 32 -%}
+                    <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="{{ star_empty_color }}"/><rect width="{{ fill_width }}" height="32" fill="{{ s_header_stars_color }}"/><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="#fff"/></svg>
+                  {%- else -%}
+                    <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="{{ star_empty_color }}"/><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="#fff"/></svg>
+                  {%- endif -%}
+                {%- endfor -%}
+              </div>
+              <span class="product-reviews__section-count" style="color:{{ s_header_summary_color }};">
+                {%- if has_reviews -%}
+                  {{ s_header_based_on_prefix }} {{ review_count }}{% if review_count >= 1000 %}+{% endif %} reviews
+                {%- else -%}
+                  {{ s_header_based_on_prefix }} {{ s_footer_total }}
+                {%- endif -%}
+              </span>
+            </div>
+          </header>
+        {%- else -%}
+          <div class="product-reviews__trusted" style="display:flex;justify-content:center;align-items:center;gap:6px;font-size:{{ s_trusted_font_size }}px;color:{{ s_trusted_text_color}};text-align:center;flex-wrap:wrap;margin-bottom:{{ s_trusted_mb }}px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="{{ s_trusted_check_color}}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M22 12c0-5.5228-4.4772-10-10-10S2 6.4772 2 12s4.4772 10 10 10 10-4.4772 10-10Zm-5.2929-3.7071a1 1 0 0 1 0 1.4142l-6 6a1 1 0 0 1-1.4142 0l-3-3a1 1 0 1 1 1.4142-1.4142L11 13.5858l5.2929-5.2929a1 1 0 0 1 1.4142 0Z"/></svg>
+            <span style="display:inline-flex;align-items:center;flex-wrap:wrap;justify-content:center;">
+              {{ shop.name }} {{ s_trusted_after}}
+              <span style="color:{{ s_trusted_highlight_color}};margin-left:4px;">{{ s_trusted_highlight}}</span>
+            </span>
+          </div>
+        {%- endif -%}
       {%- endif -%}
 
       {%- if has_reviews -%}

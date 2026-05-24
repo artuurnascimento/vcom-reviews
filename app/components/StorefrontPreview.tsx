@@ -87,27 +87,78 @@ export function StorefrontPreview({ settings, shopName = "Sua loja" }: Props) {
           }}
         >
           {settings.trusted_show_header ? (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                gap: 6,
-                flexWrap: "wrap",
-                fontSize: settings.trusted_font_size,
-                color: settings.trusted_text_color,
-                marginBottom: settings.trusted_margin_bottom,
-                textAlign: "center",
-              }}
-            >
-              <CheckIcon color={settings.trusted_checkmark_color} />
-              <span>
-                {shopName} {settings.trusted_text_after}{" "}
-                <span style={{ color: settings.trusted_highlight_color, fontWeight: 600 }}>
-                  {settings.trusted_text_highlight}
+            settings.header_style === "aggregate" ? (
+              <header
+                style={{
+                  textAlign: "left",
+                  marginBottom: settings.trusted_margin_bottom,
+                }}
+              >
+                <h2
+                  style={{
+                    margin: "0 0 10px",
+                    fontSize: 20,
+                    fontWeight: 800,
+                    letterSpacing: "0.06em",
+                    textTransform: "uppercase",
+                    color: "#000",
+                    lineHeight: 1.15,
+                  }}
+                >
+                  {settings.section_headline}
+                </h2>
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                    gap: "8px 12px",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 24,
+                      fontWeight: 800,
+                      color: settings.header_rating_color,
+                      lineHeight: 1,
+                    }}
+                  >
+                    4.8
+                  </span>
+                  <ReviewStars
+                    rating={4.8}
+                    size={18}
+                    fillColor={settings.header_stars_color}
+                    emptyColor={settings.stars_empty_color}
+                  />
+                  <span style={{ fontSize: 15, color: settings.header_summary_color }}>
+                    {settings.header_based_on_prefix} 128 reviews
+                  </span>
+                </div>
+              </header>
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  gap: 6,
+                  flexWrap: "wrap",
+                  fontSize: settings.trusted_font_size,
+                  color: settings.trusted_text_color,
+                  marginBottom: settings.trusted_margin_bottom,
+                  textAlign: "center",
+                }}
+              >
+                <CheckIcon color={settings.trusted_checkmark_color} />
+                <span>
+                  {shopName} {settings.trusted_text_after}{" "}
+                  <span style={{ color: settings.trusted_highlight_color, fontWeight: 600 }}>
+                    {settings.trusted_text_highlight}
+                  </span>
                 </span>
-              </span>
-            </div>
+              </div>
+            )
           ) : null}
 
           <PreviewReviews settings={settings} />
@@ -274,8 +325,26 @@ function ReviewCard({
           {settings.show_verified && review.verified ? (
             <VerifiedBadge settings={settings} />
           ) : null}
-          <div style={{ fontWeight: 700, fontSize: 14, margin: "6px 0 4px" }}>{review.title}</div>
-          <div style={{ fontSize: 13, color: "#333", lineHeight: 1.45 }}>{review.body}</div>
+          <div
+            style={{
+              fontWeight: 800,
+              fontSize: 15,
+              margin: "6px 0 4px",
+              color: settings.review_title_color,
+            }}
+          >
+            {review.title}
+          </div>
+          <div
+            style={{
+              fontSize: 14,
+              color: settings.review_body_color,
+              lineHeight: 1.55,
+              fontWeight: 400,
+            }}
+          >
+            {review.body}
+          </div>
           <div style={{ fontSize: 11, color: "#888", marginTop: 6 }}>{review.time}</div>
         </div>
       </div>
@@ -296,8 +365,26 @@ function ReviewCard({
       {settings.show_verified && review.verified ? (
         <VerifiedBadge settings={settings} />
       ) : null}
-      <div style={{ fontWeight: 700, fontSize: compact ? 13 : 15, margin: "8px 0 4px" }}>{review.title}</div>
-      <div style={{ fontSize: compact ? 12 : 13, color: "#333", lineHeight: 1.45 }}>{review.body}</div>
+          <div
+            style={{
+              fontWeight: 800,
+              fontSize: compact ? 14 : 17,
+              margin: "8px 0 4px",
+              color: settings.review_title_color,
+            }}
+          >
+            {review.title}
+          </div>
+          <div
+            style={{
+              fontSize: compact ? 13 : 15,
+              color: settings.review_body_color,
+              lineHeight: 1.55,
+              fontWeight: 400,
+            }}
+          >
+            {review.body}
+          </div>
       <div style={{ fontSize: 11, color: "#888", marginTop: 8 }}>
         {review.author} — {review.time}
       </div>
