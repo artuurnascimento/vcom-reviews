@@ -13,11 +13,10 @@ import { ReviewStars } from "./ReviewStars";
 type Props = {
   review: GeneratedAiReview;
   index: number;
-  rating: number;
   onChange: (field: keyof GeneratedAiReview, value: string) => void;
 };
 
-export function AiReviewPreviewCard({ review, index, rating, onChange }: Props) {
+export function AiReviewPreviewCard({ review, index, onChange }: Props) {
   return (
     <Box
       padding="400"
@@ -39,7 +38,10 @@ export function AiReviewPreviewCard({ review, index, rating, onChange }: Props) 
                 {String(index + 1).padStart(2, "0")}
               </Text>
             </Box>
-            <ReviewStars rating={rating} size={14} />
+            <ReviewStars rating={review.rating} size={14} />
+            <Text as="span" variant="bodySm" fontWeight="semibold">
+              {review.rating.toFixed(1)}
+            </Text>
           </InlineStack>
           {review.time ? (
             <Text as="span" variant="bodySm" tone="subdued">
@@ -72,18 +74,28 @@ export function AiReviewPreviewCard({ review, index, rating, onChange }: Props) 
         />
         <InlineGrid columns={2} gap="300">
           <TextField
+            label="Nota"
+            type="number"
+            value={String(review.rating)}
+            onChange={(v) => onChange("rating", v)}
+            min={0.5}
+            max={5}
+            step={0.1}
+            autoComplete="off"
+          />
+          <TextField
             label="Autor"
             value={review.author}
             onChange={(v) => onChange("author", v)}
             autoComplete="off"
           />
-          <TextField
-            label="Quando"
-            value={review.time}
-            onChange={(v) => onChange("time", v)}
-            autoComplete="off"
-          />
         </InlineGrid>
+        <TextField
+          label="Quando"
+          value={review.time}
+          onChange={(v) => onChange("time", v)}
+          autoComplete="off"
+        />
       </BlockStack>
     </Box>
   );

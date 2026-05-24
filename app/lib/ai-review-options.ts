@@ -68,7 +68,8 @@ export type AiReviewGenerateInput = {
   locale: string;
   country: string;
   city: string;
-  rating: number;
+  ratingMin: number;
+  ratingMax: number;
   count: number;
   /** URLs públicas das imagens do produto (para visão multimodal) */
   productImageUrls?: string[];
@@ -79,9 +80,52 @@ export type GeneratedAiReview = {
   body: string;
   author: string;
   time: string;
+  rating: number;
   /** URL da imagem do produto vinculada a esta avaliação (preview + save) */
   imageUrl?: string;
 };
+
+export function clampRating(value: number): number {
+  if (!Number.isFinite(value)) return 5;
+  return Math.min(5, Math.max(0.5, Math.round(value * 10) / 10));
+}
+
+export function normalizeRatingRange(
+  min: number,
+  max: number,
+): { min: number; max: number } {
+  const a = clampRating(min);
+  const b = clampRating(max);
+  return a <= b ? { min: a, max: b } : { min: b, max: a };
+}
+
+export function formatRatingRange(min: number, max: number): string {
+  const { min: lo, max: hi } = normalizeRatingRange(min, max);
+  if (lo === hi) return `${lo.toFixed(1)}★`;
+  return `${lo.toFixed(1)} – ${hi.toFixed(1)}★`;
+}
+
+/** Distribui notas variadas dentro da faixa para N avaliações. */
+export function distributeRatings(count: number, min: number, max: number): number[] {
+  const { min: lo, max: hi } = normalizeRatingRange(min, max);
+  if (count <= 0) return [];
+  if (count === 1) return [hi];
+
+  const ratings: number[] = [];
+  for (let i = 0; i < count; i++) {
+    const t = i / (count - 1);
+    const base = lo + (hi - lo) * t;
+    const jitter = (Math.random() - 0.5) * Math.min(0.3, (hi - lo) * 0.4);
+    ratings.push(clampRating(base + jitter));
+  }
+
+  for (let i = ratings.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [ratings[i], ratings[j]] = [ratings[j], ratings[i]];
+  }
+
+  return ratings;
+}
 
 export function labelForOption(
   options: ReadonlyArray<{ label: string; value: string }>,

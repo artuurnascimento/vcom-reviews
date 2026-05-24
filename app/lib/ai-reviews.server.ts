@@ -2,7 +2,13 @@ import type {
   AiReviewGenerateInput,
   GeneratedAiReview,
 } from "./ai-review-options";
-import { labelForOption, AI_TONES } from "./ai-review-options";
+import {
+  clampRating,
+  distributeRatings,
+  labelForOption,
+  normalizeRatingRange,
+  AI_TONES,
+} from "./ai-review-options";
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 const MAX_REVIEWS_PER_REQUEST = 10;
@@ -31,9 +37,14 @@ function resolveProductType(input: AiReviewGenerateInput): string {
   return input.productType;
 }
 
-function buildPrompt(input: AiReviewGenerateInput, hasImages: boolean): string {
+function buildPrompt(
+  input: AiReviewGenerateInput,
+  hasImages: boolean,
+  targetRatings: number[],
+): string {
   const productType = resolveProductType(input);
   const toneLabel = labelForOption(AI_TONES, input.tone);
+  const { min, max } = normalizeRatingRange(input.ratingMin, input.ratingMax);
   const productLine = input.productTitle
     ? `Produto: "${input.productTitle}"`
     : "Produto: genérico da loja (sem nome específico)";
@@ -58,11 +69,15 @@ function buildPrompt(input: AiReviewGenerateInput, hasImages: boolean): string {
       ? personaParts.join(", ")
       : "persona variada (gênero, idade e local aleatórios)";
 
+  const ratingLines = targetRatings
+    .map((r, i) => `- Avaliação ${i + 1}: nota ${r.toFixed(1)}`)
+    .join("\n");
+
   const visualRules = hasImages
     ? `
-8. IMAGENS DO PRODUTO anexadas: analise cor, material, embalagem, acabamento e detalhes visíveis.
-9. Mencione 1–2 detalhes visuais de forma natural (como quem recebeu/usou o produto), sem listar como catálogo.
-10. Não diga "na foto" ou "na imagem" — escreva como experiência real ("a cor é linda", "chegou bem embalado").`
+9. IMAGENS DO PRODUTO anexadas: analise cor, material, embalagem, acabamento e detalhes visíveis.
+10. Mencione 1–2 detalhes visuais de forma natural (como quem recebeu/usou o produto), sem listar como catálogo.
+11. Não diga "na foto" ou "na imagem" — escreva como experiência real ("a cor é linda", "chegou bem embalado").`
     : "";
 
   return `Você gera rascunhos de avaliações de clientes para uma loja online revisar antes de publicar.
@@ -74,17 +89,21 @@ ${descriptionLine ? `- ${descriptionLine}` : ""}
 - Idioma: ${input.locale}
 - Tom: ${toneLabel}
 - Persona do autor: ${persona}
-- Nota: ${input.rating} de 5 (o texto deve ser coerente com essa nota)
+- Faixa de notas: ${min.toFixed(1)} a ${max.toFixed(1)} (escala 0,5–5,0)
 - Quantidade: ${input.count} avaliações DISTINTAS entre si
+
+Notas obrigatórias por avaliação (use EXATAMENTE no campo "rating"):
+${ratingLines}
 
 Regras:
 1. Cada avaliação deve parecer escrita por pessoa diferente (vocabulário, tamanho, estilo).
-2. Autor: primeiro nome + inicial do sobrenome (ex.: "Mariana S.", "João P.").
-3. Título: curto (3–8 palavras) ou vazio se o tom for muito casual.
-4. Corpo: 2–5 frases naturais; evite clichês repetidos ("super recomendo", "mudou minha vida", "nota 10").
-5. Campo "time": relativo em idioma ${input.locale} (ex.: "há 2 dias", "há 1 semana", "há 3 semanas").
-6. NÃO mencione IA, simulação, loja fictícia ou hashtags.
-7. NÃO repita frases entre as avaliações.${visualRules}
+2. O texto deve ser coerente com a nota atribuída (notas altas = mais positivo; notas mais baixas = críticas leves mas ainda dentro da faixa).
+3. Autor: primeiro nome + inicial do sobrenome (ex.: "Mariana S.", "João P.").
+4. Título: curto (3–8 palavras) ou vazio se o tom for muito casual.
+5. Corpo: 2–5 frases naturais; evite clichês repetidos ("super recomendo", "mudou minha vida", "nota 10").
+6. Campo "time": relativo em idioma ${input.locale} (ex.: "há 2 dias", "há 1 semana", "há 3 semanas").
+7. NÃO mencione IA, simulação, loja fictícia ou hashtags.
+8. NÃO repita frases entre as avaliações.${visualRules}
 
 Retorne JSON com exatamente ${input.count} item(ns) no array "reviews".`;
 }
@@ -131,7 +150,13 @@ function assignProductImages(
   }));
 }
 
-function parseGeneratedReviews(raw: unknown, expected: number): GeneratedAiReview[] {
+function parseGeneratedReviews(
+  raw: unknown,
+  expected: number,
+  targetRatings: number[],
+  ratingMin: number,
+  ratingMax: number,
+): GeneratedAiReview[] {
   let items: unknown[] = [];
 
   if (raw && typeof raw === "object" && "reviews" in raw) {
@@ -143,18 +168,28 @@ function parseGeneratedReviews(raw: unknown, expected: number): GeneratedAiRevie
     items = [raw];
   }
 
+  const { min, max } = normalizeRatingRange(ratingMin, ratingMax);
+
   const parsed = items
-    .map((item) => {
+    .map((item, index) => {
       if (!item || typeof item !== "object") return null;
       const row = item as Record<string, unknown>;
       const body = String(row.body ?? "").trim();
       const author = String(row.author ?? "").trim();
       if (!body || !author) return null;
+
+      const fallback = targetRatings[index] ?? targetRatings[targetRatings.length - 1] ?? max;
+      let rating = clampRating(parseFloat(String(row.rating ?? fallback)) || fallback);
+      if (rating < min || rating > max) {
+        rating = fallback;
+      }
+
       return {
         title: String(row.title ?? "").trim(),
         body,
         author,
         time: String(row.time ?? "há alguns dias").trim(),
+        rating,
       } satisfies GeneratedAiReview;
     })
     .filter((r): r is GeneratedAiReview => r !== null);
@@ -175,6 +210,7 @@ export async function generateReviewsWithGemini(
 ): Promise<GeneratedAiReview[]> {
   const count = Math.min(Math.max(1, input.count), MAX_REVIEWS_PER_REQUEST);
   const payload = { ...input, count };
+  const targetRatings = distributeRatings(count, input.ratingMin, input.ratingMax);
   const imageUrls = (input.productImageUrls || []).filter(Boolean);
   const visionParts = await loadVisionParts(imageUrls);
   const hasImages = visionParts.length > 0;
@@ -184,7 +220,7 @@ export async function generateReviewsWithGemini(
 
   const parts: Array<GeminiTextPart | GeminiInlinePart> = [
     ...visionParts,
-    { text: buildPrompt(payload, hasImages) },
+    { text: buildPrompt(payload, hasImages, targetRatings) },
   ];
 
   const response = await fetch(url, {
@@ -208,8 +244,9 @@ export async function generateReviewsWithGemini(
                   body: { type: "string" },
                   author: { type: "string" },
                   time: { type: "string" },
+                  rating: { type: "number" },
                 },
-                required: ["body", "author", "time"],
+                required: ["body", "author", "time", "rating"],
               },
             },
           },
@@ -245,6 +282,12 @@ export async function generateReviewsWithGemini(
     throw new Error("Não foi possível interpretar a resposta da IA.");
   }
 
-  const reviews = parseGeneratedReviews(parsed, count);
+  const reviews = parseGeneratedReviews(
+    parsed,
+    count,
+    targetRatings,
+    input.ratingMin,
+    input.ratingMax,
+  );
   return assignProductImages(reviews, imageUrls);
 }

@@ -28,6 +28,9 @@ import {
   AI_PRODUCT_TYPES,
   AI_TONES,
   type GeneratedAiReview,
+  formatRatingRange,
+  normalizeRatingRange,
+  clampRating,
 } from "../lib/ai-review-options";
 import {
   generateReviewsWithGemini,
@@ -42,8 +45,7 @@ import {
   type ProductSearchResult,
 } from "../components/ProductSearchPicker";
 import { ProductHeroCard } from "../components/ProductHeroCard";
-import { StarRatingPicker } from "../components/StarRatingPicker";
-import { ReviewStars } from "../components/ReviewStars";
+import { RatingRangeField } from "../components/RatingRangeField";
 
 type ProductPreview = {
   id: string;
@@ -58,7 +60,8 @@ type ProductPreview = {
 type GenerateSuccess = {
   ok: true;
   reviews: GeneratedAiReview[];
-  rating: number;
+  ratingMin: number;
+  ratingMax: number;
   placement: ReviewPlacement;
   productId: string;
   productTitle?: string;
@@ -95,7 +98,8 @@ function parseGenerateInput(form: FormData) {
     locale: String(form.get("locale") || "pt-BR"),
     country: String(form.get("country") || "random"),
     city: String(form.get("city") || "").trim(),
-    rating: parseFloat(String(form.get("rating") || "5")) || 5,
+    ratingMin: parseFloat(String(form.get("ratingMin") || "4.6")) || 4.6,
+    ratingMax: parseFloat(String(form.get("ratingMax") || "5")) || 5,
     count: Math.min(10, Math.max(1, parseInt(String(form.get("count") || "3"), 10) || 3)),
     placement: (String(form.get("placement") || "product") as ReviewPlacement),
     verifiedBuyer: form.get("verifiedBuyer") === "true",
@@ -173,7 +177,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           : [];
 
       await createReview(admin, {
-        rating: payload.rating,
+        rating: clampRating(review.rating ?? payload.ratingMax),
         verified_buyer: payload.verifiedBuyer,
         title: review.title,
         body: review.body,
@@ -232,6 +236,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     } satisfies GenerateResult);
   }
 
+  const { min: ratingMin, max: ratingMax } = normalizeRatingRange(
+    payload.ratingMin,
+    payload.ratingMax,
+  );
+
   try {
     const reviews = await generateReviewsWithGemini({
       productType: payload.productType,
@@ -245,14 +254,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       locale: payload.locale,
       country: payload.country,
       city: payload.city,
-      rating: payload.rating,
+      ratingMin,
+      ratingMax,
       count: payload.count,
     });
 
     return json({
       ok: true,
       reviews,
-      rating: payload.rating,
+      ratingMin,
+      ratingMax,
       placement: payload.placement,
       productId: payload.productId,
       productTitle: product.title,
@@ -292,7 +303,8 @@ export default function GenerateReviewsPage() {
   const [locale, setLocale] = useState("pt-BR");
   const [country, setCountry] = useState("Brasil");
   const [city, setCity] = useState("");
-  const [rating, setRating] = useState(5);
+  const [ratingMin, setRatingMin] = useState(4.6);
+  const [ratingMax, setRatingMax] = useState(5);
   const [count, setCount] = useState("3");
   const [placement, setPlacement] = useState<ReviewPlacement>("product");
   const [verifiedBuyer, setVerifiedBuyer] = useState(false);
@@ -390,7 +402,8 @@ export default function GenerateReviewsPage() {
       fd.set("locale", locale);
       fd.set("country", country);
       fd.set("city", city);
-      fd.set("rating", String(rating));
+      fd.set("ratingMin", String(ratingMin));
+      fd.set("ratingMax", String(ratingMax));
       fd.set("count", count);
       fd.set("placement", placement);
       fd.set("verifiedBuyer", String(verifiedBuyer));
@@ -412,7 +425,8 @@ export default function GenerateReviewsPage() {
       locale,
       country,
       city,
-      rating,
+      ratingMin,
+      ratingMax,
       count,
       placement,
       verifiedBuyer,
@@ -434,7 +448,13 @@ export default function GenerateReviewsPage() {
   const updatePreview = useCallback(
     (index: number, field: keyof GeneratedAiReview, value: string) => {
       setPreview((prev) =>
-        prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
+        prev.map((item, i) => {
+          if (i !== index) return item;
+          if (field === "rating") {
+            return { ...item, rating: clampRating(parseFloat(value) || item.rating) };
+          }
+          return { ...item, [field]: value };
+        }),
       );
     },
     [],
@@ -454,14 +474,16 @@ export default function GenerateReviewsPage() {
 
   const canGenerate = geminiConfigured && Boolean(productId);
 
+  const parsedCount = Math.min(10, Math.max(1, parseInt(count, 10) || 3));
+
   const summaryBadges = useMemo(
     () => [
       `${count} avaliações`,
-      `${rating}★`,
+      formatRatingRange(ratingMin, ratingMax),
       AI_TONES.find((t) => t.value === tone)?.label || tone,
       AI_LOCALES.find((l) => l.value === locale)?.label || locale,
     ],
-    [count, rating, tone, locale],
+    [count, ratingMin, ratingMax, tone, locale],
   );
 
   const productTab = (
@@ -538,12 +560,15 @@ export default function GenerateReviewsPage() {
         autoComplete="off"
       />
       <Box padding="400" borderRadius="300" background="bg-surface-secondary" borderWidth="025" borderColor="border">
-        <BlockStack gap="200">
-          <Text as="p" variant="bodyMd" fontWeight="semibold">
-            Nota das avaliações
-          </Text>
-          <StarRatingPicker value={rating} onChange={setRating} />
-        </BlockStack>
+        <RatingRangeField
+          min={ratingMin}
+          max={ratingMax}
+          count={parsedCount}
+          onChange={(min, max) => {
+            setRatingMin(min);
+            setRatingMax(max);
+          }}
+        />
       </Box>
     </BlockStack>
   );
@@ -698,13 +723,17 @@ export default function GenerateReviewsPage() {
                     </Text>
                   </BlockStack>
                   {preview.length > 0 ? (
-                    <InlineStack gap="200" blockAlign="center">
-                      <ReviewStars rating={rating} size={16} />
-                      <Text as="span" variant="bodySm" tone="subdued">
-                        {rating}/5
-                      </Text>
-                    </InlineStack>
-                  ) : null}
+                    <Text as="span" variant="bodySm" tone="subdued">
+                      {formatRatingRange(
+                        Math.min(...preview.map((r) => r.rating)),
+                        Math.max(...preview.map((r) => r.rating)),
+                      )}
+                    </Text>
+                  ) : (
+                    <Text as="span" variant="bodySm" tone="subdued">
+                      {formatRatingRange(ratingMin, ratingMax)}
+                    </Text>
+                  )}
                 </InlineStack>
 
                 {preview.length === 0 ? (
@@ -735,7 +764,6 @@ export default function GenerateReviewsPage() {
                         key={`preview-${index}`}
                         review={review}
                         index={index}
-                        rating={rating}
                         onChange={(field, value) => updatePreview(index, field, value)}
                       />
                     ))}
