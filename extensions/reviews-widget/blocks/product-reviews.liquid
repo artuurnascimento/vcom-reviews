@@ -2,6 +2,8 @@
   VCOM Reviews — configurações via app (shop.metafields.vcom_reviews.storefront_settings)
 {%- endcomment -%}
 
+{{ 'vcom-layouts.css' | asset_url | stylesheet_tag }}
+
 {%- assign bid = block.id -%}
 {%- assign cfg = shop.metafields.vcom_reviews.storefront_settings.value -%}
 
@@ -54,6 +56,7 @@
 {%- assign s_footer_total = cfg.footer_total | default: '11 customers' -%}
 {%- assign s_footer_suffix = cfg.footer_suffix | default: '.' -%}
 {%- assign s_footer_text_color = cfg.footer_text_color | default: '#000000' -%}
+{%- assign s_layout = cfg.layout | default: 'trustpilot_carousel' -%}
 
 {%- assign all_reviews = nil -%}
 {%- if shop.metaobjects.review -%}
@@ -90,6 +93,11 @@
 {%- assign review_count = 0 -%}
 {%- assign rating_avg = 0 -%}
 {%- assign rating_sum = 0 -%}
+{%- assign dist_1 = 0 -%}
+{%- assign dist_2 = 0 -%}
+{%- assign dist_3 = 0 -%}
+{%- assign dist_4 = 0 -%}
+{%- assign dist_5 = 0 -%}
 {%- if all_reviews != blank -%}
   {%- for r in all_reviews -%}
     {%- assign r_st = 'approved' -%}
@@ -108,6 +116,13 @@
     {%- assign review_count = review_count | plus: 1 -%}
     {%- assign r_val_raw = r.rating.value | default: r.rating | replace: ',', '.' -%}
     {%- assign rating_sum = rating_sum | plus: r_val_raw | plus: 0.0 -%}
+    {%- assign r_stars_int = r_val_raw | plus: 0 | round -%}
+    {%- if r_stars_int == 1 -%}{%- assign dist_1 = dist_1 | plus: 1 -%}
+    {%- elsif r_stars_int == 2 -%}{%- assign dist_2 = dist_2 | plus: 1 -%}
+    {%- elsif r_stars_int == 3 -%}{%- assign dist_3 = dist_3 | plus: 1 -%}
+    {%- elsif r_stars_int == 4 -%}{%- assign dist_4 = dist_4 | plus: 1 -%}
+    {%- else -%}{%- assign dist_5 = dist_5 | plus: 1 -%}
+    {%- endif -%}
   {%- endfor -%}
   {%- if review_count > 0 -%}
     {%- assign rating_avg = rating_sum | times: 1.0 | divided_by: review_count -%}
@@ -119,7 +134,7 @@
 {%- assign total_pages = review_count | plus: reviews_per_page | minus: 1 | divided_by: reviews_per_page -%}
 {%- if total_pages < 1 -%}{%- assign total_pages = 1 -%}{%- endif -%}
 
-<div id="vcom-reviews-{{ bid }}" class="product-reviews vcom-reviews-app-block" style="background:{{ s_background}};scroll-margin-top:96px;">
+<div id="vcom-reviews-{{ bid }}" class="product-reviews vcom-reviews-app-block vcom-layout--{{ s_layout }}" style="background:{{ s_background}};scroll-margin-top:96px;" data-layout="{{ s_layout }}">
   <div class="vcom-reviews-container" style="max-width:1200px;margin:0 auto;padding:0 16px;">
     <div class="product-reviews__inner" style="padding:{{ s_pad_top }}px {{ s_pad_sides }}px {{ s_pad_bottom }}px;">
 
@@ -134,8 +149,47 @@
       {%- endif -%}
 
       {%- if has_reviews -%}
-        <style>#vcom-reviews-{{ bid }} .product-reviews__wrap{display:grid;grid-auto-flow:column;grid-auto-columns:85%;overflow-x:auto;scroll-snap-type:x mandatory;gap:16px;padding:8px 0;-webkit-overflow-scrolling:touch;scrollbar-width:thin}#vcom-reviews-{{ bid }} .product-reviews__card{scroll-snap-align:start;border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:20px 24px;background:#fff;text-align:left}#vcom-reviews-{{ bid }} .product-reviews__stars{display:flex;gap:6px;margin-bottom:8px}#vcom-reviews-{{ bid }} .product-reviews__stars svg{width:24px;height:24px;flex:0 0 auto}#vcom-reviews-{{ bid }} .product-reviews__verified{display:flex;align-items:center;gap:6px;margin:6px 0 10px;font-size:12px;font-weight:700;color:{{ verified_color }}}#vcom-reviews-{{ bid }} .product-reviews__title{margin:0 0 8px;font-size:16px;line-height:1.3;font-weight:700;color:#111}#vcom-reviews-{{ bid }} .product-reviews__text{margin:0 0 10px;font-size:14px;line-height:1.5;color:#333}#vcom-reviews-{{ bid }} .product-reviews__images{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}#vcom-reviews-{{ bid }} .product-reviews__image-link{display:block;border-radius:8px;overflow:hidden;border:1px solid rgba(0,0,0,.08);cursor:pointer;background:none;padding:0;margin:0;font:inherit;text-align:left}#vcom-reviews-{{ bid }} .product-reviews__image{width:80px;height:80px;object-fit:cover;display:block;pointer-events:none}#vcom-reviews-{{ bid }} .product-reviews__image-more{width:80px;height:80px;min-width:80px;min-height:80px;border-radius:8px;border:1px solid rgba(0,0,0,.08);background:rgba(0,0,0,.06);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#555;transition:background .2s,color .2s}#vcom-reviews-{{ bid }} .product-reviews__image-more:hover{background:rgba(0,0,0,.1);color:#111}#vcom-reviews-{{ bid }} .product-reviews__image-link--hidden{display:none}#vcom-reviews-{{ bid }} .product-reviews__images.is-expanded .product-reviews__image-link--hidden{display:block}#vcom-reviews-{{ bid }} .product-reviews__images.is-expanded .product-reviews__image-see-more{display:none!important}#vcom-reviews-{{ bid }} .product-reviews__images.is-expanded .product-reviews__image-see-less{display:inline-block!important}#vcom-reviews-{{ bid }} .product-reviews__image-see-less{display:none;width:100%}#vcom-reviews-{{ bid }} .product-reviews__image-see-more:hover,#vcom-reviews-{{ bid }} .product-reviews__image-see-less:hover{background:rgba(0,0,0,.1);color:#111}#vcom-reviews-{{ bid }} .product-reviews__text-wrap{margin:0 0 10px}#vcom-reviews-{{ bid }} .product-reviews__text-more,#vcom-reviews-{{ bid }} .product-reviews__text-less{background:none;border:none;padding:0;font-size:13px;font-weight:600;color:{{ star_color}};cursor:pointer;margin-top:4px;text-decoration:underline}#vcom-reviews-{{ bid }} .product-reviews__text-more:hover,#vcom-reviews-{{ bid }} .product-reviews__text-less:hover{opacity:.85}#vcom-reviews-{{ bid }} .product-reviews__image-modal{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:24px;opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s}#vcom-reviews-{{ bid }} .product-reviews__image-modal.is-open{opacity:1;visibility:visible}#vcom-reviews-{{ bid }} .product-reviews__image-modal-inner{position:relative;max-width:90vw;max-height:90vh}#vcom-reviews-{{ bid }} .product-reviews__image-modal img{max-width:100%;max-height:85vh;width:auto;height:auto;object-contain;display:block;border-radius:8px}#vcom-reviews-{{ bid }} .product-reviews__image-modal-close{position:absolute;top:-44px;right:0;width:36px;height:36px;border:none;background:rgba(255,255,255,.2);color:#fff;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:24px;line-height:1;padding:0;transition:background .2s}#vcom-reviews-{{ bid }} .product-reviews__image-modal-close:hover{background:rgba(255,255,255,.35)}#vcom-reviews-{{ bid }} .product-reviews__meta{font-size:12px;color:#888}@media (min-width:992px){#vcom-reviews-{{ bid }} .product-reviews__wrap{display:grid;grid-template-columns:repeat(3,1fr);overflow:visible;scroll-snap-type:none;grid-auto-flow:initial;grid-auto-columns:initial}}</style>
-        <div class="product-reviews__wrap" id="vcom-reviews-grid-{{ block.id }}" data-proxy-url="/apps/vcom-reviews/reviews?placement={{ submit_placement }}&product_id={{ submit_product_id | replace: 'gid://shopify/Product/', '' }}">
+        <style>#vcom-reviews-{{ bid }} .product-reviews__verified{color:{{ verified_color }}}#vcom-reviews-{{ bid }} .product-reviews__images{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}#vcom-reviews-{{ bid }} .product-reviews__image-link{display:block;border-radius:8px;overflow:hidden;border:1px solid rgba(0,0,0,.08);cursor:pointer;background:none;padding:0;margin:0;font:inherit;text-align:left}#vcom-reviews-{{ bid }} .product-reviews__image{width:80px;height:80px;object-fit:cover;display:block;pointer-events:none}#vcom-reviews-{{ bid }} .product-reviews__image-more{width:80px;height:80px;min-width:80px;min-height:80px;border-radius:8px;border:1px solid rgba(0,0,0,.08);background:rgba(0,0,0,.06);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#555}#vcom-reviews-{{ bid }} .product-reviews__image-link--hidden{display:none}#vcom-reviews-{{ bid }} .product-reviews__images.is-expanded .product-reviews__image-link--hidden{display:block}#vcom-reviews-{{ bid }} .product-reviews__images.is-expanded .product-reviews__image-see-more{display:none!important}#vcom-reviews-{{ bid }} .product-reviews__images.is-expanded .product-reviews__image-see-less{display:inline-block!important}#vcom-reviews-{{ bid }} .product-reviews__image-see-less{display:none;width:100%}#vcom-reviews-{{ bid }} .product-reviews__text-wrap{margin:0 0 10px}#vcom-reviews-{{ bid }} .product-reviews__text-more,#vcom-reviews-{{ bid }} .product-reviews__text-less{background:none;border:none;padding:0;font-size:13px;font-weight:600;color:{{ star_color}};cursor:pointer;margin-top:4px;text-decoration:underline}#vcom-reviews-{{ bid }} .product-reviews__image-modal{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:24px;opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s}#vcom-reviews-{{ bid }} .product-reviews__image-modal.is-open{opacity:1;visibility:visible}#vcom-reviews-{{ bid }} .product-reviews__image-modal-inner{position:relative;max-width:90vw;max-height:90vh}#vcom-reviews-{{ bid }} .product-reviews__image-modal img{max-width:100%;max-height:85vh;width:auto;height:auto;object-contain;display:block;border-radius:8px}#vcom-reviews-{{ bid }} .product-reviews__image-modal-close{position:absolute;top:-44px;right:0;width:36px;height:36px;border:none;background:rgba(255,255,255,.2);color:#fff;border-radius:50%;cursor:pointer;font-size:24px;line-height:1;padding:0}#vcom-reviews-{{ bid }}:not(.vcom-layout--trustpilot_list) .product-reviews__avatar,#vcom-reviews-{{ bid }}:not(.vcom-layout--trustpilot_list) .product-reviews__head{display:none}#vcom-reviews-{{ bid }}.vcom-layout--trustpilot_list .product-reviews__stars--default{display:none}#vcom-reviews-{{ bid }}.vcom-layout--trustpilot_list .product-reviews__meta-author{display:none}</style>
+        {%- if s_layout == 'trustpilot_split' -%}
+        <div class="vcom-split">
+          <aside class="vcom-split__summary" aria-label="Resumo das avaliações">
+            <div class="vcom-split__score">{{ rating_avg | round: 1 }}</div>
+            <div class="product-reviews__stars" style="justify-content:center;margin-bottom:8px;" aria-hidden="true">
+              {%- assign split_stars = rating_avg | plus: 0.0 -%}
+              {%- for i in (1..5) -%}
+                {%- assign star_min = i | minus: 1 | times: 1.0 -%}
+                {%- if split_stars >= i -%}
+                  <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="{{ star_color }}"/><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="#fff"/></svg>
+                {%- elsif split_stars > star_min -%}
+                  {%- assign pct = split_stars | minus: star_min -%}
+                  {%- assign fill_width = pct | times: 32 -%}
+                  <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="{{ star_empty_color }}"/><rect width="{{ fill_width }}" height="32" fill="{{ star_color }}"/><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="#fff"/></svg>
+                {%- else -%}
+                  <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="{{ star_empty_color }}"/><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="#fff"/></svg>
+                {%- endif -%}
+              {%- endfor -%}
+            </div>
+            <p class="vcom-split__label">TrustScore</p>
+            {%- for star_level in (5..1) -%}
+              {%- assign dist_count = dist_5 -%}
+              {%- if star_level == 4 -%}{%- assign dist_count = dist_4 -%}
+              {%- elsif star_level == 3 -%}{%- assign dist_count = dist_3 -%}
+              {%- elsif star_level == 2 -%}{%- assign dist_count = dist_2 -%}
+              {%- elsif star_level == 1 -%}{%- assign dist_count = dist_1 -%}
+              {%- endif -%}
+              {%- assign bar_pct = 0 -%}
+              {%- if review_count > 0 -%}{%- assign bar_pct = dist_count | times: 100.0 | divided_by: review_count -%}{%- endif -%}
+              <div class="vcom-bar-row">
+                <span>{{ star_level }}</span>
+                <div class="vcom-bar-track"><div class="vcom-bar-fill" style="width:{{ bar_pct }}%;background:{{ star_color }};"></div></div>
+                <span>{{ dist_count }}</span>
+              </div>
+            {%- endfor -%}
+            <p class="vcom-split__count">{{ review_count }} avaliações</p>
+          </aside>
+          <div class="vcom-split__reviews">
+        {%- endif -%}
+        <div class="product-reviews__wrap" id="vcom-reviews-grid-{{ block.id }}" data-proxy-url="/apps/vcom-reviews/reviews?placement={{ submit_placement }}&product_id={{ submit_product_id | replace: 'gid://shopify/Product/', '' }}" data-layout="{{ s_layout }}">
           
           {%- assign approved_index = 0 -%}
           {%- for review in all_reviews -%}
@@ -172,7 +226,28 @@
             {%- endif -%}
             {%- assign r_images = r_images | default: nil -%}
             <article class="product-reviews__card product-reviews__card--page-{{ page_num }}" data-page="{{ page_num }}"{% if total_pages > 1 and page_num > 1 %} style="display:none"{% endif %}>
-              <div class="product-reviews__stars" aria-hidden="true">
+              {%- assign r_avatar = r_author | slice: 0, 1 | upcase -%}
+              {%- if r_avatar == blank -%}{%- assign r_avatar = '?' -%}{%- endif -%}
+              <div class="product-reviews__avatar" aria-hidden="true">{{ r_avatar }}</div>
+              <div class="product-reviews__card-body">
+              <div class="product-reviews__head">
+                {%- if r_author != blank -%}<span class="product-reviews__author-name">{{ r_author }}</span>{%- endif -%}
+                <div class="product-reviews__stars" aria-hidden="true">
+                {%- for i in (1..5) -%}
+                  {%- assign star_min = i | minus: 1 | times: 1.0 -%}
+                  {%- if stars >= i -%}
+                    <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="{{ star_color }}"/><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="#fff"/></svg>
+                  {%- elsif stars > star_min -%}
+                    {%- assign pct = stars | minus: star_min -%}
+                    {%- assign fill_width = pct | times: 32 -%}
+                    <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="{{ star_empty_color }}"/><rect width="{{ fill_width }}" height="32" fill="{{ star_color }}"/><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="#fff"/></svg>
+                  {%- else -%}
+                    <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="{{ star_empty_color }}"/><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="#fff"/></svg>
+                  {%- endif -%}
+                {%- endfor -%}
+                </div>
+              </div>
+              <div class="product-reviews__stars product-reviews__stars--default" aria-hidden="true">
                 {%- for i in (1..5) -%}
                   {%- assign star_min = i | minus: 1 | times: 1.0 -%}
                   {%- if stars >= i -%}
@@ -233,13 +308,18 @@
                 </div>
               {%- endif -%}
               <div class="product-reviews__meta">
-                {%- if r_author != blank -%}<span>{{ r_author }}</span>{%- endif -%}
+                {%- if r_author != blank -%}<span class="product-reviews__meta-author">{{ r_author }}</span>{%- endif -%}
                 {%- if r_author != blank and r_time != blank -%}<span class="product-reviews__meta-sep"> - </span>{%- endif -%}
                 {%- if r_time != blank -%}<span>{{ r_time }}</span>{%- endif -%}
+              </div>
               </div>
             </article>
           {%- endfor -%}
         </div>
+        {%- if s_layout == 'trustpilot_split' -%}
+          </div>
+        </div>
+        {%- endif -%}
 
         <div class="product-reviews__image-modal" id="vcom-reviews-image-modal-{{ block.id }}" role="dialog" aria-modal="true" aria-label="Ver imagem">
           <div class="product-reviews__image-modal-inner">
@@ -280,8 +360,8 @@
           </script>
         {%- endif -%}
       {%- else -%}
-        <style>#vcom-reviews-{{ bid }} .product-reviews__wrap{display:grid;grid-auto-flow:column;grid-auto-columns:85%;overflow-x:auto;scroll-snap-type:x mandatory;gap:16px;padding:8px 0}#vcom-reviews-{{ bid }} .product-reviews__card{scroll-snap-align:start;border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:20px 24px;background:#fff;text-align:left}#vcom-reviews-{{ bid }} .product-reviews__stars{display:flex;gap:6px;margin-bottom:8px}#vcom-reviews-{{ bid }} .product-reviews__stars svg{width:24px;height:24px}#vcom-reviews-{{ bid }} .product-reviews__verified{display:flex;align-items:center;gap:6px;margin:6px 0 10px;font-size:12px;font-weight:700;color:{{ verified_color }}}#vcom-reviews-{{ bid }} .product-reviews__title{margin:0 0 8px;font-size:16px;font-weight:700;color:#111}#vcom-reviews-{{ bid }} .product-reviews__text{margin:0 0 10px;font-size:14px;line-height:1.5;color:#333}#vcom-reviews-{{ bid }} .product-reviews__meta{font-size:12px;color:#888}@media (min-width:992px){#vcom-reviews-{{ bid }} .product-reviews__wrap{display:grid;grid-template-columns:repeat(3,1fr);overflow:visible;grid-auto-flow:initial;grid-auto-columns:initial}}</style>
-        <div class="product-reviews__wrap" id="vcom-reviews-grid-{{ block.id }}" data-proxy-url="/apps/vcom-reviews/reviews?placement={{ submit_placement }}&product_id={{ submit_product_id | replace: 'gid://shopify/Product/', '' }}"></div>
+        <style>#vcom-reviews-{{ bid }} .product-reviews__verified{color:{{ verified_color }}}#vcom-reviews-{{ bid }}:not(.vcom-layout--trustpilot_list) .product-reviews__avatar,#vcom-reviews-{{ bid }}:not(.vcom-layout--trustpilot_list) .product-reviews__head{display:none}#vcom-reviews-{{ bid }}.vcom-layout--trustpilot_list .product-reviews__stars--default{display:none}#vcom-reviews-{{ bid }}.vcom-layout--trustpilot_list .product-reviews__meta-author{display:none}</style>
+        <div class="product-reviews__wrap" id="vcom-reviews-grid-{{ block.id }}" data-proxy-url="/apps/vcom-reviews/reviews?placement={{ submit_placement }}&product_id={{ submit_product_id | replace: 'gid://shopify/Product/', '' }}" data-layout="{{ s_layout }}"></div>
         {%- if s_show_empty -%}
           <p class="product-reviews__empty vcom-reviews-proxy-empty" style="text-align:center;font-size:14px;color:#666;margin:0;">
             {{ s_empty_message}}
@@ -306,6 +386,7 @@
             var verifiedLabel={{ s_verified_label}};
             var titleMax={{ title_max_chars }};
             var textMax={{ text_max_chars }};
+            var layout=grid.getAttribute('data-layout')||'trustpilot_carousel';
             function starSvg(stars,i){
               var idx=i+1;var min=idx-1;
               if(stars>=idx)return '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="'+starColor+'"/><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="#fff"/></svg>';
@@ -313,29 +394,62 @@
               return '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="'+starEmpty+'"/><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="#fff"/></svg>';
             }
             function esc(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+            function buildCard(rv){
+              var stars=parseFloat(rv.rating)||5;
+              var starsHtml='';
+              for(var i=0;i<5;i++)starsHtml+=starSvg(stars,i);
+              var author=rv.author||'';
+              var avatar=author?author.charAt(0).toUpperCase():'?';
+              var title=rv.title||'';
+              var body=rv.body||'';
+              var bodyShow=body.length>textMax?body.slice(0,textMax)+'...':body;
+              var html='<article class="product-reviews__card">';
+              html+='<div class="product-reviews__avatar" aria-hidden="true">'+esc(avatar)+'</div>';
+              html+='<div class="product-reviews__card-body">';
+              html+='<div class="product-reviews__head">';
+              if(author)html+='<span class="product-reviews__author-name">'+esc(author)+'</span>';
+              html+='<div class="product-reviews__stars" aria-hidden="true">'+starsHtml+'</div></div>';
+              html+='<div class="product-reviews__stars product-reviews__stars--default" aria-hidden="true">'+starsHtml+'</div>';
+              if(showVerified&&rv.verified_buyer){html+='<div class="product-reviews__verified"><span>'+esc(String(verifiedLabel))+'</span></div>';}
+              if(title)html+='<h3 class="product-reviews__title">'+esc(title.length>titleMax?title.slice(0,titleMax)+'...':title)+'</h3>';
+              if(body)html+='<p class="product-reviews__text">'+esc(bodyShow)+'</p>';
+              html+='<div class="product-reviews__meta">';
+              if(author)html+='<span class="product-reviews__meta-author">'+esc(author)+'</span>';
+              if(author&&rv.time)html+='<span class="product-reviews__meta-sep"> - </span>';
+              if(rv.time)html+='<span>'+esc(rv.time)+'</span>';
+              html+='</div></div></article>';
+              return html;
+            }
             fetch(url,{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(data){
               if(!data||!data.ok||!data.reviews||!data.reviews.length)return;
               var empty=document.querySelector('#vcom-reviews-'+bid+' .vcom-reviews-proxy-empty');
               if(empty)empty.style.display='none';
               var html='';
-              data.reviews.forEach(function(rv){
-                var stars=parseFloat(rv.rating)||5;
-                var starsHtml='';
-                for(var i=0;i<5;i++)starsHtml+=starSvg(stars,i);
-                var title=rv.title||'';
-                var body=rv.body||'';
-                var bodyShow=body.length>textMax?body.slice(0,textMax)+'...':body;
-                html+='<article class="product-reviews__card"><div class="product-reviews__stars" aria-hidden="true">'+starsHtml+'</div>';
-                if(showVerified&&rv.verified_buyer){html+='<div class="product-reviews__verified"><span>'+esc(verifiedLabel)+'</span></div>';}
-                if(title)html+='<h3 class="product-reviews__title">'+esc(title.length>titleMax?title.slice(0,titleMax)+'...':title)+'</h3>';
-                if(body)html+='<p class="product-reviews__text">'+esc(bodyShow)+'</p>';
-                html+='<div class="product-reviews__meta">';
-                if(rv.author)html+='<span>'+esc(rv.author)+'</span>';
-                if(rv.author&&rv.time)html+='<span> - </span>';
-                if(rv.time)html+='<span>'+esc(rv.time)+'</span>';
-                html+='</div></article>';
-              });
+              data.reviews.forEach(function(rv){html+=buildCard(rv);});
               grid.innerHTML=html;
+              if(layout==='trustpilot_split'){
+                var dist=[0,0,0,0,0];
+                data.reviews.forEach(function(rv){
+                  var r=Math.round(parseFloat(rv.rating)||5);
+                  if(r<1)r=1;if(r>5)r=5;dist[r-1]++;
+                });
+                var avg=parseFloat(data.avg)||0;
+                var count=data.count||data.reviews.length;
+                var avgStars='';
+                for(var si=0;si<5;si++)avgStars+=starSvg(avg,si);
+                var bars='';
+                for(var lvl=5;lvl>=1;lvl--){
+                  var dc=dist[lvl-1];
+                  var pct=count>0?Math.round(dc*100/count):0;
+                  bars+='<div class="vcom-bar-row"><span>'+lvl+'</span><div class="vcom-bar-track"><div class="vcom-bar-fill" style="width:'+pct+'%;background:'+starColor+';"></div></div><span>'+dc+'</span></div>';
+                }
+                var split=document.createElement('div');
+                split.className='vcom-split';
+                split.innerHTML='<aside class="vcom-split__summary"><div class="vcom-split__score">'+avg.toFixed(1)+'</div><div class="product-reviews__stars" style="justify-content:center;margin-bottom:8px;">'+avgStars+'</div><p class="vcom-split__label">TrustScore</p>'+bars+'<p class="vcom-split__count">'+count+' avaliações</p></aside><div class="vcom-split__reviews"></div>';
+                var col=split.querySelector('.vcom-split__reviews');
+                grid.parentNode.insertBefore(split,grid);
+                col.appendChild(grid);
+              }
               var footer=document.querySelector('#vcom-reviews-'+bid+' .product-reviews__footer');
               if(footer&&data.count>0){
                 var strongs=footer.querySelectorAll('strong');

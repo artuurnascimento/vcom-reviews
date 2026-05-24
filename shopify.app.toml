@@ -15,7 +15,7 @@ api_version = "2025-01"
   uri = "/webhooks/app/uninstalled"
 
 [access_scopes]
-scopes = "read_metaobject_definitions,write_metaobject_definitions,read_metaobjects,write_metaobjects,read_files,write_files,read_products,read_themes"
+scopes = "read_metaobject_definitions,write_metaobject_definitions,read_metaobjects,write_metaobjects,read_files,write_files,read_products,read_themes,write_themes"
 
 [auth]
 redirect_urls = ["https://localhost/auth/callback", "https://localhost/auth/shopify/callback"]

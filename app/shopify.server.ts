@@ -7,6 +7,7 @@ import {
 import { SQLiteSessionStorage } from "@shopify/shopify-app-session-storage-sqlite";
 import { ensureReviewInfrastructure } from "./lib/metaobject-setup.server";
 import { ensureDefaultStorefrontSettings } from "./lib/storefront-settings.server";
+import { ensureHomepageReviewsThemeBlock } from "./lib/theme-homepage.server";
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY || "",
@@ -32,6 +33,7 @@ const shopify = shopifyApp({
           );
         } else {
           await ensureDefaultStorefrontSettings(admin);
+          await ensureHomepageReviewsThemeBlock(admin, session.shop);
         }
       } catch (error) {
         console.error("[vcom-reviews] afterAuth setup error", session.shop, error);

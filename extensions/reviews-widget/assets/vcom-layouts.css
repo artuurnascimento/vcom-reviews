@@ -1,0 +1,269 @@
+/* VCOM Reviews — Trustpilot-inspired layout variants */
+
+.vcom-reviews-app-block .product-reviews__stars {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.vcom-reviews-app-block .product-reviews__stars svg {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+}
+
+.vcom-reviews-app-block .product-reviews__card {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  padding: 20px 24px;
+  background: #fff;
+  text-align: left;
+}
+
+.vcom-reviews-app-block .product-reviews__verified {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.vcom-reviews-app-block .product-reviews__title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  line-height: 1.3;
+  font-weight: 700;
+  color: #111;
+}
+
+.vcom-reviews-app-block .product-reviews__text {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #333;
+}
+
+.vcom-reviews-app-block .product-reviews__meta {
+  font-size: 12px;
+  color: #888;
+}
+
+/* Carousel (default Trustpilot widget) */
+.vcom-layout--trustpilot_carousel .product-reviews__wrap {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 85%;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  gap: 16px;
+  padding: 8px 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.vcom-layout--trustpilot_carousel .product-reviews__card {
+  scroll-snap-align: start;
+}
+
+@media (min-width: 992px) {
+  .vcom-layout--trustpilot_carousel .product-reviews__wrap {
+    grid-template-columns: repeat(3, 1fr);
+    grid-auto-flow: initial;
+    grid-auto-columns: initial;
+    overflow: visible;
+    scroll-snap-type: none;
+  }
+}
+
+/* Grid */
+.vcom-layout--trustpilot_grid .product-reviews__wrap {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 640px) {
+  .vcom-layout--trustpilot_grid .product-reviews__wrap {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 992px) {
+  .vcom-layout--trustpilot_grid .product-reviews__wrap {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Split — score panel + reviews */
+.vcom-layout--trustpilot_split .vcom-split {
+  display: grid;
+  gap: 24px;
+}
+
+@media (min-width: 992px) {
+  .vcom-layout--trustpilot_split .vcom-split {
+    grid-template-columns: minmax(220px, 280px) 1fr;
+    align-items: start;
+  }
+}
+
+.vcom-layout--trustpilot_split .vcom-split__summary {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 24px;
+  background: #fff;
+  text-align: center;
+}
+
+.vcom-layout--trustpilot_split .vcom-split__score {
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1;
+  color: #111;
+  margin-bottom: 8px;
+}
+
+.vcom-layout--trustpilot_split .vcom-split__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin: 8px 0 16px;
+}
+
+.vcom-layout--trustpilot_split .vcom-split__count {
+  font-size: 13px;
+  color: #666;
+  margin-top: 12px;
+}
+
+.vcom-layout--trustpilot_split .vcom-bar-row {
+  display: grid;
+  grid-template-columns: 32px 1fr 28px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #555;
+}
+
+.vcom-layout--trustpilot_split .vcom-bar-track {
+  height: 8px;
+  background: #ececf1;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.vcom-layout--trustpilot_split .vcom-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.vcom-layout--trustpilot_split .product-reviews__wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.vcom-layout--trustpilot_split .product-reviews__card {
+  padding: 16px 20px;
+}
+
+/* List */
+.vcom-layout--trustpilot_list .product-reviews__wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.vcom-layout--trustpilot_list .product-reviews__card {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 16px;
+  border: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 0;
+  padding: 20px 0;
+  background: transparent;
+}
+
+.vcom-layout--trustpilot_list .product-reviews__card:last-child {
+  border-bottom: none;
+}
+
+.vcom-layout--trustpilot_list .product-reviews__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #ececf1;
+  color: #333;
+  font-weight: 700;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.vcom-layout--trustpilot_list .product-reviews__card-body {
+  min-width: 0;
+}
+
+.vcom-layout--trustpilot_list .product-reviews__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.vcom-layout--trustpilot_list .product-reviews__author-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: #111;
+}
+
+.vcom-layout--trustpilot_list .product-reviews__stars {
+  margin-bottom: 0;
+}
+
+.vcom-layout--trustpilot_list .product-reviews__stars svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Mosaic compact */
+.vcom-layout--trustpilot_mosaic .product-reviews__wrap {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .vcom-layout--trustpilot_mosaic .product-reviews__wrap {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.vcom-layout--trustpilot_mosaic .product-reviews__card {
+  padding: 14px 16px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.vcom-layout--trustpilot_mosaic .product-reviews__stars svg {
+  width: 16px;
+  height: 16px;
+}
+
+.vcom-layout--trustpilot_mosaic .product-reviews__title {
+  font-size: 14px;
+}
+
+.vcom-layout--trustpilot_mosaic .product-reviews__text {
+  font-size: 13px;
+}
+
+.vcom-layout--trustpilot_mosaic .product-reviews__verified {
+  font-size: 11px;
+}

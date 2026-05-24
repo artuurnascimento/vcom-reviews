@@ -10,7 +10,17 @@ import path from "node:path";
 export const STOREFRONT_METAFIELD_NAMESPACE = "vcom_reviews";
 export const STOREFRONT_METAFIELD_KEY = "storefront_settings";
 
+import {
+  DEFAULT_STOREFRONT_LAYOUT,
+  normalizeStorefrontLayout,
+  type StorefrontLayoutId,
+} from "./storefront-layouts";
+import { ensureHomepageReviewsThemeBlock, type ThemeHomepageSyncResult } from "./theme-homepage.server";
+
+export type { StorefrontLayoutId };
+
 export interface StorefrontSettings {
+  layout: StorefrontLayoutId;
   data_source: "auto" | "homepage" | "product";
   background: string;
   section_padding_top: number;
@@ -63,6 +73,7 @@ export interface StorefrontSettings {
 }
 
 export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
+  layout: DEFAULT_STOREFRONT_LAYOUT,
   data_source: "auto",
   background: "#ffffff",
   section_padding_top: 24,
@@ -115,7 +126,9 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
 };
 
 function mergeSettings(raw: Partial<StorefrontSettings> | null | undefined): StorefrontSettings {
-  return { ...DEFAULT_STOREFRONT_SETTINGS, ...(raw || {}) };
+  const merged = { ...DEFAULT_STOREFRONT_SETTINGS, ...(raw || {}) };
+  merged.layout = normalizeStorefrontLayout(merged.layout);
+  return merged;
 }
 
 const SETTINGS_DIR = path.join(process.cwd(), "data", "storefront-settings");
@@ -221,7 +234,12 @@ export async function getStorefrontSettings(admin: AdminApi): Promise<Storefront
 export async function saveStorefrontSettings(
   admin: AdminApi,
   settings: StorefrontSettings,
-): Promise<{ ok: boolean; errors: string[] }> {
+  shopDomain?: string,
+): Promise<{
+  ok: boolean;
+  errors: string[];
+  themeSync?: ThemeHomepageSyncResult;
+}> {
   const shop = await getShopDomain(admin);
   const merged = mergeSettings(settings);
   const errors: string[] = [];
@@ -233,7 +251,9 @@ export async function saveStorefrontSettings(
     console.warn("[vcom-reviews] shop metafield save", metafieldErrors);
   }
 
-  return { ok: true, errors };
+  const themeSync = await ensureHomepageReviewsThemeBlock(admin, shopDomain ?? shop ?? undefined);
+
+  return { ok: true, errors, themeSync };
 }
 
 export async function ensureDefaultStorefrontSettings(admin: AdminApi) {
@@ -256,6 +276,7 @@ export function parseStorefrontSettingsForm(form: FormData): StorefrontSettings 
   const str = (key: keyof StorefrontSettings) => String(form.get(key) ?? "");
 
   return mergeSettings({
+    layout: normalizeStorefrontLayout(str("layout")),
     data_source: (str("data_source") || "auto") as StorefrontSettings["data_source"],
     background: str("background"),
     section_padding_top: num("section_padding_top", 24),

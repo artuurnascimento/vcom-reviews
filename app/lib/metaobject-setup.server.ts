@@ -8,6 +8,7 @@ import {
   REVIEW_METAOBJECT_TYPE,
   LEGACY_REVIEW_METAOBJECT_TYPE,
 } from "./constants";
+import { getThemeHomepageBlockStatus } from "./theme-homepage.server";
 
 const REVIEW_FIELD_DEFINITIONS = [
   { key: "rating", name: "Rating", type: "number_decimal", required: true },
@@ -172,6 +173,8 @@ export async function getInfrastructureStatus(admin: AdminApi) {
   );
   const json = await response.json();
   const def = json.data?.metaobjectDefinitionByType;
+  const themeStatus = await getThemeHomepageBlockStatus(admin);
+  const themeReady = themeStatus.configured && themeStatus.settingsClean;
   const items = [
     {
       id: "metaobject",
@@ -180,9 +183,17 @@ export async function getInfrastructureStatus(admin: AdminApi) {
         "Armazena todas as avaliações (sem metafields). Vitrine lê shop.metaobjects.review",
       ready: Boolean(def?.id),
     },
+    {
+      id: "homepage_theme",
+      label: "Bloco na homepage (index.json)",
+      description:
+        "Seção vcom_reviews_homepage com settings vazios — visual configurado só no app",
+      ready: themeReady,
+    },
   ];
   return {
     items,
-    allReady: Boolean(def?.id),
+    allReady: Boolean(def?.id) && themeReady,
+    themeStatus,
   };
 }

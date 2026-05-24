@@ -19,20 +19,27 @@ import {
   ensureReviewInfrastructure,
   getInfrastructureStatus,
 } from "../lib/metaobject-setup.server";
+import { ensureHomepageReviewsThemeBlock, buildThemeEditorDeepLink } from "../lib/theme-homepage.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { admin } = await authenticate.admin(request);
-  return getInfrastructureStatus(admin);
+  const { admin, session } = await authenticate.admin(request);
+  const status = await getInfrastructureStatus(admin);
+  return { ...status, themeDeepLink: buildThemeEditorDeepLink(session.shop) };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { admin } = await authenticate.admin(request);
-  const result = await ensureReviewInfrastructure(admin);
-  return result;
+  const { admin, session } = await authenticate.admin(request);
+  const infra = await ensureReviewInfrastructure(admin);
+  const theme = await ensureHomepageReviewsThemeBlock(admin, session.shop);
+  return {
+    ok: infra.ok && theme.ok,
+    errors: [...infra.errors, ...theme.errors],
+    theme,
+  };
 };
 
 export default function SetupPage() {
-  const status = useLoaderData<typeof loader>();
+  const { items, themeDeepLink, themeStatus } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const submit = useSubmit();
   const justRan = actionData !== undefined;
@@ -49,20 +56,39 @@ export default function SetupPage() {
           <BlockStack gap="500">
             {justRan ? (
               success ? (
-                <Banner tone="success" title="Configuração concluída">
-                  Metaobject review pronto para uso.
-                </Banner>
+                <BlockStack gap="300">
+                  <Banner tone="success" title="Configuração concluída">
+                    Metaobject e homepage sincronizados.
+                  </Banner>
+                  {actionData?.theme?.updated ? (
+                    <Banner tone="success" title="index.json atualizado">
+                      templates/index.json publicado com bloco Avaliações VCOM (settings
+                      vazios).
+                    </Banner>
+                  ) : null}
+                </BlockStack>
               ) : (
                 <Banner tone="critical" title="Erros na configuração">
                   {actionData?.errors?.join(" · ")}
+                  {actionData?.theme?.accessDenied ? (
+                    <>
+                      {" "}
+                      Reinstale o app para aceitar write_themes ou abra o Theme Editor.
+                    </>
+                  ) : null}
                 </Banner>
               )
             ) : null}
 
-            {!status.allReady && !justRan ? (
-              <Banner tone="warning" title="Ação necessária">
-                A configuração roda automaticamente na instalação. Se algo falhou,
-                use o botão abaixo para reexecutar.
+            {!items.every((i) => i.ready) && !justRan ? (
+              <Banner
+                tone="warning"
+                title="Ação necessária"
+                action={{ content: "Abrir Theme Editor", url: themeDeepLink, target: "_blank" }}
+              >
+                A configuração roda automaticamente na instalação. Se o bloco da homepage
+                não sincronizar via API, use o botão abaixo ou reexecute a configuração.
+                {themeStatus.errors.length ? ` (${themeStatus.errors[0]})` : ""}
               </Banner>
             ) : null}
 
@@ -72,7 +98,7 @@ export default function SetupPage() {
                   Status da infraestrutura
                 </Text>
                 <BlockStack gap="300">
-                  {status.items.map((item) => (
+                  {items.map((item) => (
                     <InlineStack key={item.id} align="space-between" blockAlign="center">
                       <BlockStack gap="100">
                         <Text as="span" variant="bodyMd" fontWeight="semibold">
@@ -94,7 +120,7 @@ export default function SetupPage() {
                   onClick={() => submit({}, { method: "post" })}
                   loading={false}
                 >
-                  {status.allReady ? "Reexecutar configuração" : "Executar configuração"}
+                  {items.every((i) => i.ready) ? "Reexecutar configuração" : "Executar configuração"}
                 </Button>
               </BlockStack>
             </Card>
@@ -125,9 +151,13 @@ export default function SetupPage() {
                   Próximo passo
                 </Text>
                 <Text as="p" variant="bodySm" tone="subdued">
-                  Após a configuração, crie avaliações e adicione o bloco{" "}
-                  <strong>Avaliações VCOM</strong> no Theme Editor.
+                  O app sincroniza automaticamente templates/index.json na instalação e ao
+                  salvar Aparência (bloco com settings vazios). Se a API do tema falhar,
+                  abra o Theme Editor pelo link acima.
                 </Text>
+                <Button url={themeDeepLink} target="_blank">
+                  Abrir Theme Editor
+                </Button>
                 <Box>
                   <InlineStack gap="200">
                     <Button url="/app/reviews/new" variant="primary">
