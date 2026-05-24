@@ -1,4 +1,4 @@
-import { Autocomplete, BlockStack, Icon, InlineStack, Text, Thumbnail } from "@shopify/polaris";
+import { Autocomplete, Icon, Thumbnail } from "@shopify/polaris";
 import { SearchIcon } from "@shopify/polaris-icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -44,7 +44,13 @@ export function ProductSearchPicker({
       results.map((product) => ({
         value: product.id,
         label: product.title,
-        product,
+        media: (
+          <Thumbnail
+            source={product.imageUrl || ""}
+            alt={product.imageAlt}
+            size="small"
+          />
+        ),
       })),
     [results],
   );
@@ -103,26 +109,6 @@ export function ProductSearchPicker({
       textField={textField}
       loading={loading}
       listTitle={results.length ? "Produtos encontrados" : "Nenhum produto"}
-      renderOption={(option) => {
-        const product = (option as typeof options[number]).product;
-        return (
-          <InlineStack gap="300" blockAlign="center" wrap={false}>
-            <Thumbnail
-              source={product.imageUrl || ""}
-              alt={product.imageAlt}
-              size="small"
-            />
-            <BlockStack gap="050">
-              <Text as="span" variant="bodyMd" fontWeight="semibold">
-                {product.title}
-              </Text>
-              <Text as="span" variant="bodySm" tone="subdued">
-                {[product.productType, product.handle].filter(Boolean).join(" · ")}
-              </Text>
-            </BlockStack>
-          </InlineStack>
-        );
-      }}
     />
   );
 }

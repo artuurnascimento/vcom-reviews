@@ -1,6 +1,12 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
-import { useActionData, useFetcher, useLoaderData, useSubmit } from "@remix-run/react";
+import {
+  useActionData,
+  useFetcher,
+  useLoaderData,
+  useRouteError,
+  useSubmit,
+} from "@remix-run/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Badge,
@@ -49,6 +55,7 @@ import {
 } from "../components/ProductSearchPicker";
 import { ProductHeroCard } from "../components/ProductHeroCard";
 import { PlacementDestinationPicker } from "../components/PlacementDestinationPicker";
+import { RatingRangeField } from "../components/RatingRangeField";
 
 type ProductPreview = {
   id: string;
@@ -299,6 +306,27 @@ const TABS = [
   { id: "style", content: "Estilo" },
   { id: "publish", content: "Quantidade" },
 ];
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "object" && error && "message" in error
+        ? String((error as { message: unknown }).message)
+        : "Erro ao abrir a geração com IA.";
+
+  return (
+    <Page title="Gerar avaliações com IA" backAction={{ url: "/app/reviews" }}>
+      <Banner tone="critical" title="Não foi possível abrir esta página">
+        <p>{message}</p>
+      </Banner>
+      <Box paddingBlockStart="400">
+        <Button url="/app/reviews">Voltar às avaliações</Button>
+      </Box>
+    </Page>
+  );
+}
 
 export default function GenerateReviewsPage() {
   const { geminiConfigured, geminiModel, shopName } = useLoaderData<typeof loader>();
