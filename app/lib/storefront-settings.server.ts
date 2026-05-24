@@ -195,6 +195,7 @@ export function parseStorefrontSettingsForm(form: FormData): StorefrontSettings 
     header_summary_color: str("header_summary_color"),
     header_based_on_prefix: str("header_based_on_prefix"),
     header_show_trustpilot_logo: bool("header_show_trustpilot_logo"),
+    header_trustpilot_logo_height: num("header_trustpilot_logo_height", 22),
     review_title_color: str("review_title_color"),
     review_body_color: str("review_body_color"),
     trusted_show_header: bool("trusted_show_header"),

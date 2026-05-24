@@ -23,6 +23,7 @@
 {%- assign s_header_based_on_prefix = cfg.header_based_on_prefix | default: 'Based on' -%}
 {%- assign s_header_show_trustpilot = cfg.header_show_trustpilot_logo -%}
 {%- if s_header_show_trustpilot == nil -%}{%- assign s_header_show_trustpilot = true -%}{%- endif -%}
+{%- assign s_trustpilot_logo_h = cfg.header_trustpilot_logo_height | default: 22 -%}
 {%- assign s_review_title_color = cfg.review_title_color | default: '#000000' -%}
 {%- assign s_review_body_color = cfg.review_body_color | default: '#6b6b6b' -%}
 {%- assign s_review_title_size = cfg.review_title_font_size | default: 17 -%}
@@ -193,6 +194,7 @@
     #vcom-reviews-{{ bid }} .product-reviews__form-row input,#vcom-reviews-{{ bid }} .product-reviews__form-row textarea{border-color:{{ s_form_input_border }}}
     #vcom-reviews-{{ bid }} .product-reviews__form-success{background:{{ s_success_bg }};border:1px solid {{ s_success_border }};border-radius:{{ s_success_radius }}px;color:{{ s_success_text }};font-size:{{ s_success_font }}px}
     #vcom-reviews-{{ bid }} .product-reviews__form-success svg{stroke:{{ s_success_icon }}}
+    #vcom-reviews-{{ bid }} .product-reviews__trustpilot-logo{height:{{ s_trustpilot_logo_h }}px;width:auto}
     #vcom-reviews-{{ bid }} .product-reviews__section-title{font-size:{{ s_section_headline_size }}px}
     @media (max-width:991px){
       #vcom-reviews-{{ bid }}.vcom-layout--trustpilot_grid .product-reviews__wrap,
@@ -252,8 +254,9 @@
                   src="{{ 'trustpilot-logo.svg' | asset_url }}"
                   alt="Trustpilot"
                   width="98"
-                  height="24"
+                  height="{{ s_trustpilot_logo_h }}"
                   loading="lazy"
+                  style="height:{{ s_trustpilot_logo_h }}px;width:auto;"
                 >
               {%- endif -%}
               <span class="product-reviews__section-score" style="color:{{ s_header_rating_color }};">{{ display_rating }}</span>

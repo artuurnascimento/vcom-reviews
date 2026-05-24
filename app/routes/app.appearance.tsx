@@ -498,6 +498,17 @@ export default function AppearancePage() {
                               checked={settings.header_show_trustpilot_logo}
                               onChange={(v) => set("header_show_trustpilot_logo", v)}
                             />
+                            {settings.header_show_trustpilot_logo ? (
+                              <RangeField
+                                label="Tamanho da logo Trustpilot"
+                                name="header_trustpilot_logo_height"
+                                value={settings.header_trustpilot_logo_height}
+                                min={12}
+                                max={48}
+                                suffix="px"
+                                onChange={(v) => set("header_trustpilot_logo_height", v)}
+                              />
+                            ) : null}
                             <TextField
                               label="Prefixo do resumo"
                               name="header_based_on_prefix"

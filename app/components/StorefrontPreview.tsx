@@ -116,7 +116,7 @@ export function StorefrontPreview({ settings, shopName = "Sua loja" }: Props) {
                   }}
                 >
                   {settings.header_show_trustpilot_logo ? (
-                    <TrustpilotLogoMark />
+                    <TrustpilotLogoMark height={settings.header_trustpilot_logo_height} />
                   ) : null}
                   <span
                     style={{
@@ -471,12 +471,13 @@ function VerifiedBadge({ settings }: { settings: StorefrontSettings }) {
   );
 }
 
-function TrustpilotLogoMark() {
+function TrustpilotLogoMark({ height = 22 }: { height?: number }) {
+  const width = Math.round((height / 22) * 98);
   return (
     <svg
       viewBox="0 0 200 32"
-      width={98}
-      height={22}
+      width={width}
+      height={height}
       aria-label="Trustpilot"
       role="img"
       style={{ display: "block", flexShrink: 0 }}

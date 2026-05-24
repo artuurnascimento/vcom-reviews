@@ -22,6 +22,7 @@ export interface StorefrontSettings {
   header_summary_color: string;
   header_based_on_prefix: string;
   header_show_trustpilot_logo: boolean;
+  header_trustpilot_logo_height: number;
   review_title_color: string;
   review_body_color: string;
   review_title_font_size: number;
@@ -110,6 +111,7 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   header_summary_color: "#6b6b6b",
   header_based_on_prefix: "Based on",
   header_show_trustpilot_logo: true,
+  header_trustpilot_logo_height: 22,
   review_title_color: "#000000",
   review_body_color: "#6b6b6b",
   review_title_font_size: 17,
@@ -226,6 +228,10 @@ export function coerceStorefrontSettings(
     header_show_trustpilot_logo: bool(
       r.header_show_trustpilot_logo,
       d.header_show_trustpilot_logo,
+    ),
+    header_trustpilot_logo_height: Math.min(
+      48,
+      Math.max(12, num(r.header_trustpilot_logo_height, d.header_trustpilot_logo_height)),
     ),
     review_title_color: str(r.review_title_color, d.review_title_color),
     review_body_color: str(r.review_body_color, d.review_body_color),
