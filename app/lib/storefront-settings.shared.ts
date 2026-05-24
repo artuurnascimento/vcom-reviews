@@ -22,6 +22,14 @@ export interface StorefrontSettings {
   header_based_on_prefix: string;
   review_title_color: string;
   review_body_color: string;
+  review_title_font_size: number;
+  review_body_font_size: number;
+  review_meta_color: string;
+  card_background: string;
+  card_border_color: string;
+  card_border_radius: number;
+  card_padding: number;
+  cards_gap: number;
   trusted_show_header: boolean;
   trusted_text_after: string;
   trusted_text_highlight: string;
@@ -44,7 +52,20 @@ export interface StorefrontSettings {
   show_empty_message: boolean;
   empty_message: string;
   show_review_form: boolean;
+  review_form_show_success: boolean;
   review_form_success_message: string;
+  review_form_success_bg: string;
+  review_form_success_border: string;
+  review_form_success_text_color: string;
+  review_form_success_icon_color: string;
+  review_form_success_show_icon: boolean;
+  review_form_success_border_radius: number;
+  review_form_success_font_size: number;
+  form_panel_background: string;
+  form_panel_border_color: string;
+  form_panel_border_radius: number;
+  form_label_color: string;
+  form_input_border_color: string;
   review_form_show_images: boolean;
   review_form_images_max: number;
   review_form_btn_text: string;
@@ -83,6 +104,14 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   header_based_on_prefix: "Based on",
   review_title_color: "#000000",
   review_body_color: "#6b6b6b",
+  review_title_font_size: 17,
+  review_body_font_size: 15,
+  review_meta_color: "#888888",
+  card_background: "#ffffff",
+  card_border_color: "rgba(0, 0, 0, 0.08)",
+  card_border_radius: 10,
+  card_padding: 20,
+  cards_gap: 16,
   trusted_show_header: true,
   trusted_text_after: "is trusted by over",
   trusted_text_highlight: "28k+",
@@ -105,7 +134,20 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   show_empty_message: false,
   empty_message: "Adicione avaliações no app VCOM Reviews.",
   show_review_form: true,
+  review_form_show_success: true,
   review_form_success_message: "",
+  review_form_success_bg: "#ecfdf5",
+  review_form_success_border: "#a7f3d0",
+  review_form_success_text_color: "#065f46",
+  review_form_success_icon_color: "#065f46",
+  review_form_success_show_icon: true,
+  review_form_success_border_radius: 10,
+  review_form_success_font_size: 15,
+  form_panel_background: "#f9fafb",
+  form_panel_border_color: "#e5e7eb",
+  form_panel_border_radius: 10,
+  form_label_color: "#111111",
+  form_input_border_color: "#d1d5db",
   review_form_show_images: true,
   review_form_images_max: 5,
   review_form_btn_text: "",
@@ -169,6 +211,14 @@ export function coerceStorefrontSettings(
     header_based_on_prefix: str(r.header_based_on_prefix, d.header_based_on_prefix),
     review_title_color: str(r.review_title_color, d.review_title_color),
     review_body_color: str(r.review_body_color, d.review_body_color),
+    review_title_font_size: num(r.review_title_font_size, d.review_title_font_size),
+    review_body_font_size: num(r.review_body_font_size, d.review_body_font_size),
+    review_meta_color: str(r.review_meta_color, d.review_meta_color),
+    card_background: str(r.card_background, d.card_background),
+    card_border_color: str(r.card_border_color, d.card_border_color),
+    card_border_radius: num(r.card_border_radius, d.card_border_radius),
+    card_padding: num(r.card_padding, d.card_padding),
+    cards_gap: num(r.cards_gap, d.cards_gap),
     trusted_show_header: bool(r.trusted_show_header, d.trusted_show_header),
     trusted_text_after: str(r.trusted_text_after, d.trusted_text_after),
     trusted_text_highlight: str(r.trusted_text_highlight, d.trusted_text_highlight),
@@ -191,7 +241,26 @@ export function coerceStorefrontSettings(
     show_empty_message: bool(r.show_empty_message, d.show_empty_message),
     empty_message: str(r.empty_message, d.empty_message),
     show_review_form: bool(r.show_review_form, d.show_review_form),
+    review_form_show_success: bool(r.review_form_show_success, d.review_form_show_success),
     review_form_success_message: str(r.review_form_success_message, d.review_form_success_message),
+    review_form_success_bg: str(r.review_form_success_bg, d.review_form_success_bg),
+    review_form_success_border: str(r.review_form_success_border, d.review_form_success_border),
+    review_form_success_text_color: str(
+      r.review_form_success_text_color,
+      d.review_form_success_text_color,
+    ),
+    review_form_success_icon_color: str(r.review_form_success_icon_color, d.review_form_success_icon_color),
+    review_form_success_show_icon: bool(r.review_form_success_show_icon, d.review_form_success_show_icon),
+    review_form_success_border_radius: num(
+      r.review_form_success_border_radius,
+      d.review_form_success_border_radius,
+    ),
+    review_form_success_font_size: num(r.review_form_success_font_size, d.review_form_success_font_size),
+    form_panel_background: str(r.form_panel_background, d.form_panel_background),
+    form_panel_border_color: str(r.form_panel_border_color, d.form_panel_border_color),
+    form_panel_border_radius: num(r.form_panel_border_radius, d.form_panel_border_radius),
+    form_label_color: str(r.form_label_color, d.form_label_color),
+    form_input_border_color: str(r.form_input_border_color, d.form_input_border_color),
     review_form_show_images: bool(r.review_form_show_images, d.review_form_show_images),
     review_form_images_max: num(r.review_form_images_max, d.review_form_images_max),
     review_form_btn_text: str(r.review_form_btn_text, d.review_form_btn_text),

@@ -324,6 +324,80 @@ export default function AppearancePage() {
                             value={settings.review_body_color}
                             onChange={(v) => set("review_body_color", v)}
                           />
+                          <ColorPickerField
+                            label="Autor / data (cards)"
+                            name="review_meta_color"
+                            value={settings.review_meta_color}
+                            onChange={(v) => set("review_meta_color", v)}
+                          />
+                        </InlineGrid>
+                      </BlockStack>
+                    </Card>
+                    <Card>
+                      <BlockStack gap="400">
+                        <Text as="h2" variant="headingMd">
+                          Cards de avaliação
+                        </Text>
+                        <InlineGrid columns={2} gap="400">
+                          <ColorPickerField
+                            label="Fundo do card"
+                            name="card_background"
+                            value={settings.card_background}
+                            onChange={(v) => set("card_background", v)}
+                          />
+                          <ColorPickerField
+                            label="Borda do card"
+                            name="card_border_color"
+                            value={settings.card_border_color}
+                            onChange={(v) => set("card_border_color", v)}
+                          />
+                        </InlineGrid>
+                        <InlineGrid columns={2} gap="400">
+                          <RangeField
+                            label="Raio da borda"
+                            name="card_border_radius"
+                            value={settings.card_border_radius}
+                            min={0}
+                            max={24}
+                            suffix="px"
+                            onChange={(v) => set("card_border_radius", v)}
+                          />
+                          <RangeField
+                            label="Padding interno"
+                            name="card_padding"
+                            value={settings.card_padding}
+                            min={8}
+                            max={40}
+                            suffix="px"
+                            onChange={(v) => set("card_padding", v)}
+                          />
+                          <RangeField
+                            label="Espaço entre cards"
+                            name="cards_gap"
+                            value={settings.cards_gap}
+                            min={0}
+                            max={32}
+                            suffix="px"
+                            onChange={(v) => set("cards_gap", v)}
+                          />
+                          <RangeField
+                            label="Tamanho título"
+                            name="review_title_font_size"
+                            value={settings.review_title_font_size}
+                            min={12}
+                            max={28}
+                            suffix="px"
+                            onChange={(v) => set("review_title_font_size", v)}
+                          />
+                          <RangeField
+                            label="Tamanho texto"
+                            name="review_body_font_size"
+                            value={settings.review_body_font_size}
+                            min={11}
+                            max={20}
+                            suffix="px"
+                            onChange={(v) => set("review_body_font_size", v)}
+                          />
                         </InlineGrid>
                       </BlockStack>
                     </Card>
@@ -596,13 +670,116 @@ export default function AppearancePage() {
                         onChange={(v) => set("review_form_images_max", parseInt(v, 10) || 5)}
                         autoComplete="off"
                       />
-                      <TextField
-                        label="Mensagem após envio"
-                        name="review_form_success_message"
-                        value={settings.review_form_success_message}
-                        onChange={(v) => set("review_form_success_message", v)}
-                        autoComplete="off"
+                      <Checkbox
+                        label="Mostrar mensagem após envio (banner verde)"
+                        name="review_form_show_success"
+                        checked={settings.review_form_show_success}
+                        onChange={(v) => set("review_form_show_success", v)}
                       />
+                      <Box opacity={settings.review_form_show_success ? "100" : "60"}>
+                        <BlockStack gap="400">
+                          <TextField
+                            label="Texto da mensagem"
+                            name="review_form_success_message"
+                            value={settings.review_form_success_message}
+                            onChange={(v) => set("review_form_success_message", v)}
+                            autoComplete="off"
+                            helpText="Vazio = texto padrão em inglês da loja"
+                            multiline={2}
+                          />
+                          <Checkbox
+                            label="Mostrar ícone de check na mensagem"
+                            name="review_form_success_show_icon"
+                            checked={settings.review_form_success_show_icon}
+                            onChange={(v) => set("review_form_success_show_icon", v)}
+                          />
+                          <InlineGrid columns={2} gap="400">
+                            <ColorPickerField
+                              label="Fundo da mensagem"
+                              name="review_form_success_bg"
+                              value={settings.review_form_success_bg}
+                              onChange={(v) => set("review_form_success_bg", v)}
+                            />
+                            <ColorPickerField
+                              label="Borda da mensagem"
+                              name="review_form_success_border"
+                              value={settings.review_form_success_border}
+                              onChange={(v) => set("review_form_success_border", v)}
+                            />
+                            <ColorPickerField
+                              label="Texto da mensagem"
+                              name="review_form_success_text_color"
+                              value={settings.review_form_success_text_color}
+                              onChange={(v) => set("review_form_success_text_color", v)}
+                            />
+                            <ColorPickerField
+                              label="Ícone da mensagem"
+                              name="review_form_success_icon_color"
+                              value={settings.review_form_success_icon_color}
+                              onChange={(v) => set("review_form_success_icon_color", v)}
+                            />
+                          </InlineGrid>
+                          <InlineGrid columns={2} gap="400">
+                            <RangeField
+                              label="Raio da mensagem"
+                              name="review_form_success_border_radius"
+                              value={settings.review_form_success_border_radius}
+                              min={0}
+                              max={24}
+                              suffix="px"
+                              onChange={(v) => set("review_form_success_border_radius", v)}
+                            />
+                            <RangeField
+                              label="Tamanho da fonte"
+                              name="review_form_success_font_size"
+                              value={settings.review_form_success_font_size}
+                              min={11}
+                              max={22}
+                              suffix="px"
+                              onChange={(v) => set("review_form_success_font_size", v)}
+                            />
+                          </InlineGrid>
+                        </BlockStack>
+                      </Box>
+                      <Divider />
+                      <Text as="h3" variant="headingSm">
+                        Painel do formulário
+                      </Text>
+                      <InlineGrid columns={2} gap="400">
+                        <ColorPickerField
+                          label="Fundo do formulário"
+                          name="form_panel_background"
+                          value={settings.form_panel_background}
+                          onChange={(v) => set("form_panel_background", v)}
+                        />
+                        <ColorPickerField
+                          label="Borda do formulário"
+                          name="form_panel_border_color"
+                          value={settings.form_panel_border_color}
+                          onChange={(v) => set("form_panel_border_color", v)}
+                        />
+                        <ColorPickerField
+                          label="Labels do formulário"
+                          name="form_label_color"
+                          value={settings.form_label_color}
+                          onChange={(v) => set("form_label_color", v)}
+                        />
+                        <ColorPickerField
+                          label="Borda dos campos"
+                          name="form_input_border_color"
+                          value={settings.form_input_border_color}
+                          onChange={(v) => set("form_input_border_color", v)}
+                        />
+                        <RangeField
+                          label="Raio do painel"
+                          name="form_panel_border_radius"
+                          value={settings.form_panel_border_radius}
+                          min={0}
+                          max={24}
+                          suffix="px"
+                          onChange={(v) => set("form_panel_border_radius", v)}
+                        />
+                      </InlineGrid>
                       <Divider />
                       <InlineGrid columns={2} gap="400">
                         <TextField

@@ -180,25 +180,61 @@ export function StorefrontPreview({ settings, shopName = "Sua loja" }: Props) {
           ) : null}
 
           {settings.show_review_form ? (
-            <div style={{ marginTop: 20, textAlign: "center" }}>
-              <button
-                type="button"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "10px 18px",
-                  border: `1px solid ${settings.stars_color}`,
-                  background: "transparent",
-                  color: settings.stars_color,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  borderRadius: 8,
-                  cursor: "default",
-                }}
-              >
-                + {settings.review_form_btn_text || "Escrever avaliação"}
-              </button>
+            <div style={{ marginTop: 20 }}>
+              <div style={{ textAlign: "center", marginBottom: 12 }}>
+                <button
+                  type="button"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "10px 18px",
+                    border: `1px solid ${settings.stars_color}`,
+                    background: "transparent",
+                    color: settings.stars_color,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    borderRadius: 8,
+                    cursor: "default",
+                  }}
+                >
+                  + {settings.review_form_btn_text || "Escrever avaliação"}
+                </button>
+              </div>
+              {settings.review_form_show_success ? (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "14px 18px",
+                    background: settings.review_form_success_bg,
+                    border: `1px solid ${settings.review_form_success_border}`,
+                    borderRadius: settings.review_form_success_border_radius,
+                    color: settings.review_form_success_text_color,
+                    fontSize: settings.review_form_success_font_size,
+                    fontWeight: 500,
+                  }}
+                >
+                  {settings.review_form_success_show_icon ? (
+                    <svg
+                      width={22}
+                      height={22}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke={settings.review_form_success_icon_color}
+                      strokeWidth={2}
+                      aria-hidden
+                    >
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                  ) : null}
+                  <span>
+                    {settings.review_form_success_message ||
+                      "Thank you! Your review was sent and will appear after store approval."}
+                  </span>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -215,7 +251,7 @@ function PreviewReviews({ settings }: { settings: StorefrontSettings }) {
     return (
       <div style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: 16 }}>
         <SplitSummary settings={settings} />
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: settings.cards_gap }}>
           {reviews.slice(0, 2).map((r) => (
             <ReviewCard key={r.author} review={r} settings={settings} compact />
           ))}
@@ -224,20 +260,22 @@ function PreviewReviews({ settings }: { settings: StorefrontSettings }) {
     );
   }
 
+  const gap = settings.cards_gap;
+
   const wrapStyle: CSSProperties = (() => {
     switch (layout) {
       case "trustpilot_grid":
-        return { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 };
+        return { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap };
       case "trustpilot_mosaic":
-        return { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 };
+        return { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap };
       case "trustpilot_list":
-        return { display: "flex", flexDirection: "column" };
+        return { display: "flex", flexDirection: "column", gap };
       case "trustpilot_carousel":
       default:
         return {
           display: "grid",
           gridTemplateColumns: "repeat(3, 1fr)",
-          gap: 10,
+          gap,
         };
     }
   })();
@@ -328,7 +366,7 @@ function ReviewCard({
           <div
             style={{
               fontWeight: 800,
-              fontSize: 15,
+              fontSize: settings.review_title_font_size,
               margin: "6px 0 4px",
               color: settings.review_title_color,
             }}
@@ -337,7 +375,7 @@ function ReviewCard({
           </div>
           <div
             style={{
-              fontSize: 14,
+              fontSize: settings.review_body_font_size,
               color: settings.review_body_color,
               lineHeight: 1.55,
               fontWeight: 400,
@@ -345,22 +383,24 @@ function ReviewCard({
           >
             {review.body}
           </div>
-          <div style={{ fontSize: 11, color: "#888", marginTop: 6 }}>{review.time}</div>
+          <div style={{ fontSize: 11, color: settings.review_meta_color, marginTop: 6 }}>
+            {review.time}
+          </div>
         </div>
       </div>
     );
   }
 
+  const cardStyle: CSSProperties = {
+    border: list ? "none" : `1px solid ${settings.card_border_color}`,
+    borderRadius: compact ? Math.min(settings.card_border_radius, 8) : settings.card_border_radius,
+    padding: compact ? Math.max(8, settings.card_padding - 8) : settings.card_padding,
+    background: settings.card_background,
+    boxShadow: compact ? "0 1px 3px rgba(0,0,0,0.06)" : undefined,
+  };
+
   return (
-    <div
-      style={{
-        border: list ? "none" : "1px solid rgba(0,0,0,0.08)",
-        borderRadius: compact ? 8 : 10,
-        padding: compact ? "12px 14px" : "16px 18px",
-        background: "#fff",
-        boxShadow: compact ? "0 1px 3px rgba(0,0,0,0.06)" : undefined,
-      }}
-    >
+    <div style={cardStyle}>
       <ReviewStars rating={review.rating} size={compact ? 14 : 18} fillColor={settings.stars_color} emptyColor={settings.stars_empty_color} />
       {settings.show_verified && review.verified ? (
         <VerifiedBadge settings={settings} />
@@ -368,7 +408,9 @@ function ReviewCard({
           <div
             style={{
               fontWeight: 800,
-              fontSize: compact ? 14 : 17,
+              fontSize: compact
+                ? Math.max(12, settings.review_title_font_size - 3)
+                : settings.review_title_font_size,
               margin: "8px 0 4px",
               color: settings.review_title_color,
             }}
@@ -377,7 +419,9 @@ function ReviewCard({
           </div>
           <div
             style={{
-              fontSize: compact ? 13 : 15,
+              fontSize: compact
+                ? Math.max(11, settings.review_body_font_size - 2)
+                : settings.review_body_font_size,
               color: settings.review_body_color,
               lineHeight: 1.55,
               fontWeight: 400,
@@ -385,7 +429,7 @@ function ReviewCard({
           >
             {review.body}
           </div>
-      <div style={{ fontSize: 11, color: "#888", marginTop: 8 }}>
+      <div style={{ fontSize: 11, color: settings.review_meta_color, marginTop: 8 }}>
         {review.author} — {review.time}
       </div>
     </div>
