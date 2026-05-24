@@ -48,12 +48,19 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 12px;
+  gap: 8px 14px;
+}
+
+.vcom-reviews-app-block .product-reviews__trustpilot-logo {
+  display: block;
+  height: 22px;
+  width: auto;
+  flex: 0 0 auto;
 }
 
 .vcom-reviews-app-block .product-reviews__section-score {
-  font-size: clamp(20px, 2.2vw, 26px);
-  font-weight: 800;
+  font-size: 18px;
+  font-weight: 700;
   line-height: 1;
 }
 

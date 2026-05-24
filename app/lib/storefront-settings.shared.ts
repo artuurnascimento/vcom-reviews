@@ -21,6 +21,7 @@ export interface StorefrontSettings {
   header_stars_color: string;
   header_summary_color: string;
   header_based_on_prefix: string;
+  header_show_trustpilot_logo: boolean;
   review_title_color: string;
   review_body_color: string;
   review_title_font_size: number;
@@ -108,6 +109,7 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   header_stars_color: "#e8a317",
   header_summary_color: "#6b6b6b",
   header_based_on_prefix: "Based on",
+  header_show_trustpilot_logo: true,
   review_title_color: "#000000",
   review_body_color: "#6b6b6b",
   review_title_font_size: 17,
@@ -221,6 +223,10 @@ export function coerceStorefrontSettings(
     header_stars_color: str(r.header_stars_color, d.header_stars_color),
     header_summary_color: str(r.header_summary_color, d.header_summary_color),
     header_based_on_prefix: str(r.header_based_on_prefix, d.header_based_on_prefix),
+    header_show_trustpilot_logo: bool(
+      r.header_show_trustpilot_logo,
+      d.header_show_trustpilot_logo,
+    ),
     review_title_color: str(r.review_title_color, d.review_title_color),
     review_body_color: str(r.review_body_color, d.review_body_color),
     review_title_font_size: num(r.review_title_font_size, d.review_title_font_size),

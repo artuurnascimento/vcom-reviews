@@ -492,6 +492,12 @@ export default function AppearancePage() {
                               suffix="px"
                               onChange={(v) => set("section_headline_font_size", v)}
                             />
+                            <Checkbox
+                              label="Mostrar logo Trustpilot no resumo"
+                              name="header_show_trustpilot_logo"
+                              checked={settings.header_show_trustpilot_logo}
+                              onChange={(v) => set("header_show_trustpilot_logo", v)}
+                            />
                             <TextField
                               label="Prefixo do resumo"
                               name="header_based_on_prefix"

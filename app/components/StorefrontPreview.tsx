@@ -112,13 +112,16 @@ export function StorefrontPreview({ settings, shopName = "Sua loja" }: Props) {
                     display: "flex",
                     flexWrap: "wrap",
                     alignItems: "center",
-                    gap: "8px 12px",
+                    gap: "8px 14px",
                   }}
                 >
+                  {settings.header_show_trustpilot_logo ? (
+                    <TrustpilotLogoMark />
+                  ) : null}
                   <span
                     style={{
-                      fontSize: 24,
-                      fontWeight: 800,
+                      fontSize: 18,
+                      fontWeight: 700,
                       color: settings.header_rating_color,
                       lineHeight: 1,
                     }}
@@ -465,6 +468,34 @@ function VerifiedBadge({ settings }: { settings: StorefrontSettings }) {
       <CheckIcon color={settings.verified_icon_color} size={12} />
       {settings.verified_label}
     </div>
+  );
+}
+
+function TrustpilotLogoMark() {
+  return (
+    <svg
+      viewBox="0 0 200 32"
+      width={98}
+      height={22}
+      aria-label="Trustpilot"
+      role="img"
+      style={{ display: "block", flexShrink: 0 }}
+    >
+      <path
+        fill="#00B67A"
+        d="M12 0 14.8 8.4 24 9.2 16.8 15.2 19.4 24 12 19.2 4.6 24 7.2 15.2 0 9.2 9.2 8.4 12 0Z"
+      />
+      <text
+        x="30"
+        y="21"
+        fill="#191919"
+        fontFamily="Arial, Helvetica, sans-serif"
+        fontSize="16"
+        fontWeight="700"
+      >
+        Trustpilot
+      </text>
+    </svg>
   );
 }
 

@@ -21,6 +21,8 @@
 {%- assign s_header_stars_color = cfg.header_stars_color | default: '#e8a317' -%}
 {%- assign s_header_summary_color = cfg.header_summary_color | default: '#6b6b6b' -%}
 {%- assign s_header_based_on_prefix = cfg.header_based_on_prefix | default: 'Based on' -%}
+{%- assign s_header_show_trustpilot = cfg.header_show_trustpilot_logo -%}
+{%- if s_header_show_trustpilot == nil -%}{%- assign s_header_show_trustpilot = true -%}{%- endif -%}
 {%- assign s_review_title_color = cfg.review_title_color | default: '#000000' -%}
 {%- assign s_review_body_color = cfg.review_body_color | default: '#6b6b6b' -%}
 {%- assign s_review_title_size = cfg.review_title_font_size | default: 17 -%}
@@ -244,6 +246,16 @@
           <header class="product-reviews__section-head" style="margin-bottom:{{ s_trusted_mb }}px;">
             <h2 class="product-reviews__section-title">{{ s_section_headline }}</h2>
             <div class="product-reviews__section-summary">
+              {%- if s_header_show_trustpilot -%}
+                <img
+                  class="product-reviews__trustpilot-logo"
+                  src="{{ 'trustpilot-logo.svg' | asset_url }}"
+                  alt="Trustpilot"
+                  width="98"
+                  height="24"
+                  loading="lazy"
+                >
+              {%- endif -%}
               <span class="product-reviews__section-score" style="color:{{ s_header_rating_color }};">{{ display_rating }}</span>
               <div class="product-reviews__section-stars" aria-hidden="true">
                 {%- for i in (1..5) -%}
