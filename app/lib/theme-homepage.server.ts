@@ -1,9 +1,26 @@
+type ThemeFileBody = {
+  __typename?: string;
+  content?: string;
+  contentBase64?: string;
+  url?: string;
+};
+
 type AdminApi = {
   graphql: (
     query: string,
     options?: { variables?: Record<string, unknown> },
   ) => Promise<Response>;
+  rest?: {
+    get: (options: {
+      path: string;
+      query?: Record<string, string | number>;
+    }) => Promise<Response>;
+  };
 };
+
+function themeIdNumeric(themeGid: string): string {
+  return themeGid.split("/").pop() || themeGid;
+}
 
 /** Handle do app na URL do bloco (shopify://apps/{handle}/blocks/...) */
 export const THEME_APP_HANDLE = "vcom-reviwers";
@@ -159,7 +176,51 @@ async function getMainThemeId(admin: AdminApi): Promise<string | null> {
   return main?.id ?? nodes?.[0]?.id ?? null;
 }
 
-async function readIndexTemplate(
+async function resolveThemeFileBody(body: ThemeFileBody | null | undefined): Promise<string | null> {
+  if (!body) return null;
+
+  const typename = body.__typename;
+  if (typename === "OnlineStoreThemeFileBodyText") {
+    return body.content ?? null;
+  }
+  if (typename === "OnlineStoreThemeFileBodyBase64" && body.contentBase64) {
+    try {
+      return Buffer.from(body.contentBase64, "base64").toString("utf8");
+    } catch {
+      return null;
+    }
+  }
+  if (typename === "OnlineStoreThemeFileBodyUrl" && body.url) {
+    try {
+      const res = await fetch(body.url);
+      if (!res.ok) return null;
+      return await res.text();
+    } catch {
+      return null;
+    }
+  }
+
+  if (body.content) return body.content;
+  if (body.contentBase64) {
+    try {
+      return Buffer.from(body.contentBase64, "base64").toString("utf8");
+    } catch {
+      return null;
+    }
+  }
+  if (body.url) {
+    try {
+      const res = await fetch(body.url);
+      if (!res.ok) return null;
+      return await res.text();
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+async function readIndexTemplateGraphql(
   admin: AdminApi,
   themeId: string,
 ): Promise<{ content: string | null; errors: string[] }> {
@@ -171,11 +232,15 @@ async function readIndexTemplate(
           nodes {
             filename
             body {
+              __typename
               ... on OnlineStoreThemeFileBodyText {
                 content
               }
               ... on OnlineStoreThemeFileBodyBase64 {
                 contentBase64
+              }
+              ... on OnlineStoreThemeFileBodyUrl {
+                url
               }
             }
           }
@@ -189,19 +254,79 @@ async function readIndexTemplate(
   if (gqlErrors?.length) {
     return { content: null, errors: gqlErrors.map((e) => e.message) };
   }
-  const node = json.data?.theme?.files?.nodes?.[0];
-  const body = node?.body as
-    | { content?: string; contentBase64?: string }
-    | undefined;
-  let content = body?.content;
-  if (!content && body?.contentBase64) {
-    try {
-      content = Buffer.from(body.contentBase64, "base64").toString("utf8");
-    } catch {
-      return { content: null, errors: ["Não foi possível decodificar index.json (base64)."] };
+  const body = json.data?.theme?.files?.nodes?.[0]?.body as ThemeFileBody | undefined;
+  const content = await resolveThemeFileBody(body);
+  return { content, errors: [] };
+}
+
+async function readIndexTemplateRest(
+  admin: AdminApi,
+  themeId: string,
+): Promise<string | null> {
+  if (!admin.rest) return null;
+  try {
+    const response = await admin.rest.get({
+      path: `themes/${themeIdNumeric(themeId)}/assets`,
+      query: { "asset[key]": HOMEPAGE_TEMPLATE_FILE },
+    });
+    if (!response.ok) return null;
+    const data = (await response.json()) as { asset?: { value?: string } };
+    return data.asset?.value ?? null;
+  } catch (error) {
+    console.warn("[vcom-reviews] REST theme asset read failed", error);
+    return null;
+  }
+}
+
+async function readIndexTemplate(
+  admin: AdminApi,
+  themeId: string,
+): Promise<{ content: string | null; errors: string[] }> {
+  const gql = await readIndexTemplateGraphql(admin, themeId);
+
+  const candidates: string[] = [];
+  if (gql.content) candidates.push(gql.content);
+
+  const restContent = await readIndexTemplateRest(admin, themeId);
+  if (restContent && !candidates.includes(restContent)) {
+    candidates.push(restContent);
+  }
+
+  for (const raw of candidates) {
+    if (parseIndexJson(raw) || rawIndexHasReviewsSection(raw)) {
+      return { content: raw, errors: [] };
     }
   }
-  return { content: content ?? null, errors: [] };
+
+  if (gql.errors.length) {
+    return gql;
+  }
+
+  if (candidates.length > 0) {
+    console.warn(
+      "[vcom-reviews] index.json read but parse failed",
+      `length=${candidates[0].length}`,
+      `preview=${candidates[0].slice(0, 120).replace(/\s+/g, " ")}`,
+    );
+    return {
+      content: null,
+      errors: [
+        "Não foi possível interpretar templates/index.json. O tema pode estar corrompido ou use o Theme Editor.",
+      ],
+    };
+  }
+
+  return {
+    content: null,
+    errors: [`Arquivo ${HOMEPAGE_TEMPLATE_FILE} não encontrado no tema.`],
+  };
+}
+
+function rawIndexHasReviewsSection(raw: string): boolean {
+  return (
+    raw.includes(`"${HOMEPAGE_SECTION_ID}"`) &&
+    (raw.includes(THEME_BLOCK_HANDLE) || raw.includes("product-reviews"))
+  );
 }
 
 function stripBom(raw: string): string {
@@ -252,8 +377,30 @@ function stripTrailingCommas(json: string): string {
   return json.replace(/,(\s*[}\]])/g, "$1");
 }
 
-function parseIndexJson(raw: string): IndexTemplate | null {
-  const cleaned = stripTrailingCommas(stripJsonComments(stripBom(raw.trim())));
+function prepareIndexJsonText(raw: string): string {
+  let text = stripBom(raw.trim());
+  if (!text) return text;
+
+  if (text.startsWith('"') && text.endsWith('"')) {
+    try {
+      const unwrapped = JSON.parse(text) as unknown;
+      if (typeof unwrapped === "string") text = unwrapped;
+    } catch {
+      /* keep original */
+    }
+  }
+
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start >= 0 && end > start) {
+    text = text.slice(start, end + 1);
+  }
+
+  return stripTrailingCommas(stripJsonComments(text));
+}
+
+export function parseIndexJson(raw: string): IndexTemplate | null {
+  const cleaned = prepareIndexJsonText(raw);
   let parsed: unknown;
   try {
     parsed = JSON.parse(cleaned);
@@ -341,6 +488,9 @@ export async function getThemeHomepageBlockStatus(
 
   const template = parseIndexJson(content);
   if (!template) {
+    if (rawIndexHasReviewsSection(content)) {
+      return { configured: true, settingsClean: true, errors: [] };
+    }
     return { configured: false, settingsClean: false, errors: ["index.json inválido."] };
   }
 
@@ -404,12 +554,24 @@ export async function ensureHomepageReviewsThemeBlock(
 
   const template = parseIndexJson(content);
   if (!template) {
+    if (rawIndexHasReviewsSection(content)) {
+      return {
+        ok: true,
+        updated: false,
+        alreadyConfigured: true,
+        accessDenied: false,
+        errors: [],
+        deepLink,
+      };
+    }
     return {
       ok: false,
       updated: false,
       alreadyConfigured: false,
       accessDenied: false,
-      errors: ["Não foi possível interpretar templates/index.json."],
+      errors: [
+        "Não foi possível interpretar templates/index.json. Use o Theme Editor para adicionar o bloco Avaliações VCOM.",
+      ],
       deepLink,
     };
   }
