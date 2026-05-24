@@ -43,6 +43,7 @@ export default function AppHome() {
       primaryAction={{ content: "Nova avaliação", url: paths.reviewsNew }}
       secondaryActions={[
         { content: "Ver todas", url: paths.reviews },
+        { content: "Gerar com IA", url: paths.reviewsGenerate },
         { content: "Aparência", url: paths.appearance },
         { content: "Configuração", url: paths.setup },
       ]}
@@ -219,6 +220,12 @@ export default function AppHome() {
                   <BlockStack gap="200">
                     <Button url={paths.reviewsNew} variant="primary" fullWidth>
                       Nova avaliação
+                    </Button>
+                    <Button url={paths.reviewsGenerate} fullWidth>
+                      Gerar com IA
+                    </Button>
+                    <Button url={paths.appearance} fullWidth>
+                      Aparência
                     </Button>
                     <Button url={paths.reviews} fullWidth>
                       Gerenciar avaliações
