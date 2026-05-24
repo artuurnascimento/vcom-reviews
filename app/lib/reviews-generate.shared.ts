@@ -1,0 +1,42 @@
+import type { GeneratedAiReview } from "./ai-review-options";
+import type { ReviewPlacement } from "./constants";
+import type { ProductSearchResult } from "../components/ProductSearchPicker";
+
+export type ProductPreview = {
+  id: string;
+  title: string;
+  description: string;
+  productType: string;
+  vendor: string;
+  tags: string[];
+  images: Array<{ url: string; altText: string }>;
+};
+
+export type GenerateSuccess = {
+  ok: true;
+  reviews: GeneratedAiReview[];
+  ratingMin: number;
+  ratingMax: number;
+  placement: ReviewPlacement;
+  productId: string;
+  productTitle?: string;
+  usedImages: boolean;
+};
+
+export type GenerateError = { ok: false; error: string };
+export type GenerateResult = GenerateSuccess | GenerateError;
+
+export type ProductLoadResult =
+  | { ok: true; product: ProductPreview | null }
+  | { ok: false; error: string };
+
+export type SearchProductsResult =
+  | { ok: true; results: ProductSearchResult[] }
+  | { ok: false; error: string };
+
+export type GenerateLoaderData = {
+  geminiConfigured: boolean;
+  geminiModel: string;
+  shopName: string;
+  loaderError?: string;
+};

@@ -1,6 +1,5 @@
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
 import {
+  isRouteErrorResponse,
   useActionData,
   useFetcher,
   useLoaderData,
@@ -25,7 +24,6 @@ import {
   Text,
   TextField,
 } from "@shopify/polaris";
-import { authenticate } from "../shopify.server";
 import {
   AI_AGE_RANGES,
   AI_COUNTRIES,
@@ -35,19 +33,19 @@ import {
   AI_TONES,
   type GeneratedAiReview,
   formatRatingRange,
-  normalizeRatingRange,
   clampRating,
   getDefaultLocaleForCountry,
   getLocaleSelectOptions,
   labelForOption,
 } from "../lib/ai-review-options";
-import {
-  generateReviewsWithGemini,
-  isGeminiConfigured,
-} from "../lib/ai-reviews.server";
 import type { ReviewPlacement } from "../lib/constants";
-import { createReview, getProductDetails, searchProducts } from "../lib/reviews.server";
-import { createShopifyFilesFromUrls } from "../lib/upload.server";
+import type {
+  GenerateLoaderData,
+  GenerateResult,
+  ProductLoadResult,
+  ProductPreview,
+  SearchProductsResult,
+} from "../lib/reviews-generate.shared";
 import { AiReviewPreviewCard } from "../components/AiReviewPreviewCard";
 import {
   ProductSearchPicker,
@@ -57,249 +55,7 @@ import { ProductHeroCard } from "../components/ProductHeroCard";
 import { PlacementDestinationPicker } from "../components/PlacementDestinationPicker";
 import { RatingRangeField } from "../components/RatingRangeField";
 
-type ProductPreview = {
-  id: string;
-  title: string;
-  description: string;
-  productType: string;
-  vendor: string;
-  tags: string[];
-  images: Array<{ url: string; altText: string }>;
-};
-
-type GenerateSuccess = {
-  ok: true;
-  reviews: GeneratedAiReview[];
-  ratingMin: number;
-  ratingMax: number;
-  placement: ReviewPlacement;
-  productId: string;
-  productTitle?: string;
-  usedImages: boolean;
-};
-
-type GenerateError = { ok: false; error: string };
-type GenerateResult = GenerateSuccess | GenerateError;
-
-type ProductLoadResult =
-  | { ok: true; product: ProductPreview | null }
-  | { ok: false; error: string };
-
-type SearchProductsResult =
-  | { ok: true; results: ProductSearchResult[] }
-  | { ok: false; error: string };
-
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { admin } = await authenticate.admin(request);
-  const shopRes = await admin.graphql(`#graphql query { shop { name } }`);
-  const shopJson = await shopRes.json();
-  return {
-    geminiConfigured: isGeminiConfigured(),
-    geminiModel: process.env.GEMINI_MODEL || "gemini-2.0-flash",
-    shopName: (shopJson.data?.shop?.name as string) || "Sua loja",
-  };
-};
-
-function parseGenerateInput(form: FormData) {
-  return {
-    productType: String(form.get("productType") || "moda"),
-    customProductType: String(form.get("customProductType") || "").trim(),
-    productId: String(form.get("productId") || "").trim(),
-    gender: String(form.get("gender") || "random"),
-    ageRange: String(form.get("ageRange") || "random"),
-    tone: String(form.get("tone") || "natural"),
-    locale: String(form.get("locale") || "pt-BR"),
-    country: String(form.get("country") || "random"),
-    city: String(form.get("city") || "").trim(),
-    ratingMin: parseFloat(String(form.get("ratingMin") || "4.6")) || 4.6,
-    ratingMax: parseFloat(String(form.get("ratingMax") || "5")) || 5,
-    count: Math.min(10, Math.max(1, parseInt(String(form.get("count") || "3"), 10) || 3)),
-    placement: (String(form.get("placement") || "homepage") as ReviewPlacement),
-    verifiedBuyer: form.get("verifiedBuyer") === "true",
-    saveAsPending: form.get("saveAsPending") !== "false",
-    useProductImages: form.get("useProductImages") !== "false",
-    attachProductImages: form.get("attachProductImages") !== "false",
-  };
-}
-
-export const action = async ({ request }: ActionFunctionArgs) => {
-  const { admin } = await authenticate.admin(request);
-  const form = await request.formData();
-  const intent = String(form.get("intent") || "generate");
-
-  if (intent === "searchProducts") {
-    const query = String(form.get("query") || "");
-    try {
-      const results = await searchProducts(admin, query, { first: 15 });
-      return json({ ok: true, results } satisfies SearchProductsResult);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erro ao buscar produtos.";
-      return json({ ok: false, error: msg } satisfies SearchProductsResult);
-    }
-  }
-
-  if (intent === "loadProduct") {
-    const productId = String(form.get("productId") || "").trim();
-    if (!productId) {
-      return json({ ok: true, product: null } satisfies ProductLoadResult);
-    }
-    const product = await getProductDetails(admin, productId);
-    return json({ ok: true, product } satisfies ProductLoadResult);
-  }
-
-  if (intent === "save") {
-    const payload = parseGenerateInput(form);
-    const reviewsJson = String(form.get("reviews") || "[]");
-    let reviews: GeneratedAiReview[] = [];
-    try {
-      reviews = JSON.parse(reviewsJson) as GeneratedAiReview[];
-    } catch {
-      return json({ ok: false, error: "Dados de preview inválidos." } satisfies GenerateResult);
-    }
-
-    if (reviews.length === 0) {
-      return json({ ok: false, error: "Nenhuma avaliação para salvar." } satisfies GenerateResult);
-    }
-
-    if (payload.placement === "product" && !payload.productId) {
-      return json({
-        ok: false,
-        error: "Selecione um produto para avaliações de produto.",
-      } satisfies GenerateResult);
-    }
-
-    const status = payload.saveAsPending ? "pending" : "approved";
-
-    let urlToFileId: Record<string, string> = {};
-    if (payload.attachProductImages) {
-      const urls = reviews.map((r) => r.imageUrl).filter(Boolean) as string[];
-      if (urls.length > 0) {
-        try {
-          urlToFileId = await createShopifyFilesFromUrls(admin, urls);
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : "Erro ao anexar imagens do produto.";
-          return json({ ok: false, error: msg } satisfies GenerateResult);
-        }
-      }
-    }
-
-    for (const review of reviews) {
-      const imageFileIds =
-        payload.attachProductImages && review.imageUrl
-          ? [urlToFileId[review.imageUrl]].filter(Boolean)
-          : [];
-
-      await createReview(admin, {
-        rating: clampRating(review.rating ?? payload.ratingMax),
-        verified_buyer: payload.verifiedBuyer,
-        title: review.title,
-        body: review.body,
-        author: review.author,
-        time: review.time,
-        placement: payload.placement,
-        productId: payload.placement === "product" ? payload.productId : undefined,
-        imageFileIds,
-        status,
-      });
-    }
-
-    return redirect(`/app/reviews${status === "pending" ? "/pending" : ""}`);
-  }
-
-  if (!isGeminiConfigured()) {
-    return json({
-      ok: false,
-      error: "Configure GEMINI_API_KEY no Railway ou .env para usar a geração com IA.",
-    } satisfies GenerateResult);
-  }
-
-  const payload = parseGenerateInput(form);
-
-  if (payload.placement === "product" && !payload.productId) {
-    return json({
-      ok: false,
-      error: "Selecione um produto para gerar avaliações da página de produto.",
-    } satisfies GenerateResult);
-  }
-
-  let product: Awaited<ReturnType<typeof getProductDetails>> = null;
-  if (payload.productId) {
-    product = await getProductDetails(admin, payload.productId);
-    if (!product) {
-      return json({ ok: false, error: "Produto não encontrado." } satisfies GenerateResult);
-    }
-  }
-
-  const productDescription = product
-    ? [product.description, product.productType, product.vendor, ...(product.tags || [])]
-        .filter(Boolean)
-        .join(" · ")
-    : "";
-
-  const productImageUrls =
-    product && payload.useProductImages && product.images.length > 0
-      ? product.images.map((img) => img.url)
-      : [];
-
-  if (payload.useProductImages && payload.productId && productImageUrls.length === 0) {
-    return json({
-      ok: false,
-      error:
-        'Este produto não tem imagens. Adicione fotos no Shopify ou desmarque "Analisar imagens".',
-    } satisfies GenerateResult);
-  }
-
-  if (payload.useProductImages && !payload.productId) {
-    return json({
-      ok: false,
-      error: "Para analisar imagens, selecione um produto de referência na aba Produto.",
-    } satisfies GenerateResult);
-  }
-
-  const shopRes = await admin.graphql(`#graphql query { shop { name } }`);
-  const shopJson = await shopRes.json();
-  const shopName = (shopJson.data?.shop?.name as string) || "Sua loja";
-
-  const { min: ratingMin, max: ratingMax } = normalizeRatingRange(
-    payload.ratingMin,
-    payload.ratingMax,
-  );
-
-  try {
-    const reviews = await generateReviewsWithGemini({
-      productType: payload.productType,
-      customProductType: payload.customProductType,
-      productTitle: product?.title,
-      productDescription,
-      productImageUrls,
-      placement: payload.placement,
-      shopName,
-      gender: payload.gender,
-      ageRange: payload.ageRange,
-      tone: payload.tone,
-      locale: payload.locale,
-      country: payload.country,
-      city: payload.city,
-      ratingMin,
-      ratingMax,
-      count: payload.count,
-    });
-
-    return json({
-      ok: true,
-      reviews,
-      ratingMin,
-      ratingMax,
-      placement: payload.placement,
-      productId: payload.productId,
-      productTitle: product?.title,
-      usedImages: productImageUrls.length > 0,
-    } satisfies GenerateResult);
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Erro ao gerar avaliações.";
-    return json({ ok: false, error: msg } satisfies GenerateResult);
-  }
-};
+export { loader, action } from "../lib/reviews-generate-route.server";
 
 const TABS = [
   { id: "product", content: "Referência" },
@@ -307,14 +63,21 @@ const TABS = [
   { id: "publish", content: "Quantidade" },
 ];
 
+function getRouteErrorMessage(error: unknown): string {
+  if (isRouteErrorResponse(error)) {
+    if (typeof error.data === "string" && error.data) return error.data;
+    if (error.data && typeof error.data === "object" && "message" in error.data) {
+      return String((error.data as { message: unknown }).message);
+    }
+    return error.statusText || `Erro ${error.status}`;
+  }
+  if (error instanceof Error && error.message) return error.message;
+  return "Erro ao abrir a geração com IA.";
+}
+
 export function ErrorBoundary() {
   const error = useRouteError();
-  const message =
-    error instanceof Error
-      ? error.message
-      : typeof error === "object" && error && "message" in error
-        ? String((error as { message: unknown }).message)
-        : "Erro ao abrir a geração com IA.";
+  const message = getRouteErrorMessage(error);
 
   return (
     <Page title="Gerar avaliações com IA" backAction={{ url: "/app/reviews" }}>
@@ -329,11 +92,12 @@ export function ErrorBoundary() {
 }
 
 export default function GenerateReviewsPage() {
-  const { geminiConfigured, geminiModel, shopName } = useLoaderData<typeof loader>();
-  const actionData = useActionData<typeof action>();
-  const generateFetcher = useFetcher<typeof action>();
-  const productFetcher = useFetcher<typeof action>();
-  const searchFetcher = useFetcher<typeof action>();
+  const { geminiConfigured, geminiModel, shopName, loaderError } =
+    useLoaderData<GenerateLoaderData>();
+  const actionData = useActionData<GenerateResult>();
+  const generateFetcher = useFetcher<GenerateResult>();
+  const productFetcher = useFetcher<ProductLoadResult>();
+  const searchFetcher = useFetcher<SearchProductsResult>();
   const saveSubmit = useSubmit();
 
   const [selectedTab, setSelectedTab] = useState(0);
@@ -375,6 +139,10 @@ export default function GenerateReviewsPage() {
   }, [generateResult]);
 
   useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
     const timer = setTimeout(() => {
       const fd = new FormData();
       fd.set("intent", "searchProducts");
@@ -559,7 +327,7 @@ export default function GenerateReviewsPage() {
     />
   );
 
-  const productTab = (
+  const renderProductTab = () => (
     <BlockStack gap="400">
       <ProductSearchPicker
         selectedId={productId}
@@ -612,7 +380,7 @@ export default function GenerateReviewsPage() {
     </BlockStack>
   );
 
-  const styleTab = (
+  const renderStyleTab = () => (
     <BlockStack gap="400">
       <InlineGrid columns={{ xs: 1, sm: 2 }} gap="400">
         <Select
@@ -676,7 +444,7 @@ export default function GenerateReviewsPage() {
     </BlockStack>
   );
 
-  const publishTab = (
+  const renderPublishTab = () => (
     <FormLayout>
       <TextField
         label="Quantidade de avaliações"
@@ -754,6 +522,12 @@ export default function GenerateReviewsPage() {
           </Banner>
         ) : null}
 
+        {loaderError ? (
+          <Banner tone="warning" title="Carregamento parcial">
+            <p>{loaderError}</p>
+          </Banner>
+        ) : null}
+
         {error ? (
           <Banner tone="critical" title="Erro">
             <p>{error}</p>
@@ -810,9 +584,9 @@ export default function GenerateReviewsPage() {
             >
               <Tabs tabs={TABS} selected={selectedTab} onSelect={setSelectedTab}>
                 <Box paddingBlockStart="400">
-                  {selectedTab === 0 ? productTab : null}
-                  {selectedTab === 1 ? styleTab : null}
-                  {selectedTab === 2 ? publishTab : null}
+                  {selectedTab === 0 ? renderProductTab() : null}
+                  {selectedTab === 1 ? renderStyleTab() : null}
+                  {selectedTab === 2 ? renderPublishTab() : null}
                 </Box>
               </Tabs>
               <Divider />
