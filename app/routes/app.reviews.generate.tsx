@@ -31,6 +31,9 @@ import {
   formatRatingRange,
   normalizeRatingRange,
   clampRating,
+  getDefaultLocaleForCountry,
+  getLocaleSelectOptions,
+  labelForOption,
 } from "../lib/ai-review-options";
 import {
   generateReviewsWithGemini,
@@ -389,6 +392,13 @@ export default function GenerateReviewsPage() {
     setPreview([]);
   }, []);
 
+  const handleCountryChange = useCallback((value: string) => {
+    setCountry(value);
+    setLocale(getDefaultLocaleForCountry(value));
+  }, []);
+
+  const localeOptions = useMemo(() => getLocaleSelectOptions(country), [country]);
+
   const buildFormData = useCallback(
     (intent: "generate" | "save") => {
       const fd = new FormData();
@@ -481,7 +491,7 @@ export default function GenerateReviewsPage() {
       `${count} avaliações`,
       formatRatingRange(ratingMin, ratingMax),
       AI_TONES.find((t) => t.value === tone)?.label || tone,
-      AI_LOCALES.find((l) => l.value === locale)?.label || locale,
+      labelForOption(AI_LOCALES, locale) || locale,
     ],
     [count, ratingMin, ratingMax, tone, locale],
   );
@@ -541,8 +551,23 @@ export default function GenerateReviewsPage() {
           value={ageRange}
           onChange={setAgeRange}
         />
-        <Select label="Idioma" options={[...AI_LOCALES]} value={locale} onChange={setLocale} />
-        <Select label="País" options={[...AI_COUNTRIES]} value={country} onChange={setCountry} />
+        <Select
+          label="País"
+          options={[...AI_COUNTRIES]}
+          value={country}
+          onChange={handleCountryChange}
+        />
+        <Select
+          label="Idioma"
+          options={localeOptions}
+          value={locale}
+          onChange={setLocale}
+          helpText={
+            country === "random"
+              ? "Todos os idiomas disponíveis"
+              : `Ajustado automaticamente para ${country} — você pode trocar`
+          }
+        />
       </InlineGrid>
       {productType === "outro" ? (
         <TextField

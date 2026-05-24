@@ -39,9 +39,20 @@ export const AI_TONES = [
 export const AI_LOCALES = [
   { label: "Português (Brasil)", value: "pt-BR" },
   { label: "Português (Portugal)", value: "pt-PT" },
-  { label: "English (US)", value: "en-US" },
-  { label: "English (UK)", value: "en-GB" },
-  { label: "Español", value: "es-ES" },
+  { label: "English (United States)", value: "en-US" },
+  { label: "English (United Kingdom)", value: "en-GB" },
+  { label: "Español (España)", value: "es-ES" },
+  { label: "Español (México)", value: "es-MX" },
+  { label: "Español (Argentina)", value: "es-AR" },
+  { label: "Français (France)", value: "fr-FR" },
+  { label: "Deutsch (Deutschland)", value: "de-DE" },
+  { label: "Italiano (Italia)", value: "it-IT" },
+  { label: "Nederlands (Nederland)", value: "nl-NL" },
+  { label: "Polski (Polska)", value: "pl-PL" },
+  { label: "Türkçe (Türkiye)", value: "tr-TR" },
+  { label: "日本語 (日本)", value: "ja-JP" },
+  { label: "한국어 (대한민국)", value: "ko-KR" },
+  { label: "中文 (简体)", value: "zh-CN" },
 ] as const;
 
 export const AI_COUNTRIES = [
@@ -49,13 +60,138 @@ export const AI_COUNTRIES = [
   { label: "Brasil", value: "Brasil" },
   { label: "Portugal", value: "Portugal" },
   { label: "Estados Unidos", value: "Estados Unidos" },
+  { label: "Canadá", value: "Canadá" },
   { label: "Reino Unido", value: "Reino Unido" },
+  { label: "Irlanda", value: "Irlanda" },
   { label: "Espanha", value: "Espanha" },
   { label: "México", value: "México" },
   { label: "Argentina", value: "Argentina" },
+  { label: "Chile", value: "Chile" },
+  { label: "Colômbia", value: "Colômbia" },
   { label: "França", value: "França" },
   { label: "Alemanha", value: "Alemanha" },
+  { label: "Itália", value: "Itália" },
+  { label: "Países Baixos", value: "Países Baixos" },
+  { label: "Bélgica", value: "Bélgica" },
+  { label: "Suíça", value: "Suíça" },
+  { label: "Áustria", value: "Áustria" },
+  { label: "Polônia", value: "Polônia" },
+  { label: "Turquia", value: "Turquia" },
+  { label: "Japão", value: "Japão" },
+  { label: "Coreia do Sul", value: "Coreia do Sul" },
+  { label: "China", value: "China" },
+  { label: "Austrália", value: "Austrália" },
 ] as const;
+
+/** Idioma padrão ao selecionar um país */
+const COUNTRY_DEFAULT_LOCALE: Record<string, string> = {
+  Brasil: "pt-BR",
+  Portugal: "pt-PT",
+  "Estados Unidos": "en-US",
+  Canadá: "en-US",
+  "Reino Unido": "en-GB",
+  Irlanda: "en-GB",
+  Espanha: "es-ES",
+  México: "es-MX",
+  Argentina: "es-AR",
+  Chile: "es-ES",
+  Colômbia: "es-ES",
+  França: "fr-FR",
+  Alemanha: "de-DE",
+  Itália: "it-IT",
+  "Países Baixos": "nl-NL",
+  Bélgica: "fr-FR",
+  Suíça: "de-DE",
+  Áustria: "de-DE",
+  Polônia: "pl-PL",
+  Turquia: "tr-TR",
+  Japão: "ja-JP",
+  "Coreia do Sul": "ko-KR",
+  China: "zh-CN",
+  Austrália: "en-GB",
+};
+
+/** Idiomas recomendados por país (aparecem primeiro no select) */
+const COUNTRY_SUGGESTED_LOCALES: Record<string, string[]> = {
+  Brasil: ["pt-BR", "en-US", "es-ES"],
+  Portugal: ["pt-PT", "pt-BR", "en-GB", "es-ES"],
+  "Estados Unidos": ["en-US", "es-MX", "fr-FR"],
+  Canadá: ["en-US", "fr-FR"],
+  "Reino Unido": ["en-GB", "en-US"],
+  Irlanda: ["en-GB", "en-US"],
+  Espanha: ["es-ES", "en-GB", "fr-FR", "pt-PT"],
+  México: ["es-MX", "es-ES", "en-US"],
+  Argentina: ["es-AR", "es-ES", "pt-BR"],
+  Chile: ["es-ES", "es-AR"],
+  Colômbia: ["es-ES", "es-MX"],
+  França: ["fr-FR", "en-GB", "de-DE", "es-ES", "it-IT"],
+  Alemanha: ["de-DE", "en-GB", "fr-FR", "nl-NL"],
+  Itália: ["it-IT", "fr-FR", "en-GB", "de-DE"],
+  "Países Baixos": ["nl-NL", "en-GB", "de-DE", "fr-FR"],
+  Bélgica: ["fr-FR", "nl-NL", "de-DE", "en-GB"],
+  Suíça: ["de-DE", "fr-FR", "it-IT", "en-GB"],
+  Áustria: ["de-DE", "en-GB"],
+  Polônia: ["pl-PL", "en-GB", "de-DE"],
+  Turquia: ["tr-TR", "en-US", "de-DE"],
+  Japão: ["ja-JP", "en-US", "ko-KR", "zh-CN"],
+  "Coreia do Sul": ["ko-KR", "en-US", "ja-JP", "zh-CN"],
+  China: ["zh-CN", "en-US", "ja-JP"],
+  Austrália: ["en-GB", "en-US"],
+};
+
+export function getDefaultLocaleForCountry(country: string): string {
+  if (country === "random") return "pt-BR";
+  return COUNTRY_DEFAULT_LOCALE[country] || "en-US";
+}
+
+export function getLocaleSelectOptions(country: string): Array<
+  | { label: string; value: string }
+  | { title: string; options: Array<{ label: string; value: string }> }
+> {
+  const all = AI_LOCALES.map((l) => ({ label: l.label, value: l.value }));
+
+  if (country === "random") {
+    return all;
+  }
+
+  const suggestedIds = COUNTRY_SUGGESTED_LOCALES[country] || [
+    getDefaultLocaleForCountry(country),
+  ];
+  const suggestedSet = new Set(suggestedIds);
+  const suggested = suggestedIds
+    .map((id) => all.find((l) => l.value === id))
+    .filter((l): l is { label: string; value: string } => Boolean(l));
+  const others = all.filter((l) => !suggestedSet.has(l.value));
+
+  if (others.length === 0) {
+    return suggested;
+  }
+
+  return [
+    {
+      title: `Recomendado para ${country}`,
+      options: suggested,
+    },
+    {
+      title: "Outros idiomas",
+      options: others,
+    },
+  ];
+}
+
+export function isLocaleInOptions(
+  locale: string,
+  options: ReturnType<typeof getLocaleSelectOptions>,
+): boolean {
+  for (const item of options) {
+    if ("options" in item) {
+      if (item.options.some((o) => o.value === locale)) return true;
+    } else if (item.value === locale) {
+      return true;
+    }
+  }
+  return false;
+}
 
 export type AiReviewGenerateInput = {
   productType: string;
