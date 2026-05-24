@@ -5,9 +5,8 @@ import {
   shopifyApp,
 } from "@shopify/shopify-app-remix/server";
 import { SQLiteSessionStorage } from "@shopify/shopify-app-session-storage-sqlite";
-import { ensureReviewInfrastructure } from "./lib/metaobject-setup.server";
+import { runAutomaticInfrastructureSetup } from "./lib/metaobject-setup.server";
 import { ensureDefaultStorefrontSettings } from "./lib/storefront-settings.server";
-import { ensureHomepageReviewsThemeBlock } from "./lib/theme-homepage.server";
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY || "",
@@ -24,7 +23,7 @@ const shopify = shopifyApp({
   hooks: {
     afterAuth: async ({ admin, session }) => {
       try {
-        const result = await ensureReviewInfrastructure(admin);
+        const result = await runAutomaticInfrastructureSetup(admin, session.shop);
         if (!result.ok) {
           console.error(
             "[vcom-reviews] afterAuth setup failed",
@@ -33,7 +32,6 @@ const shopify = shopifyApp({
           );
         } else {
           await ensureDefaultStorefrontSettings(admin);
-          await ensureHomepageReviewsThemeBlock(admin, session.shop);
         }
       } catch (error) {
         console.error("[vcom-reviews] afterAuth setup error", session.shop, error);

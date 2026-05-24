@@ -16,34 +16,46 @@ import {
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import {
-  ensureReviewInfrastructure,
   getInfrastructureStatus,
+  runAutomaticInfrastructureSetup,
 } from "../lib/metaobject-setup.server";
-import { ensureHomepageReviewsThemeBlock, buildThemeEditorDeepLink } from "../lib/theme-homepage.server";
+import { buildThemeEditorDeepLink } from "../lib/theme-homepage.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
-  const status = await getInfrastructureStatus(admin);
-  return { ...status, themeDeepLink: buildThemeEditorDeepLink(session.shop) };
+  let status = await getInfrastructureStatus(admin);
+  let autoSetup: Awaited<ReturnType<typeof runAutomaticInfrastructureSetup>> | null = null;
+
+  if (!status.allReady) {
+    autoSetup = await runAutomaticInfrastructureSetup(admin, session.shop);
+    status = await getInfrastructureStatus(admin);
+  }
+
+  return {
+    ...status,
+    themeDeepLink: buildThemeEditorDeepLink(session.shop),
+    autoSetup,
+  };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
-  const infra = await ensureReviewInfrastructure(admin);
-  const theme = await ensureHomepageReviewsThemeBlock(admin, session.shop);
+  const result = await runAutomaticInfrastructureSetup(admin, session.shop);
   return {
-    ok: infra.ok && theme.ok,
-    errors: [...infra.errors, ...theme.errors],
-    theme,
+    ok: result.ok,
+    errors: result.errors,
+    theme: result.theme,
   };
 };
 
 export default function SetupPage() {
-  const { items, themeDeepLink, themeStatus } = useLoaderData<typeof loader>();
+  const { items, themeDeepLink, themeStatus, autoSetup } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const submit = useSubmit();
   const justRan = actionData !== undefined;
   const success = actionData?.ok === true;
+  const autoRanOk = autoSetup?.ok === true;
+  const autoRanFailed = autoSetup != null && !autoSetup.ok;
 
   return (
     <Page
@@ -80,14 +92,36 @@ export default function SetupPage() {
               )
             ) : null}
 
-            {!items.every((i) => i.ready) && !justRan ? (
+            {autoRanOk && items.every((i) => i.ready) ? (
+              <Banner tone="success" title="Configuração automática concluída">
+                Metaobject e bloco na homepage foram sincronizados ao abrir esta página.
+                {autoSetup?.theme?.updated
+                  ? " O arquivo templates/index.json foi atualizado."
+                  : null}
+              </Banner>
+            ) : null}
+
+            {autoRanFailed ? (
+              <Banner
+                tone="warning"
+                title="Configuração automática incompleta"
+                action={{ content: "Abrir Theme Editor", url: themeDeepLink, target: "_blank" }}
+              >
+                {autoSetup.errors.join(" · ")}
+                {autoSetup.theme.accessDenied
+                  ? " Reinstale o app para aceitar o escopo write_themes."
+                  : ""}
+              </Banner>
+            ) : null}
+
+            {!items.every((i) => i.ready) && !justRan && !autoRanFailed ? (
               <Banner
                 tone="warning"
                 title="Ação necessária"
                 action={{ content: "Abrir Theme Editor", url: themeDeepLink, target: "_blank" }}
               >
-                A configuração roda automaticamente na instalação. Se o bloco da homepage
-                não sincronizar via API, use o botão abaixo ou reexecute a configuração.
+                Se o bloco da homepage não sincronizar via API, use o Theme Editor ou o botão
+                abaixo.
                 {themeStatus.errors.length ? ` (${themeStatus.errors[0]})` : ""}
               </Banner>
             ) : null}
@@ -116,11 +150,12 @@ export default function SetupPage() {
                 </BlockStack>
                 <Divider />
                 <Button
-                  variant="primary"
+                  variant={items.every((i) => i.ready) ? "secondary" : "primary"}
                   onClick={() => submit({}, { method: "post" })}
-                  loading={false}
                 >
-                  {items.every((i) => i.ready) ? "Reexecutar configuração" : "Executar configuração"}
+                  {items.every((i) => i.ready)
+                    ? "Reexecutar configuração"
+                    : "Tentar novamente manualmente"}
                 </Button>
               </BlockStack>
             </Card>
@@ -151,9 +186,9 @@ export default function SetupPage() {
                   Próximo passo
                 </Text>
                 <Text as="p" variant="bodySm" tone="subdued">
-                  O app sincroniza automaticamente templates/index.json na instalação e ao
-                  salvar Aparência (bloco com settings vazios). Se a API do tema falhar,
-                  abra o Theme Editor pelo link acima.
+                  O app sincroniza templates/index.json automaticamente ao instalar, ao abrir
+                  qualquer página do painel e ao salvar Aparência. O botão acima só é
+                  necessário se a API do tema falhar.
                 </Text>
                 <Button url={themeDeepLink} target="_blank">
                   Abrir Theme Editor

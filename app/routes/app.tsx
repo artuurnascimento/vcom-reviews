@@ -5,24 +5,25 @@ import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { NavMenu } from "@shopify/app-bridge-react";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import { authenticate } from "../shopify.server";
-import { ensureReviewDefinitionReady } from "../lib/metaobject-setup.server";
+import { runAutomaticInfrastructureSetup } from "../lib/metaobject-setup.server";
 import { ensureDefaultStorefrontSettings } from "../lib/storefront-settings.server";
 
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { admin } = await authenticate.admin(request);
-  const setup = await ensureReviewDefinitionReady(admin);
+  const { admin, session } = await authenticate.admin(request);
+  const setup = await runAutomaticInfrastructureSetup(admin, session.shop);
   await ensureDefaultStorefrontSettings(admin);
   return {
     apiKey: process.env.SHOPIFY_API_KEY || "",
     setupOk: setup.ok,
     setupErrors: setup.errors,
+    themeAccessDenied: setup.theme.accessDenied,
   };
 };
 
 export default function AppLayout() {
-  const { apiKey, setupOk, setupErrors } = useLoaderData<typeof loader>();
+  const { apiKey, setupOk, setupErrors, themeAccessDenied } = useLoaderData<typeof loader>();
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
       {!setupOk ? (
@@ -38,8 +39,11 @@ export default function AppLayout() {
           >
             <strong>Configuração necessária:</strong>{" "}
             {setupErrors?.join(" · ") ||
-              "O metaobject review ainda não existe."}{" "}
-            <a href="/app/setup">Abrir configuração</a>
+              "Infraestrutura ainda não está pronta."}{" "}
+            {themeAccessDenied
+              ? "Reinstale o app para aceitar write_themes. "
+              : null}
+            <a href="/app/setup">Ver detalhes</a>
           </div>
         </div>
       ) : null}

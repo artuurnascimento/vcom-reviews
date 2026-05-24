@@ -8,7 +8,11 @@ import {
   REVIEW_METAOBJECT_TYPE,
   LEGACY_REVIEW_METAOBJECT_TYPE,
 } from "./constants";
-import { getThemeHomepageBlockStatus } from "./theme-homepage.server";
+import {
+  ensureHomepageReviewsThemeBlock,
+  getThemeHomepageBlockStatus,
+  type ThemeHomepageSyncResult,
+} from "./theme-homepage.server";
 
 const REVIEW_FIELD_DEFINITIONS = [
   { key: "rating", name: "Rating", type: "number_decimal", required: true },
@@ -84,6 +88,24 @@ export async function ensureReviewInfrastructure(admin: AdminApi) {
   }
 
   return { ok: errors.length === 0, errors };
+}
+
+/** Metaobject + bloco na homepage — idempotente, seguro chamar várias vezes. */
+export async function runAutomaticInfrastructureSetup(
+  admin: AdminApi,
+  shopDomain?: string,
+): Promise<{
+  ok: boolean;
+  errors: string[];
+  theme: ThemeHomepageSyncResult;
+}> {
+  const infra = await ensureReviewInfrastructure(admin);
+  const theme = await ensureHomepageReviewsThemeBlock(admin, shopDomain);
+  return {
+    ok: infra.ok && theme.ok,
+    errors: [...infra.errors, ...theme.errors],
+    theme,
+  };
 }
 
 async function fetchMetaobjectNodes(admin: AdminApi, type: string) {
