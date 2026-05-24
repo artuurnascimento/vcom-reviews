@@ -1,12 +1,13 @@
 import type { HeadersFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { Link, Outlet, useLoaderData, useRouteError } from "@remix-run/react";
 import { boundary } from "@shopify/shopify-app-remix/server";
-import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { NavMenu } from "@shopify/app-bridge-react";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import { authenticate } from "../shopify.server";
 import { runAutomaticInfrastructureSetup } from "../lib/metaobject-setup.server";
 import { ensureDefaultStorefrontSettings } from "../lib/storefront-settings.server";
+import { EmbeddedAppProvider } from "../components/EmbeddedAppProvider";
+import { useAppPaths } from "../hooks/useEmbeddedAppPath";
 
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
@@ -26,11 +27,28 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   };
 };
 
+function AppNav() {
+  const paths = useAppPaths();
+  return (
+    <NavMenu>
+      <Link to={paths.app} rel="home">
+        Painel
+      </Link>
+      <Link to={paths.reviews}>Avaliações</Link>
+      <Link to={paths.reviewsGenerate}>Gerar com IA</Link>
+      <Link to={paths.reviewsPending}>Pendentes</Link>
+      <Link to={paths.appearance}>Aparência</Link>
+      <Link to={paths.setup}>Configuração</Link>
+    </NavMenu>
+  );
+}
+
 export default function AppLayout() {
   const { apiKey, setupOk, setupErrors, themeWarning, themeAccessDenied } =
     useLoaderData<typeof loader>();
+  const paths = useAppPaths();
   return (
-    <AppProvider isEmbeddedApp apiKey={apiKey}>
+    <EmbeddedAppProvider apiKey={apiKey}>
       {!setupOk ? (
         <div style={{ padding: "12px 16px" }}>
           <div
@@ -44,7 +62,7 @@ export default function AppLayout() {
           >
             <strong>Configuração necessária:</strong>{" "}
             {setupErrors?.join(" · ") || "O metaobject de avaliações ainda não existe."}{" "}
-            <a href="/app/setup">Abrir configuração</a>
+            <a href={paths.setup}>Abrir configuração</a>
           </div>
         </div>
       ) : themeWarning ? (
@@ -60,22 +78,13 @@ export default function AppLayout() {
           >
             <strong>Homepage:</strong> {themeWarning}
             {themeAccessDenied ? " Reinstale o app para aceitar write_themes." : null}{" "}
-            <a href="/app/setup">Configuração</a>
+            <a href={paths.setup}>Configuração</a>
           </div>
         </div>
       ) : null}
-      <NavMenu>
-        <Link to="/app" rel="home">
-          Painel
-        </Link>
-        <Link to="/app/reviews">Avaliações</Link>
-        <Link to="/app/reviews/generate">Gerar com IA</Link>
-        <Link to="/app/reviews/pending">Pendentes</Link>
-        <Link to="/app/appearance">Aparência</Link>
-        <Link to="/app/setup">Configuração</Link>
-      </NavMenu>
+      <AppNav />
       <Outlet />
-    </AppProvider>
+    </EmbeddedAppProvider>
   );
 }
 

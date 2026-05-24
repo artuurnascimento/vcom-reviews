@@ -20,6 +20,7 @@ import { authenticate } from "../shopify.server";
 import { getDashboardStats } from "../lib/dashboard.server";
 import { StatCard, RatingBar } from "../components/StatCard";
 import { ReviewStars } from "../components/ReviewStars";
+import { useAppPaths } from "../hooks/useEmbeddedAppPath";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
@@ -33,16 +34,17 @@ function truncate(text: string, max: number) {
 
 export default function AppHome() {
   const stats = useLoaderData<typeof loader>();
+  const paths = useAppPaths();
 
   return (
     <Page
       title="Painel"
       subtitle={`Avaliações manuais · ${stats.shopName}`}
-      primaryAction={{ content: "Nova avaliação", url: "/app/reviews/new" }}
+      primaryAction={{ content: "Nova avaliação", url: paths.reviewsNew }}
       secondaryActions={[
-        { content: "Ver todas", url: "/app/reviews" },
-        { content: "Aparência", url: "/app/appearance" },
-        { content: "Configuração", url: "/app/setup" },
+        { content: "Ver todas", url: paths.reviews },
+        { content: "Aparência", url: paths.appearance },
+        { content: "Configuração", url: paths.setup },
       ]}
     >
       <BlockStack gap="500">
@@ -50,7 +52,7 @@ export default function AppHome() {
           <Banner
             tone="warning"
             title="Configuração pendente"
-            action={{ content: "Executar configuração", url: "/app/setup" }}
+            action={{ content: "Executar configuração", url: paths.setup }}
           >
             <p>
               Antes de publicar reviews na loja, execute a configuração para criar o
@@ -63,7 +65,7 @@ export default function AppHome() {
           <Banner
             tone="warning"
             title={`${stats.pendingCount} avaliação(ões) aguardando aprovação`}
-            action={{ content: "Moderar", url: "/app/reviews/pending" }}
+            action={{ content: "Moderar", url: paths.reviewsPending }}
           >
             <p>Clientes enviaram reviews pela loja. Aprove para publicar na vitrine.</p>
           </Banner>
@@ -110,14 +112,14 @@ export default function AppHome() {
                   <Text as="h2" variant="headingMd">
                     Avaliações recentes
                   </Text>
-                  <Button url="/app/reviews" variant="plain">
+                  <Button url={paths.reviews} variant="plain">
                     Ver todas
                   </Button>
                 </InlineStack>
                 {stats.recentReviews.length === 0 ? (
                   <EmptyState
                     heading="Nenhuma avaliação ainda"
-                    action={{ content: "Criar avaliação", url: "/app/reviews/new" }}
+                    action={{ content: "Criar avaliação", url: paths.reviewsNew }}
                     image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                   >
                     <p>Publique reviews na homepage ou em produtos específicos.</p>
@@ -169,7 +171,7 @@ export default function AppHome() {
                         </IndexTable.Cell>
                         <IndexTable.Cell>
                           <Button
-                            url={`/app/reviews/${encodeURIComponent(r.id)}`}
+                            url={paths.reviewEdit(r.id)}
                             size="slim"
                           >
                             Editar
@@ -215,13 +217,13 @@ export default function AppHome() {
                     Ações rápidas
                   </Text>
                   <BlockStack gap="200">
-                    <Button url="/app/reviews/new" variant="primary" fullWidth>
+                    <Button url={paths.reviewsNew} variant="primary" fullWidth>
                       Nova avaliação
                     </Button>
-                    <Button url="/app/reviews" fullWidth>
+                    <Button url={paths.reviews} fullWidth>
                       Gerenciar avaliações
                     </Button>
-                    <Button url="/app/setup" fullWidth>
+                    <Button url={paths.setup} fullWidth>
                       Configuração da loja
                     </Button>
                   </BlockStack>

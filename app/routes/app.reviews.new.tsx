@@ -1,6 +1,8 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { redirect } from "@remix-run/node";
-import { useActionData, useLoaderData, useSubmit } from "@remix-run/react";
+import { useActionData, useLoaderData } from "@remix-run/react";
+import { useEmbeddedSubmit } from "../hooks/useEmbeddedAppPath";
+import { redirectWithEmbeddedSearch } from "../lib/embedded-app-path.server";
+import { useAppPaths } from "../hooks/useEmbeddedAppPath";
 import { Banner, Page, Layout } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import { ReviewForm } from "../components/ReviewForm";
@@ -25,7 +27,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return { error: "Selecione um produto." };
     }
     await createReview(admin, data);
-    return redirect("/app/reviews");
+    return redirectWithEmbeddedSearch(request, "/app/reviews");
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Erro ao salvar";
     if (msg.includes("metaobject definition")) {
@@ -39,12 +41,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function NewReview() {
+  const paths = useAppPaths();
   const { products } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
-  const submit = useSubmit();
+  const submit = useEmbeddedSubmit();
 
   return (
-    <Page title="Nova avaliação" backAction={{ url: "/app/reviews" }}>
+    <Page title="Nova avaliação" backAction={{ url: paths.reviews }}>
       <Layout>
         {actionData && "error" in actionData ? (
           <Layout.Section>
@@ -68,7 +71,9 @@ export default function NewReview() {
               files.forEach((file) => fd.append("images", file));
               submit(fd, { method: "post", encType: "multipart/form-data" });
             }}
-            onCancel={() => window.history.back()}
+            onCancel={() => {
+              window.location.assign(paths.reviews);
+            }}
           />
         </Layout.Section>
       </Layout>

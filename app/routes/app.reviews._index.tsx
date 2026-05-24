@@ -1,6 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { redirect } from "@remix-run/node";
-import { useLoaderData, useSubmit } from "@remix-run/react";
+import { redirectWithEmbeddedSearch } from "../lib/embedded-app-path.server";
+import { useLoaderData } from "@remix-run/react";
+import { useEmbeddedSubmit } from "../hooks/useEmbeddedAppPath";
 import { useCallback } from "react";
 import {
   Page,
@@ -30,6 +31,7 @@ import { getDashboardStats } from "../lib/dashboard.server";
 import { StatCard } from "../components/StatCard";
 import { ReviewStars } from "../components/ReviewStars";
 import { ReviewModerationActions } from "../components/ReviewModerationActions";
+import { useAppPaths } from "../hooks/useEmbeddedAppPath";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
@@ -48,15 +50,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   if (intent === "approveAll") {
     await approveAllPendingReviews(admin);
-    return redirect("/app/reviews");
+    return redirectWithEmbeddedSearch(request, "/app/reviews");
   }
 
   if (intent === "rejectAll") {
     await rejectAllPendingReviews(admin);
-    return redirect("/app/reviews");
+    return redirectWithEmbeddedSearch(request, "/app/reviews");
   }
 
-  if (!id) return redirect("/app/reviews");
+  if (!id) return redirectWithEmbeddedSearch(request, "/app/reviews");
 
   if (intent === "approve") {
     await approveReview(admin, id);
@@ -66,7 +68,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     await deleteReview(admin, id);
   }
 
-  return redirect("/app/reviews");
+  return redirectWithEmbeddedSearch(request, "/app/reviews");
 };
 
 function truncate(text: string, max: number) {
@@ -76,8 +78,9 @@ function truncate(text: string, max: number) {
 }
 
 export default function ReviewsIndex() {
+  const paths = useAppPaths();
   const { reviews, stats } = useLoaderData<typeof loader>();
-  const submit = useSubmit();
+  const submit = useEmbeddedSubmit();
 
   const post = useCallback(
     (data: Record<string, string>) => {
@@ -112,13 +115,13 @@ export default function ReviewsIndex() {
     <Page
       title="Avaliações"
       subtitle={`${stats.totalReviews} publicadas · ${stats.pendingCount} pendentes · média ${stats.averageRating}`}
-      backAction={{ url: "/app" }}
-      primaryAction={{ content: "Nova avaliação", url: "/app/reviews/new" }}
+      backAction={{ url: paths.app }}
+      primaryAction={{ content: "Nova avaliação", url: paths.reviewsNew }}
       secondaryActions={[
-        { content: "Gerar com IA", url: "/app/reviews/generate" },
+        { content: "Gerar com IA", url: paths.reviewsGenerate },
         {
           content: `Pendentes (${stats.pendingCount})`,
-          url: "/app/reviews/pending",
+          url: paths.reviewsPending,
         },
       ]}
     >
@@ -136,7 +139,7 @@ export default function ReviewsIndex() {
             tone="warning"
             action={{
               content: "Ver só pendentes",
-              url: "/app/reviews/pending",
+              url: paths.reviewsPending,
             }}
           >
             <BlockStack gap="300">
@@ -160,8 +163,8 @@ export default function ReviewsIndex() {
             {reviews.length === 0 ? (
               <EmptyState
                 heading="Nenhuma avaliação"
-                action={{ content: "Criar avaliação", url: "/app/reviews/new" }}
-                secondaryAction={{ content: "Voltar ao painel", url: "/app" }}
+                action={{ content: "Criar avaliação", url: paths.reviewsNew }}
+                secondaryAction={{ content: "Voltar ao painel", url: paths.app }}
                 image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
               >
                 <p>
@@ -246,7 +249,7 @@ export default function ReviewsIndex() {
                           <ReviewModerationActions
                             reviewId={r.id}
                             status={r.status}
-                            editUrl={`/app/reviews/${encodeURIComponent(r.id)}`}
+                            editUrl={paths.reviewEdit(r.id)}
                             onSubmit={post}
                             compact
                           />

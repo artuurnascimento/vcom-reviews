@@ -1,5 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { redirectWithEmbeddedSearch } from "./embedded-app-path.server";
 import { authenticate } from "../shopify.server";
 import {
   clampRating,
@@ -166,7 +167,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         });
       }
 
-      return redirect(`/app/reviews${status === "pending" ? "/pending" : ""}`);
+      return redirectWithEmbeddedSearch(
+        request,
+        `/app/reviews${status === "pending" ? "/pending" : ""}`,
+      );
     }
 
     if (!isAiGenerationConfigured()) {

@@ -1,5 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { useActionData, useLoaderData, useSubmit } from "@remix-run/react";
+import { useActionData, useLoaderData } from "@remix-run/react";
+import { useEmbeddedSubmit } from "../hooks/useEmbeddedAppPath";
 import {
   Page,
   Layout,
@@ -20,6 +21,7 @@ import {
   runAutomaticInfrastructureSetup,
 } from "../lib/metaobject-setup.server";
 import { buildThemeEditorDeepLink } from "../lib/theme-homepage.server";
+import { useAppPaths } from "../hooks/useEmbeddedAppPath";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
@@ -49,9 +51,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function SetupPage() {
+  const paths = useAppPaths();
   const { items, themeDeepLink, themeStatus, autoSetup } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
-  const submit = useSubmit();
+  const submit = useEmbeddedSubmit();
   const justRan = actionData !== undefined;
   const success = actionData?.ok === true;
   const autoRanOk = autoSetup != null && autoSetup.themeOk && items.every((i) => i.ready);
@@ -62,7 +65,7 @@ export default function SetupPage() {
     <Page
       title="Configuração"
       subtitle="Infraestrutura de dados na sua loja Shopify"
-      backAction={{ url: "/app" }}
+      backAction={{ url: paths.app }}
     >
       <Layout>
         <Layout.Section>
@@ -196,10 +199,10 @@ export default function SetupPage() {
                 </Button>
                 <Box>
                   <InlineStack gap="200">
-                    <Button url="/app/reviews/new" variant="primary">
+                    <Button url={paths.reviewsNew} variant="primary">
                       Nova avaliação
                     </Button>
-                    <Button url="/app">Voltar ao painel</Button>
+                    <Button url={paths.app}>Voltar ao painel</Button>
                   </InlineStack>
                 </Box>
               </BlockStack>

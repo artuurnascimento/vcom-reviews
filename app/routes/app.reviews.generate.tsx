@@ -1,11 +1,13 @@
 import {
   isRouteErrorResponse,
   useActionData,
-  useFetcher,
   useLoaderData,
   useRouteError,
-  useSubmit,
 } from "@remix-run/react";
+import {
+  useEmbeddedFetcher,
+  useEmbeddedSubmit,
+} from "../hooks/useEmbeddedAppPath";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Badge,
@@ -54,6 +56,7 @@ import {
 import { ProductHeroCard } from "../components/ProductHeroCard";
 import { PlacementDestinationPicker } from "../components/PlacementDestinationPicker";
 import { RatingRangeField } from "../components/RatingRangeField";
+import { useAppPaths } from "../hooks/useEmbeddedAppPath";
 
 export { loader, action } from "../lib/reviews-generate-route.server";
 
@@ -76,28 +79,30 @@ function getRouteErrorMessage(error: unknown): string {
 }
 
 export function ErrorBoundary() {
+  const paths = useAppPaths();
   const error = useRouteError();
   const message = getRouteErrorMessage(error);
 
   return (
-    <Page title="Gerar avaliações com IA" backAction={{ url: "/app/reviews" }}>
+    <Page title="Gerar avaliações com IA" backAction={{ url: paths.reviews }}>
       <Banner tone="critical" title="Não foi possível abrir esta página">
         <p>{message}</p>
       </Banner>
       <Box paddingBlockStart="400">
-        <Button url="/app/reviews">Voltar às avaliações</Button>
+        <Button url={paths.reviews}>Voltar às avaliações</Button>
       </Box>
     </Page>
   );
 }
 
 export default function GenerateReviewsPage() {
+  const paths = useAppPaths();
   const { aiConfigured, shopName, loaderError } = useLoaderData<GenerateLoaderData>();
   const actionData = useActionData<GenerateResult>();
-  const generateFetcher = useFetcher<GenerateResult>();
-  const productFetcher = useFetcher<ProductLoadResult>();
-  const searchFetcher = useFetcher<SearchProductsResult>();
-  const saveSubmit = useSubmit();
+  const generateFetcher = useEmbeddedFetcher<GenerateResult>();
+  const productFetcher = useEmbeddedFetcher<ProductLoadResult>();
+  const searchFetcher = useEmbeddedFetcher<SearchProductsResult>();
+  const saveSubmit = useEmbeddedSubmit();
 
   const [selectedTab, setSelectedTab] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -473,7 +478,7 @@ export default function GenerateReviewsPage() {
     <Page
       title="Gerar avaliações com IA"
       subtitle="Gere avaliações para a homepage ou para a página de um produto"
-      backAction={{ url: "/app/reviews" }}
+      backAction={{ url: paths.reviews }}
       primaryAction={{
         content: isGenerating ? "Gerando…" : "Gerar avaliações",
         onAction: handleGenerate,

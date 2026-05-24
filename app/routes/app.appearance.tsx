@@ -1,5 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { useActionData, useLoaderData, useRouteError, useSubmit } from "@remix-run/react";
+import { useActionData, useLoaderData, useRouteError } from "@remix-run/react";
+import { useEmbeddedSubmit } from "../hooks/useEmbeddedAppPath";
 import { useCallback, useState } from "react";
 import {
   Page,
@@ -34,6 +35,7 @@ import { ColorPickerField } from "../components/ColorPickerField";
 import { RangeField } from "../components/RangeField";
 import { LayoutPickerCard } from "../components/LayoutPickerCard";
 import { StorefrontPreview } from "../components/StorefrontPreview";
+import { useAppPaths } from "../hooks/useEmbeddedAppPath";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
@@ -81,6 +83,7 @@ const TABS = [
 ];
 
 export function ErrorBoundary() {
+  const paths = useAppPaths();
   const error = useRouteError();
   const message =
     error instanceof Error
@@ -90,22 +93,23 @@ export function ErrorBoundary() {
         : "Erro desconhecido na página de aparência";
 
   return (
-    <Page title="Aparência da vitrine" backAction={{ url: "/app" }}>
+    <Page title="Aparência da vitrine" backAction={{ url: paths.app }}>
       <Banner tone="critical" title="Não foi possível abrir o editor">
         <p>{message}</p>
       </Banner>
       <Box paddingBlockStart="400">
-        <Button url="/app">Voltar ao painel</Button>
+        <Button url={paths.app}>Voltar ao painel</Button>
       </Box>
     </Page>
   );
 }
 
 export default function AppearancePage() {
+  const paths = useAppPaths();
   const loaderData = useLoaderData<typeof loader>();
   const { shopName, themeDeepLink, loaderError } = loaderData;
   const actionData = useActionData<typeof action>();
-  const submit = useSubmit();
+  const submit = useEmbeddedSubmit();
   const [settings, setSettings] = useState(() =>
     coerceStorefrontSettings(loaderData.settings),
   );
@@ -130,7 +134,7 @@ export default function AppearancePage() {
     <Page
       title="Aparência da vitrine"
       subtitle="Editor visual com preview ao vivo"
-      backAction={{ url: "/app" }}
+      backAction={{ url: paths.app }}
       primaryAction={{ content: "Salvar alterações", onAction: handleSave }}
     >
       <BlockStack gap="400">
@@ -187,7 +191,7 @@ export default function AppearancePage() {
               <Tabs tabs={TABS} selected={selectedTab} onSelect={setSelectedTab} fitted />
             </Card>
 
-            <form id="storefront-settings-form" method="post">
+            <form id="storefront-settings-form" method="post" action={paths.appearance}>
               <input type="hidden" name="layout" value={settings.layout} />
 
               <BlockStack gap="400">

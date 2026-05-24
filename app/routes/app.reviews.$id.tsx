@@ -1,6 +1,8 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { redirect } from "@remix-run/node";
-import { useActionData, useLoaderData, useSubmit } from "@remix-run/react";
+import { useActionData, useLoaderData } from "@remix-run/react";
+import { useEmbeddedSubmit } from "../hooks/useEmbeddedAppPath";
+import { redirectWithEmbeddedSearch } from "../lib/embedded-app-path.server";
+import { useAppPaths } from "../hooks/useEmbeddedAppPath";
 import { Banner, Page, Layout } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import { ReviewForm } from "../components/ReviewForm";
@@ -34,20 +36,21 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
       return { error: "Autor e texto são obrigatórios." };
     }
     await updateReview(admin, id, data);
-    return redirect("/app/reviews");
+    return redirectWithEmbeddedSearch(request, "/app/reviews");
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Erro ao salvar" };
   }
 };
 
 export default function EditReview() {
+  const paths = useAppPaths();
   const { review, products, imageUrls, placementInfo } =
     useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
-  const submit = useSubmit();
+  const submit = useEmbeddedSubmit();
 
   return (
-    <Page title="Editar avaliação" backAction={{ url: "/app/reviews" }}>
+    <Page title="Editar avaliação" backAction={{ url: paths.reviews }}>
       <Layout>
         {actionData && "error" in actionData ? (
           <Layout.Section>
@@ -84,7 +87,9 @@ export default function EditReview() {
               files.forEach((file) => fd.append("images", file));
               submit(fd, { method: "post", encType: "multipart/form-data" });
             }}
-            onCancel={() => window.history.back()}
+            onCancel={() => {
+              window.location.assign(paths.reviews);
+            }}
           />
         </Layout.Section>
       </Layout>

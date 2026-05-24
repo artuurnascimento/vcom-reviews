@@ -1,6 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { redirect } from "@remix-run/node";
-import { useLoaderData, useSubmit } from "@remix-run/react";
+import { redirectWithEmbeddedSearch } from "../lib/embedded-app-path.server";
+import { useLoaderData } from "@remix-run/react";
+import { useEmbeddedSubmit } from "../hooks/useEmbeddedAppPath";
 import { useCallback } from "react";
 import {
   Page,
@@ -27,6 +28,7 @@ import {
 } from "../lib/reviews.server";
 import { ReviewStars } from "../components/ReviewStars";
 import { ReviewModerationActions } from "../components/ReviewModerationActions";
+import { useAppPaths } from "../hooks/useEmbeddedAppPath";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
@@ -42,15 +44,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   if (intent === "approveAll") {
     await approveAllPendingReviews(admin);
-    return redirect("/app/reviews");
+    return redirectWithEmbeddedSearch(request, "/app/reviews");
   }
 
   if (intent === "rejectAll") {
     await rejectAllPendingReviews(admin);
-    return redirect("/app/reviews");
+    return redirectWithEmbeddedSearch(request, "/app/reviews");
   }
 
-  if (!id) return redirect("/app/reviews/pending");
+  if (!id) return redirectWithEmbeddedSearch(request, "/app/reviews/pending");
 
   if (intent === "approve") {
     await approveReview(admin, id);
@@ -60,7 +62,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     await deleteReview(admin, id);
   }
 
-  return redirect("/app/reviews/pending");
+  return redirectWithEmbeddedSearch(request, "/app/reviews/pending");
 };
 
 function truncate(text: string, max: number) {
@@ -70,8 +72,9 @@ function truncate(text: string, max: number) {
 }
 
 export default function PendingReviewsPage() {
+  const paths = useAppPaths();
   const { pending } = useLoaderData<typeof loader>();
-  const submit = useSubmit();
+  const submit = useEmbeddedSubmit();
 
   const post = useCallback(
     (data: Record<string, string>) => {
@@ -106,7 +109,7 @@ export default function PendingReviewsPage() {
     <Page
       title="Aprovação pendente"
       subtitle={`${pending.length} aguardando moderação`}
-      backAction={{ url: "/app/reviews" }}
+      backAction={{ url: paths.reviews }}
       primaryAction={
         pending.length > 0
           ? {
@@ -122,9 +125,9 @@ export default function PendingReviewsPage() {
                 content: `Rejeitar todas (${pending.length})`,
                 onAction: handleRejectAll,
               },
-              { content: "Ver todas", url: "/app/reviews" },
+              { content: "Ver todas", url: paths.reviews },
             ]
-          : [{ content: "Ver todas", url: "/app/reviews" }]
+          : [{ content: "Ver todas", url: paths.reviews }]
       }
     >
       <Layout>
@@ -138,7 +141,7 @@ export default function PendingReviewsPage() {
             {pending.length === 0 ? (
               <EmptyState
                 heading="Nenhuma avaliação pendente"
-                action={{ content: "Ver todas", url: "/app/reviews" }}
+                action={{ content: "Ver todas", url: paths.reviews }}
                 image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
               >
                 <p>Quando houver avaliações aguardando, elas aparecerão aqui.</p>
@@ -195,7 +198,7 @@ export default function PendingReviewsPage() {
                           <ReviewModerationActions
                             reviewId={r.id}
                             status={r.status}
-                            editUrl={`/app/reviews/${encodeURIComponent(r.id)}`}
+                            editUrl={paths.reviewEdit(r.id)}
                             onSubmit={post}
                             compact
                           />
