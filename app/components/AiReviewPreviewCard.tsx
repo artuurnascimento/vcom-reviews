@@ -1,4 +1,5 @@
 import {
+  Badge,
   BlockStack,
   Box,
   InlineGrid,
@@ -8,15 +9,26 @@ import {
   Thumbnail,
 } from "@shopify/polaris";
 import type { GeneratedAiReview } from "../lib/ai-review-options";
+import type { ReviewPlacement } from "../lib/constants";
 import { ReviewStars } from "./ReviewStars";
 
 type Props = {
   review: GeneratedAiReview;
   index: number;
+  placement: ReviewPlacement;
+  productTitle?: string;
   onChange: (field: keyof GeneratedAiReview, value: string) => void;
 };
 
-export function AiReviewPreviewCard({ review, index, onChange }: Props) {
+export function AiReviewPreviewCard({
+  review,
+  index,
+  placement,
+  productTitle,
+  onChange,
+}: Props) {
+  const isHomepage = placement === "homepage";
+
   return (
     <Box
       padding="400"
@@ -27,7 +39,7 @@ export function AiReviewPreviewCard({ review, index, onChange }: Props) {
       shadow="100"
     >
       <BlockStack gap="300">
-        <InlineStack align="space-between" blockAlign="center">
+        <InlineStack align="space-between" blockAlign="center" wrap>
           <InlineStack gap="200" blockAlign="center">
             <Box
               padding="100"
@@ -43,13 +55,15 @@ export function AiReviewPreviewCard({ review, index, onChange }: Props) {
               {review.rating.toFixed(1)}
             </Text>
           </InlineStack>
-          {review.time ? (
-            <Text as="span" variant="bodySm" tone="subdued">
-              {review.time}
-            </Text>
-          ) : null}
+          <Badge tone={isHomepage ? "success" : "info"}>
+            {isHomepage ? "→ Página inicial" : `→ ${productTitle || "Produto"}`}
+          </Badge>
         </InlineStack>
-
+        {review.time ? (
+          <Text as="span" variant="bodySm" tone="subdued">
+            {review.time}
+          </Text>
+        ) : null}
         {review.imageUrl ? (
           <InlineStack gap="200" blockAlign="center">
             <Thumbnail source={review.imageUrl} alt="Produto" size="medium" />

@@ -8,7 +8,6 @@ import {
   BlockStack,
   Box,
   Button,
-  ButtonGroup,
   Checkbox,
   Divider,
   FormLayout,
@@ -49,7 +48,7 @@ import {
   type ProductSearchResult,
 } from "../components/ProductSearchPicker";
 import { ProductHeroCard } from "../components/ProductHeroCard";
-import { RatingRangeField } from "../components/RatingRangeField";
+import { PlacementDestinationPicker } from "../components/PlacementDestinationPicker";
 
 type ProductPreview = {
   id: string;
@@ -524,37 +523,16 @@ export default function GenerateReviewsPage() {
   );
 
   const destinationSelector = (
-    <Box padding="400" borderRadius="300" background="bg-surface-secondary" borderWidth="025" borderColor="border">
-      <BlockStack gap="300">
-        <Text as="h3" variant="headingSm">
-          Onde as avaliações vão aparecer
-        </Text>
-        <ButtonGroup variant="segmented" fullWidth>
-          <Button
-            pressed={isHomepage}
-            onClick={() => handlePlacementChange("homepage")}
-          >
-            Página inicial
-          </Button>
-          <Button
-            pressed={isProductPage}
-            onClick={() => handlePlacementChange("product")}
-          >
-            Página de produto
-          </Button>
-        </ButtonGroup>
-        <Text as="p" variant="bodySm" tone="subdued">
-          {isHomepage
-            ? `Textos para o carrossel da homepage de ${shopName}. O produto abaixo é opcional — só inspira a IA.`
-            : "Textos para a ficha do produto. Selecione o produto na aba Referência."}
-        </Text>
-      </BlockStack>
-    </Box>
+    <PlacementDestinationPicker
+      value={placement}
+      shopName={shopName}
+      productTitle={productPreview?.title}
+      onChange={handlePlacementChange}
+    />
   );
 
   const productTab = (
     <BlockStack gap="400">
-      {destinationSelector}
       <ProductSearchPicker
         selectedId={productId}
         selectedTitle={selectedProductTitle}
@@ -711,7 +689,9 @@ export default function GenerateReviewsPage() {
         preview.length > 0
           ? [
               {
-                content: `Salvar ${preview.length}`,
+                content: isHomepage
+                  ? `Salvar ${preview.length} na homepage`
+                  : `Salvar ${preview.length} no produto`,
                 onAction: handleSave,
               },
             ]
@@ -752,6 +732,17 @@ export default function GenerateReviewsPage() {
           </Banner>
         ) : null}
 
+        {isProductPage && !productId ? (
+          <Banner tone="warning" title="Produto obrigatório">
+            <p>
+              Você escolheu <strong>Página do produto</strong>. Busque e selecione o
+              produto na aba Referência antes de gerar.
+            </p>
+          </Banner>
+        ) : null}
+
+        {destinationSelector}
+
         {generateResult?.ok && generateResult.usedImages && generateResult.productTitle ? (
           <Banner tone="success" title="Imagens analisadas">
             <p>
@@ -761,12 +752,20 @@ export default function GenerateReviewsPage() {
         ) : null}
 
         {generateResult?.ok && isHomepage ? (
-          <Banner tone="info" title="Avaliações para a homepage">
+          <Banner tone="info" title="Serão salvas na homepage">
             <p>
-              Ao salvar, as avaliações vão para a <strong>página inicial</strong>
+              Ao salvar, ficam vinculadas à <strong>página inicial</strong>
               {generateResult.productTitle
-                ? ` (inspiradas em ${generateResult.productTitle}, sem vínculo à página do produto).`
+                ? ` (texto inspirado em ${generateResult.productTitle}, sem link na página do produto).`
                 : ` de ${shopName}.`}
+            </p>
+          </Banner>
+        ) : null}
+
+        {generateResult?.ok && isProductPage && generateResult.productTitle ? (
+          <Banner tone="info" title="Serão salvas na página do produto">
+            <p>
+              Ao salvar, ficam vinculadas à página de <strong>{generateResult.productTitle}</strong>.
             </p>
           </Banner>
         ) : null}
@@ -879,6 +878,8 @@ export default function GenerateReviewsPage() {
                         key={`preview-${index}`}
                         review={review}
                         index={index}
+                        placement={placement}
+                        productTitle={productPreview?.title}
                         onChange={(field, value) => updatePreview(index, field, value)}
                       />
                     ))}
@@ -888,7 +889,9 @@ export default function GenerateReviewsPage() {
                 {preview.length > 0 ? (
                   <InlineStack gap="200">
                     <Button variant="primary" onClick={handleSave} fullWidth>
-                      {`Salvar ${preview.length} avaliação(ões)`}
+                      {isHomepage
+                        ? `Salvar ${preview.length} na página inicial`
+                        : `Salvar ${preview.length} na página do produto`}
                     </Button>
                     <Button onClick={handleGenerate} loading={isGenerating} fullWidth>
                       Regenerar
