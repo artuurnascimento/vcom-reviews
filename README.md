@@ -28,6 +28,17 @@ cp .env.example .env
 3. Ao instalar o app na loja, o metaobject `review` é criado automaticamente. Se
    precisar, reexecute em **Configuração → Executar configuração**.
 
+## Ícone do app
+
+Arquivos em `assets/`:
+
+| Arquivo | Uso |
+|---------|-----|
+| `app-icon-1200.png` | Upload no **Partner Dashboard** → App → Configuração → **Ícone do app** (1200×1200 px) |
+| `app-icon.svg` | Versão vetorial para edição futura |
+
+No [Partner Dashboard](https://partners.shopify.com), abra **vcom reviwers** → **Configuração** → envie `assets/app-icon-1200.png` como ícone do app.
+
 ## Desenvolvimento
 
 ```bash
