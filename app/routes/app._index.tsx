@@ -41,6 +41,7 @@ export default function AppHome() {
       primaryAction={{ content: "Nova avaliação", url: "/app/reviews/new" }}
       secondaryActions={[
         { content: "Ver todas", url: "/app/reviews" },
+        { content: "Aparência", url: "/app/appearance" },
         { content: "Configuração", url: "/app/setup" },
       ]}
     >

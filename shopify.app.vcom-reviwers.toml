@@ -27,6 +27,13 @@ redirect_urls = [
 [pos]
 embedded = false
 
+[app.metafields.app.storefront_settings]
+name = "Storefront settings"
+description = "VCOM Reviews — cores, textos e layout da vitrine"
+type = "json"
+access.admin = "merchant_read_write"
+access.storefront = "public_read"
+
 [metaobjects.app.review]
 name = "Review"
 description = "Avaliações VCOM (homepage e produto)"

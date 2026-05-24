@@ -6,12 +6,14 @@ import { NavMenu } from "@shopify/app-bridge-react";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import { authenticate } from "../shopify.server";
 import { ensureReviewDefinitionReady } from "../lib/metaobject-setup.server";
+import { ensureDefaultStorefrontSettings } from "../lib/storefront-settings.server";
 
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
   const setup = await ensureReviewDefinitionReady(admin);
+  await ensureDefaultStorefrontSettings(admin);
   return {
     apiKey: process.env.SHOPIFY_API_KEY || "",
     setupOk: setup.ok,
@@ -47,6 +49,7 @@ export default function AppLayout() {
         </Link>
         <Link to="/app/reviews">Avaliações</Link>
         <Link to="/app/reviews/pending">Pendentes</Link>
+        <Link to="/app/appearance">Aparência</Link>
         <Link to="/app/setup">Configuração</Link>
       </NavMenu>
       <Outlet />
