@@ -1,12 +1,26 @@
 <script>
 (function () {
-  function getFooterSection() {
-    return (
-      document.querySelector(
-        '#shopify-section-group-footer-group section.shopify-section--footer',
-      ) || document.querySelector('section.shopify-section--footer')
-    );
-  }
+  var SOCIAL_HREF =
+    /instagram\.com|facebook\.com|fb\.com|tiktok\.com|youtube\.com|twitter\.com|x\.com|linkedin\.com|pinterest\.com|snapchat\.com|threads\.net/i;
+  var SOCIAL_CLASS = /social|follow|share/i;
+  var FOOTER_SELECTORS = [
+    '#shopify-section-group-footer-group',
+    '.shopify-section-group-footer-group',
+    'footer.shopify-section',
+    'section.shopify-section--footer',
+    'footer[role="contentinfo"]',
+    'footer',
+    '[role="contentinfo"]',
+    '#shopify-section-footer',
+    '[id*="shopify-section"][id*="footer" i]',
+    '#footer',
+    '.site-footer',
+    '.footer-group',
+    'section[data-section-type="footer"]',
+    '.section-footer',
+  ];
+  var HOST_HIDE =
+    '.shopify-app-block,.shopify-block--apps,.footer__block--app,.vcom-footer-app-host,[class*="shopify-block"][id^="shopify-block-"]';
 
   function nativeHasContent(el) {
     if (!el) return false;
@@ -19,95 +33,190 @@
     badge.dataset.vcomPlaced = '1';
   }
 
-  function hideAppHosts(footerRoot) {
-    footerRoot.querySelectorAll('.footer__block--app, .vcom-footer-app-host').forEach(function (host) {
-      var hasBadge = host.querySelector('.vcom-footer-trustpilot--app');
-      if (!hasBadge || host.querySelector('.vcom-footer-trustpilot--placed')) {
-        host.setAttribute('hidden', 'hidden');
-        host.style.cssText = 'display:none !important;height:0;margin:0;padding:0;border:0;overflow:hidden;';
-      }
-    });
+  function isSocialLink(a) {
+    if (!a || !a.getAttribute) return false;
+    var href = a.getAttribute('href') || '';
+    if (SOCIAL_HREF.test(href)) return true;
+    var cls =
+      (a.className || '') +
+      ' ' +
+      (a.parentElement && a.parentElement.className ? a.parentElement.className : '');
+    if (SOCIAL_CLASS.test(cls) && href && href.indexOf('http') === 0) return true;
+    var label = (a.getAttribute('aria-label') || '').toLowerCase();
+    return /instagram|facebook|tiktok|youtube|twitter|linkedin|pinterest|social/.test(label);
   }
 
-  function ensureBrandSlot(footerRoot) {
-    var textBlock = footerRoot.querySelector('.footer__block--text');
-    if (!textBlock) return null;
+  function findFooterRoot() {
+    var seen = [];
+    var list = [];
+    FOOTER_SELECTORS.forEach(function (sel) {
+      try {
+        document.querySelectorAll(sel).forEach(function (el) {
+          if (seen.indexOf(el) < 0) {
+            seen.push(el);
+            list.push(el);
+          }
+        });
+      } catch (e) {}
+    });
+    if (!list.length) return null;
 
-    var slot = textBlock.querySelector('.footer__brand-social-trustpilot');
-    if (!slot) {
-      slot = document.createElement('div');
-      slot.className = 'footer__brand-social-trustpilot v-stack gap-4';
-      slot.style.cssText = 'align-items:flex-start;margin-top:var(--spacing-4,1rem);';
-      textBlock.appendChild(slot);
+    list.sort(function (a, b) {
+      var aLinks = 0;
+      var bLinks = 0;
+      a.querySelectorAll('a[href]').forEach(function (lnk) {
+        if (isSocialLink(lnk)) aLinks++;
+      });
+      b.querySelectorAll('a[href]').forEach(function (lnk) {
+        if (isSocialLink(lnk)) bLinks++;
+      });
+      if (bLinks !== aLinks) return bLinks - aLinks;
+      var aRect = a.getBoundingClientRect();
+      var bRect = b.getBoundingClientRect();
+      return bRect.height - aRect.height;
+    });
+    return list[0];
+  }
+
+  function socialClusterRoot(link) {
+    var node = link.parentElement;
+    var best = link.parentElement;
+    while (node && node !== document.body) {
+      var links = node.querySelectorAll('a[href]');
+      var socialCount = 0;
+      for (var i = 0; i < links.length; i++) {
+        if (isSocialLink(links[i])) socialCount++;
+      }
+      if (socialCount >= 2) best = node;
+      if (socialCount >= 4) break;
+      node = node.parentElement;
     }
+    return best;
+  }
 
-    var socialInSlot = slot.querySelector('.social-media');
-    var socialInText = textBlock.querySelector(':scope > .social-media, :scope > .v-stack .social-media');
-    var socialAside = footerRoot.querySelector('.footer__aside .social-media');
+  function findSocialAnchor(footer) {
+    var clusters = [];
+    var links = footer.querySelectorAll('a[href]');
+    for (var i = 0; i < links.length; i++) {
+      if (!isSocialLink(links[i])) continue;
+      var root = socialClusterRoot(links[i]);
+      if (!footer.contains(root)) continue;
+      var found = false;
+      for (var j = 0; j < clusters.length; j++) {
+        if (clusters[j].root === root) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) clusters.push({ root: root, firstLink: links[i] });
+    }
+    if (!clusters.length) return null;
 
-    if (!socialInSlot) {
-      if (socialInText && !slot.contains(socialInText)) {
-        slot.appendChild(socialInText);
-      } else if (socialAside && footerRoot.dataset.vcomSocialMoved !== '1') {
-        slot.appendChild(socialAside);
-        footerRoot.dataset.vcomSocialMoved = '1';
+    clusters.sort(function (a, b) {
+      var ra = a.root.getBoundingClientRect();
+      var rb = b.root.getBoundingClientRect();
+      if (Math.abs(ra.left - rb.left) > 40) return ra.left - rb.left;
+      return ra.top - rb.top;
+    });
+    return clusters[0].root;
+  }
+
+  function findBrandColumn(footer, socialAnchor) {
+    if (socialAnchor) return socialAnchor.parentElement || socialAnchor;
+
+    var cols = footer.querySelectorAll(
+      ':scope > * > *, [class*="footer"] [class*="column"], [class*="footer"] [class*="grid"] > *, [class*="footer__"] > *',
+    );
+    var best = null;
+    var bestScore = Infinity;
+    for (var i = 0; i < cols.length; i++) {
+      var col = cols[i];
+      if (col.tagName === 'SCRIPT' || col.tagName === 'STYLE') continue;
+      var hasLogo = col.querySelector('img, svg, picture');
+      var hasText = (col.textContent || '').trim().length > 20;
+      if (!hasLogo && !hasText) continue;
+      var r = col.getBoundingClientRect();
+      var score = r.left * 3 + r.top;
+      if (score < bestScore) {
+        bestScore = score;
+        best = col;
       }
     }
+    return best;
+  }
 
+  function ensureSlot(afterEl) {
+    var next = afterEl.nextElementSibling;
+    if (next && next.classList && next.classList.contains('vcom-footer-trustpilot-slot')) {
+      return next;
+    }
+    var slot = afterEl.parentElement && afterEl.parentElement.querySelector('.vcom-footer-trustpilot-slot');
+    if (slot && slot.previousElementSibling === afterEl) return slot;
+    slot = document.createElement('div');
+    slot.className = 'vcom-footer-trustpilot-slot';
+    slot.style.cssText = 'display:block;width:100%;max-width:320px;margin-top:12px;';
+    afterEl.insertAdjacentElement('afterend', slot);
     return slot;
+  }
+
+  function hideHosts(footer, badge) {
+    try {
+      footer.querySelectorAll(HOST_HIDE).forEach(function (host) {
+        if (host.contains(badge)) {
+          host.setAttribute('hidden', 'hidden');
+          host.style.cssText =
+            'display:none !important;height:0;margin:0;padding:0;border:0;overflow:hidden;position:absolute;';
+        }
+      });
+    } catch (e) {}
   }
 
   function placeFooterTrustpilot() {
     var badges = document.querySelectorAll('.vcom-footer-trustpilot--app');
     if (!badges.length) return;
 
-    var footerSection = getFooterSection();
-    if (!footerSection) {
+    var footer = findFooterRoot();
+    if (!footer) {
       badges.forEach(showBadge);
       return;
     }
 
-    var footerRoot = footerSection.querySelector('.footer');
-    if (!footerRoot) {
-      badges.forEach(showBadge);
-      return;
-    }
-
-    var native = footerRoot.querySelector(
-      '.vcom-footer-trustpilot:not(.vcom-footer-trustpilot--app)',
-    );
+    var native = footer.querySelector('.vcom-footer-trustpilot:not(.vcom-footer-trustpilot--app)');
     if (nativeHasContent(native)) {
       badges.forEach(function (el) {
         el.remove();
       });
-      hideAppHosts(footerRoot);
       return;
     }
 
     var badge = badges[0];
-    for (var i = 1; i < badges.length; i++) {
-      badges[i].remove();
-    }
+    for (var d = 1; d < badges.length; d++) badges[d].remove();
 
-    var slot = ensureBrandSlot(footerRoot);
-    if (!slot) {
-      showBadge(badge);
-      return;
-    }
+    var socialAnchor = findSocialAnchor(footer);
+    var targetAfter = socialAnchor;
+    var column = findBrandColumn(footer, socialAnchor);
 
-    if (badge.parentElement !== slot) {
-      slot.appendChild(badge);
+    if (targetAfter) {
+      var slot = ensureSlot(targetAfter);
+      if (!slot.contains(badge)) slot.appendChild(badge);
+      badge.dataset.vcomPlacement = 'after-social';
+    } else if (column) {
+      if (!column.contains(badge)) column.appendChild(badge);
+      badge.dataset.vcomPlacement = 'brand-column';
+    } else {
+      if (!footer.contains(badge)) footer.appendChild(badge);
+      badge.dataset.vcomPlacement = 'footer-fallback';
     }
 
     showBadge(badge);
-    hideAppHosts(footerRoot);
+    hideHosts(footer, badge);
   }
 
   function schedulePlace() {
     placeFooterTrustpilot();
-    window.setTimeout(placeFooterTrustpilot, 150);
-    window.setTimeout(placeFooterTrustpilot, 600);
-    window.setTimeout(placeFooterTrustpilot, 1500);
+    window.setTimeout(placeFooterTrustpilot, 200);
+    window.setTimeout(placeFooterTrustpilot, 800);
+    window.setTimeout(placeFooterTrustpilot, 2000);
   }
 
   if (document.readyState === 'loading') {

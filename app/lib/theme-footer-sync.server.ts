@@ -24,7 +24,7 @@ export type FooterTrustpilotPublishResult = {
   errors: string[];
 };
 
-/** Publica Trustpilot no rodapé por todas as vias disponíveis (embed + footer-group + liquid). */
+/** Publica Trustpilot no rodapé (app embed = qualquer tema; sync liquid = opcional no tema Impact). */
 export async function ensureFooterTrustpilotPublished(
   admin: AdminApi,
   shopDomain: string,

@@ -782,7 +782,7 @@ export default function AppearancePage() {
                           Trustpilot no rodapé do tema
                         </Text>
                         <Text as="p" tone="subdued">
-                          Badge abaixo dos ícones de redes sociais no rodapé da loja (logo, estrelas e TrustScore).
+                          Funciona em qualquer tema Shopify: o app embed detecta o rodapé e posiciona o badge abaixo das redes sociais (logo, estrelas e TrustScore). Ative o embed em Configurações do tema → App embeds.
                         </Text>
                         <Checkbox
                           label="Mostrar Trustpilot no rodapé"
@@ -794,7 +794,7 @@ export default function AppearancePage() {
                           Aplicar no tema agora
                         </Button>
                         <Text as="p" tone="subdued">
-                          Publica automaticamente no tema ativo ao salvar. Use o botão acima se a loja ainda não mostrar o badge.
+                          Ao salvar, ativa o app embed automaticamente. &quot;Aplicar no tema agora&quot; é opcional (integração extra só para temas Impact com footer customizado).
                         </Text>
                         <InlineGrid columns={2} gap="400">
                           <TextField
