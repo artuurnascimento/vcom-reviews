@@ -17,7 +17,10 @@ import {
 } from "./storefront-settings.shared";
 import { normalizeStorefrontLayout } from "./storefront-layouts";
 import { ensureHomepageReviewsThemeBlock, type ThemeHomepageSyncResult } from "./theme-homepage.server";
-import { ensureFooterTrustpilotThemeFiles, type ThemeFooterSyncResult } from "./theme-footer.server";
+import {
+  ensureFooterTrustpilotPublished,
+  type FooterTrustpilotPublishResult,
+} from "./theme-footer-sync.server";
 
 export type { StorefrontLayoutId, StorefrontSettings } from "./storefront-settings.shared";
 export { DEFAULT_STOREFRONT_SETTINGS, coerceStorefrontSettings };
@@ -141,7 +144,7 @@ export async function saveStorefrontSettings(
   ok: boolean;
   errors: string[];
   themeSync?: ThemeHomepageSyncResult;
-  footerThemeSync?: ThemeFooterSyncResult;
+  footerPublish?: FooterTrustpilotPublishResult;
 }> {
   const shop = await getShopDomain(admin);
   const merged = mergeSettings(settings);
@@ -155,27 +158,30 @@ export async function saveStorefrontSettings(
   }
 
   const themeSync = await ensureHomepageReviewsThemeBlock(admin, shopDomain ?? shop ?? undefined);
-  const footerThemeSync = await ensureFooterTrustpilotThemeFiles(
+  const footerPublish = await ensureFooterTrustpilotPublished(
     admin,
+    shopDomain ?? shop ?? "",
     merged.footer_trustpilot_show === true,
   );
-  if (merged.footer_trustpilot_show && !footerThemeSync.ok) {
+
+  if (merged.footer_trustpilot_show && !footerPublish.ok) {
     return {
       ok: false,
       errors: [
         ...errors,
-        "Não foi possível publicar o Trustpilot no tema da loja.",
-        ...footerThemeSync.errors,
+        "Não foi possível publicar o Trustpilot no tema. Ative o app embed pelo link abaixo ou reinstale o app com permissão write_themes.",
+        ...footerPublish.errors,
       ],
       themeSync,
-      footerThemeSync,
+      footerPublish,
     };
   }
-  if (footerThemeSync.errors.length) {
-    console.warn("[vcom-reviews] footer theme sync", footerThemeSync.errors);
+
+  if (footerPublish.errors.length) {
+    console.warn("[vcom-reviews] footer publish", footerPublish.errors);
   }
 
-  return { ok: true, errors, themeSync, footerThemeSync };
+  return { ok: true, errors, themeSync, footerPublish };
 }
 
 export async function ensureDefaultStorefrontSettings(admin: AdminApi) {

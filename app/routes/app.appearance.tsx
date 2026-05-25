@@ -25,7 +25,8 @@ import {
   parseStorefrontSettingsJson,
   saveStorefrontSettings,
 } from "../lib/storefront-settings.server";
-import { ensureFooterTrustpilotThemeFiles } from "../lib/theme-footer.server";
+import { ensureFooterTrustpilotPublished } from "../lib/theme-footer-sync.server";
+import { buildFooterEmbedActivateUrl } from "../lib/theme-footer-embed.server";
 import {
   coerceStorefrontSettings,
   type StorefrontSettings,
@@ -53,15 +54,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     );
     const shopJson = await shopRes.json();
     const shopName = shopJson.data?.shop?.name ?? "Sua loja";
-    let footerThemeSync = null;
-    if (settings.footer_trustpilot_show) {
-      footerThemeSync = await ensureFooterTrustpilotThemeFiles(admin, true);
-    }
+    const footerPublish = settings.footer_trustpilot_show
+      ? await ensureFooterTrustpilotPublished(admin, session.shop, true)
+      : null;
     return {
       settings,
       shopName,
       themeDeepLink: buildThemeEditorDeepLink(session.shop),
-      footerThemeSync,
+      footerPublish,
+      footerEmbedActivateUrl: buildFooterEmbedActivateUrl(session.shop),
     };
   } catch (error) {
     console.error("[vcom-reviews] appearance loader", error);
@@ -80,11 +81,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const intent = form.get("intent");
 
   if (intent === "sync_footer_theme") {
-    const footerThemeSync = await ensureFooterTrustpilotThemeFiles(admin, true);
+    const footerPublish = await ensureFooterTrustpilotPublished(admin, session.shop, true);
     return {
-      ok: footerThemeSync.ok,
-      errors: footerThemeSync.ok ? [] : footerThemeSync.errors,
-      footerThemeSync,
+      ok: footerPublish.ok,
+      errors: footerPublish.ok ? [] : footerPublish.errors,
+      footerPublish,
       syncOnly: true,
     };
   }
@@ -133,8 +134,13 @@ export function ErrorBoundary() {
 export default function AppearancePage() {
   const paths = useAppPaths();
   const loaderData = useLoaderData<typeof loader>();
-  const { shopName, themeDeepLink, loaderError, footerThemeSync: loaderFooterSync } =
-    loaderData;
+  const {
+    shopName,
+    themeDeepLink,
+    loaderError,
+    footerPublish: loaderFooterPublish,
+    footerEmbedActivateUrl,
+  } = loaderData;
   const actionData = useActionData<typeof action>();
   const submit = useEmbeddedSubmit();
   const [settings, setSettings] = useState(() =>
@@ -178,19 +184,33 @@ export default function AppearancePage() {
           </Banner>
         ) : null}
 
-        {loaderFooterSync && !loaderFooterSync.ok ? (
+        {loaderFooterPublish && !loaderFooterPublish.ok ? (
           <Banner
             tone="critical"
-            title="Trustpilot no rodapé — tema não foi atualizado"
-            action={{ content: "Tentar aplicar no tema", onAction: handleSyncFooterTheme }}
+            title="Trustpilot no rodapé — ative no tema"
+            action={{
+              content: "Ativar no Theme Editor",
+              url: footerEmbedActivateUrl,
+              external: true,
+            }}
           >
-            {loaderFooterSync.accessDenied
-              ? "O app precisa da permissão write_themes. Desinstale e reinstale o app na loja, depois clique em Tentar aplicar no tema."
-              : loaderFooterSync.errors.join(" · ")}
+            {loaderFooterPublish.errors.join(" · ")}
           </Banner>
-        ) : loaderFooterSync?.updated ? (
-          <Banner tone="success" title="Tema da loja atualizado">
-            O rodapé foi publicado automaticamente no tema ativo. Atualize a vitrine (F5).
+        ) : loaderFooterPublish?.published || loaderFooterPublish?.appEmbed.alreadyActive ? (
+          <Banner tone="success" title="Trustpilot publicado no tema">
+            App embed e arquivos do tema atualizados. Atualize a loja (F5).
+          </Banner>
+        ) : loaderFooterPublish && settings.footer_trustpilot_show ? (
+          <Banner
+            tone="warning"
+            title="Ative o embed do app no tema"
+            action={{
+              content: "Ativar agora",
+              url: footerEmbedActivateUrl,
+              external: true,
+            }}
+          >
+            Clique em Ativar agora e confirme Trustpilot no rodapé em App embeds, depois salve o tema.
           </Banner>
         ) : null}
 
@@ -217,16 +237,22 @@ export default function AppearancePage() {
                     : actionData.themeSync.errors.join(" · ")}
                 </Banner>
               ) : null}
-              {actionData.footerThemeSync?.updated ? (
-                <Banner tone="info" title="Rodapé atualizado no tema">
-                  Arquivos do Trustpilot no rodapé foram publicados no tema ativo da loja.
+              {actionData.footerPublish?.published ? (
+                <Banner tone="info" title="Rodapé publicado no tema">
+                  Trustpilot ativado via app embed e/ou arquivos do tema.
                 </Banner>
               ) : null}
-              {actionData.footerThemeSync && !actionData.footerThemeSync.ok ? (
-                <Banner tone="warning" title="Trustpilot no rodapé — tema não atualizado">
-                  {actionData.footerThemeSync.accessDenied
-                    ? "O app precisa da permissão write_themes. Reinstale o app ou publique o tema manualmente."
-                    : actionData.footerThemeSync.errors.join(" · ")}
+              {actionData.footerPublish && !actionData.footerPublish.ok ? (
+                <Banner
+                  tone="warning"
+                  title="Publicação parcial — ative o embed"
+                  action={{
+                    content: "Ativar no tema",
+                    url: actionData.footerPublish.activateUrl,
+                    external: true,
+                  }}
+                >
+                  {actionData.footerPublish.errors.join(" · ")}
                 </Banner>
               ) : null}
             </BlockStack>

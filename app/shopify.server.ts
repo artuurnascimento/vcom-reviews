@@ -10,7 +10,7 @@ import {
   ensureDefaultStorefrontSettings,
   getStorefrontSettings,
 } from "./lib/storefront-settings.server";
-import { ensureFooterTrustpilotThemeFiles } from "./lib/theme-footer.server";
+import { ensureFooterTrustpilotPublished } from "./lib/theme-footer-sync.server";
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY || "",
@@ -38,10 +38,14 @@ const shopify = shopifyApp({
           await ensureDefaultStorefrontSettings(admin);
           const settings = await getStorefrontSettings(admin);
           if (settings.footer_trustpilot_show) {
-            const footerSync = await ensureFooterTrustpilotThemeFiles(admin, true);
+            const footerSync = await ensureFooterTrustpilotPublished(
+              admin,
+              session.shop,
+              true,
+            );
             if (!footerSync.ok) {
               console.warn(
-                "[vcom-reviews] afterAuth footer theme sync",
+                "[vcom-reviews] afterAuth footer publish",
                 session.shop,
                 footerSync.errors,
               );

@@ -1,0 +1,85 @@
+{%- assign cfg = shop.metafields.vcom_reviews.storefront_settings.value -%}
+{%- assign tp_show = false -%}
+{%- if cfg != blank -%}
+  {%- if cfg.footer_trustpilot_show == true or cfg.footer_trustpilot_show == 'true' or cfg.footer_trustpilot_show == 1 -%}
+    {%- assign tp_show = true -%}
+  {%- endif -%}
+{%- endif -%}
+{%- if tp_show -%}
+{%- assign tp_logo_h = cfg.footer_trustpilot_logo_height | default: 20 -%}
+{%- assign tp_stars = cfg.footer_trustpilot_stars_color | default: cfg.stars_color | default: '#00B67A' -%}
+{%- if tp_stars == blank -%}{%- assign tp_stars = '#00B67A' -%}{%- endif -%}
+{%- assign tp_stars_empty = cfg.stars_empty_color | default: '#dcdce6' -%}
+{%- assign tp_text = cfg.footer_trustpilot_text_color | default: '#191919' -%}
+{%- assign tp_muted = cfg.footer_trustpilot_muted_color | default: '#6b6b6b' -%}
+{%- assign tp_score_label = cfg.footer_trustpilot_score_label | default: 'TrustScore' -%}
+{%- assign tp_reviews_word = cfg.footer_trustpilot_reviews_word | default: 'reviews' -%}
+
+{%- assign all_reviews = nil -%}
+{%- if shop.metaobjects.review -%}
+  {%- assign all_reviews = shop.metaobjects.review.values -%}
+{%- elsif shop.metaobjects["$app:review"] -%}
+  {%- assign all_reviews = shop.metaobjects["$app:review"].values -%}
+{%- endif -%}
+
+{%- assign review_count = 0 -%}
+{%- assign rating_sum = 0 -%}
+{%- if all_reviews != blank -%}
+  {%- for r in all_reviews -%}
+    {%- assign r_st = 'approved' -%}
+    {%- if r.status != blank -%}{%- assign r_st = r.status.value | default: r.status -%}{%- endif -%}
+    {%- if r_st == 'pending' or r_st == 'rejected' -%}{%- continue -%}{%- endif -%}
+    {%- assign r_pl = 'homepage' -%}
+    {%- if r.placement != blank -%}{%- assign r_pl = r.placement.value | default: r.placement -%}{%- endif -%}
+    {%- unless r_pl == 'homepage' -%}{%- continue -%}{%- endunless -%}
+    {%- assign review_count = review_count | plus: 1 -%}
+    {%- assign r_val_raw = r.rating.value | default: r.rating | replace: ',', '.' -%}
+    {%- assign rating_sum = rating_sum | plus: r_val_raw | plus: 0.0 -%}
+  {%- endfor -%}
+{%- endif -%}
+
+{%- assign display_rating = cfg.footer_rating | default: '4.8' -%}
+{%- if review_count > 0 -%}
+  {%- assign display_rating = rating_sum | times: 1.0 | divided_by: review_count | round: 1 -%}
+{%- endif -%}
+{%- assign header_stars = display_rating | plus: 0.0 -%}
+{%- assign display_count = review_count -%}
+{%- if display_count == 0 -%}
+  {%- assign display_count = cfg.footer_trustpilot_fallback_count | default: 0 -%}
+{%- endif -%}
+
+<div class="vcom-footer-trustpilot vcom-footer-trustpilot--app" style="color:{{ tp_text }};">
+  <img
+    class="vcom-footer-trustpilot__logo"
+    src="{{ 'trustpilot-logo.svg' | asset_url }}"
+    alt="Trustpilot"
+    width="83"
+    height="{{ tp_logo_h }}"
+    loading="lazy"
+    style="height:{{ tp_logo_h }}px;width:auto;display:block;margin-bottom:10px;"
+  >
+  <div class="vcom-footer-trustpilot__stars" aria-hidden="true" style="display:flex;gap:4px;margin-bottom:8px;">
+    {%- for i in (1..5) -%}
+      {%- assign star_min = i | minus: 1 | times: 1.0 -%}
+      {%- if header_stars >= i -%}
+        <svg width="20" height="20" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="{{ tp_stars }}"/><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="#fff"/></svg>
+      {%- elsif header_stars > star_min -%}
+        {%- assign pct = header_stars | minus: star_min -%}
+        {%- assign fill_width = pct | times: 32 -%}
+        <svg width="20" height="20" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="{{ tp_stars_empty }}"/><rect width="{{ fill_width }}" height="32" fill="{{ tp_stars }}"/><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="#fff"/></svg>
+      {%- else -%}
+        <svg width="20" height="20" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="{{ tp_stars_empty }}"/><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="#fff"/></svg>
+      {%- endif -%}
+    {%- endfor -%}
+  </div>
+  <p class="vcom-footer-trustpilot__score" style="margin:0;font-size:14px;line-height:1.4;color:{{ tp_text }};">
+    <span style="color:{{ tp_muted }};">{{ tp_score_label }}</span>
+    <strong style="font-weight:700;color:{{ tp_text }};"> {{ display_rating }}</strong>
+    {%- if display_count > 0 -%}
+      <span class="vcom-footer-trustpilot__count" style="color:{{ tp_muted }};text-decoration:underline;text-underline-offset:2px;">
+        {{ display_count }}{% if display_count >= 1000 %}+{% endif %} {{ tp_reviews_word }}
+      </span>
+    {%- endif -%}
+  </p>
+</div>
+{%- endif -%}
