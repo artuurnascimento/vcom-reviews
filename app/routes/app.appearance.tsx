@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { useActionData, useLoaderData, useRouteError } from "@remix-run/react";
 import { useEmbeddedSubmit } from "../hooks/useEmbeddedAppPath";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   Page,
   Card,
@@ -139,12 +139,6 @@ export default function AppearancePage() {
     submit(fd, { method: "post" });
   }, [settings, submit]);
 
-  useEffect(() => {
-    if (actionData?.ok) {
-      setSettings(coerceStorefrontSettings(loaderData.settings));
-    }
-  }, [actionData?.ok, loaderData.settings]);
-
   return (
     <Page
       title="Aparência da vitrine"
@@ -178,6 +172,18 @@ export default function AppearancePage() {
                   {actionData.themeSync.accessDenied
                     ? "Reinstale o app para aceitar write_themes ou use o Theme Editor."
                     : actionData.themeSync.errors.join(" · ")}
+                </Banner>
+              ) : null}
+              {actionData.footerThemeSync?.updated ? (
+                <Banner tone="info" title="Rodapé atualizado no tema">
+                  Arquivos do Trustpilot no rodapé foram publicados no tema ativo da loja.
+                </Banner>
+              ) : null}
+              {actionData.footerThemeSync && !actionData.footerThemeSync.ok ? (
+                <Banner tone="warning" title="Trustpilot no rodapé — tema não atualizado">
+                  {actionData.footerThemeSync.accessDenied
+                    ? "O app precisa da permissão write_themes. Reinstale o app ou publique o tema manualmente."
+                    : actionData.footerThemeSync.errors.join(" · ")}
                 </Banner>
               ) : null}
             </BlockStack>

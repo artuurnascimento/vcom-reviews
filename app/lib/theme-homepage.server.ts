@@ -158,7 +158,7 @@ export function buildThemeEditorDeepLink(shopDomain: string): string {
   return `https://${shop}/admin/themes/current/editor?${params.toString()}`;
 }
 
-async function getMainThemeId(admin: AdminApi): Promise<string | null> {
+export async function getMainThemeId(admin: AdminApi): Promise<string | null> {
   const response = await admin.graphql(
     `#graphql
     query MainTheme {
