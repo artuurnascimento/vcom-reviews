@@ -145,18 +145,27 @@
     return best;
   }
 
-  function ensureSlot(afterEl) {
-    var next = afterEl.nextElementSibling;
-    if (next && next.classList && next.classList.contains('vcom-footer-trustpilot-slot')) {
-      return next;
+  function mountBelowSocial(socialAnchor, badge) {
+    var stack = socialAnchor.closest('.vcom-footer-trustpilot-stack');
+    if (!stack) {
+      stack = document.createElement('div');
+      stack.className = 'vcom-footer-trustpilot-stack';
+      stack.setAttribute('data-vcom-trustpilot-stack', '1');
+      var parent = socialAnchor.parentElement;
+      if (!parent) return null;
+      parent.insertBefore(stack, socialAnchor);
+      stack.appendChild(socialAnchor);
     }
-    var slot = afterEl.parentElement && afterEl.parentElement.querySelector('.vcom-footer-trustpilot-slot');
-    if (slot && slot.previousElementSibling === afterEl) return slot;
-    slot = document.createElement('div');
-    slot.className = 'vcom-footer-trustpilot-slot';
-    slot.style.cssText = 'display:block;width:100%;max-width:320px;margin-top:12px;';
-    afterEl.insertAdjacentElement('afterend', slot);
-    return slot;
+
+    var slot = stack.querySelector('.vcom-footer-trustpilot-slot');
+    if (!slot) {
+      slot = document.createElement('div');
+      slot.className = 'vcom-footer-trustpilot-slot';
+      stack.appendChild(slot);
+    }
+
+    if (!slot.contains(badge)) slot.appendChild(badge);
+    return stack;
   }
 
   function hideHosts(footer, badge) {
@@ -192,13 +201,22 @@
     var badge = badges[0];
     for (var d = 1; d < badges.length; d++) badges[d].remove();
 
+    footer.querySelectorAll('.vcom-footer-trustpilot-slot').forEach(function (orphan) {
+      if (!orphan.closest('.vcom-footer-trustpilot-stack')) {
+        if (orphan.querySelector('.vcom-footer-trustpilot--app')) {
+          orphan.parentElement && orphan.parentElement.removeChild(orphan);
+        } else {
+          orphan.remove();
+        }
+      }
+    });
+
     var socialAnchor = findSocialAnchor(footer);
     var targetAfter = socialAnchor;
     var column = findBrandColumn(footer, socialAnchor);
 
     if (targetAfter) {
-      var slot = ensureSlot(targetAfter);
-      if (!slot.contains(badge)) slot.appendChild(badge);
+      mountBelowSocial(targetAfter, badge);
       badge.dataset.vcomPlacement = 'after-social';
     } else if (column) {
       if (!column.contains(badge)) column.appendChild(badge);

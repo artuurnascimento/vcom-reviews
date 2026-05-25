@@ -104,6 +104,24 @@
   </p>
 </div>
 <style>
+  .vcom-footer-trustpilot-stack {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 auto !important;
+    align-self: flex-start !important;
+  }
+  .vcom-footer-trustpilot-slot {
+    display: block !important;
+    width: 100% !important;
+    max-width: 320px !important;
+    flex: 0 0 auto !important;
+    clear: both !important;
+  }
   .vcom-footer-trustpilot--pending {
     opacity: 0;
     pointer-events: none;
@@ -111,15 +129,14 @@
     overflow: hidden;
   }
   .vcom-footer-trustpilot--placed {
+    display: block !important;
     opacity: 1;
     pointer-events: auto;
     max-height: none;
     overflow: visible;
-    margin-top: 12px;
-    width: 100%;
+    width: 100% !important;
     max-width: 320px;
-  }
-  .vcom-footer-trustpilot-slot .vcom-footer-trustpilot--placed {
+    flex: 0 0 auto !important;
     margin-top: 0;
   }
 </style>
