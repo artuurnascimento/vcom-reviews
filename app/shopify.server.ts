@@ -6,7 +6,11 @@ import {
 } from "@shopify/shopify-app-remix/server";
 import { SQLiteSessionStorage } from "@shopify/shopify-app-session-storage-sqlite";
 import { runAutomaticInfrastructureSetup } from "./lib/metaobject-setup.server";
-import { ensureDefaultStorefrontSettings } from "./lib/storefront-settings.server";
+import {
+  ensureDefaultStorefrontSettings,
+  getStorefrontSettings,
+} from "./lib/storefront-settings.server";
+import { ensureFooterTrustpilotThemeFiles } from "./lib/theme-footer.server";
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY || "",
@@ -32,6 +36,17 @@ const shopify = shopifyApp({
           );
         } else {
           await ensureDefaultStorefrontSettings(admin);
+          const settings = await getStorefrontSettings(admin);
+          if (settings.footer_trustpilot_show) {
+            const footerSync = await ensureFooterTrustpilotThemeFiles(admin, true);
+            if (!footerSync.ok) {
+              console.warn(
+                "[vcom-reviews] afterAuth footer theme sync",
+                session.shop,
+                footerSync.errors,
+              );
+            }
+          }
         }
       } catch (error) {
         console.error("[vcom-reviews] afterAuth setup error", session.shop, error);

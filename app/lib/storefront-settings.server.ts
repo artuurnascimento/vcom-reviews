@@ -159,6 +159,18 @@ export async function saveStorefrontSettings(
     admin,
     merged.footer_trustpilot_show === true,
   );
+  if (merged.footer_trustpilot_show && !footerThemeSync.ok) {
+    return {
+      ok: false,
+      errors: [
+        ...errors,
+        "Não foi possível publicar o Trustpilot no tema da loja.",
+        ...footerThemeSync.errors,
+      ],
+      themeSync,
+      footerThemeSync,
+    };
+  }
   if (footerThemeSync.errors.length) {
     console.warn("[vcom-reviews] footer theme sync", footerThemeSync.errors);
   }

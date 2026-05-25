@@ -25,6 +25,7 @@ import {
   parseStorefrontSettingsJson,
   saveStorefrontSettings,
 } from "../lib/storefront-settings.server";
+import { ensureFooterTrustpilotThemeFiles } from "../lib/theme-footer.server";
 import {
   coerceStorefrontSettings,
   type StorefrontSettings,
@@ -52,10 +53,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     );
     const shopJson = await shopRes.json();
     const shopName = shopJson.data?.shop?.name ?? "Sua loja";
+    let footerThemeSync = null;
+    if (settings.footer_trustpilot_show) {
+      footerThemeSync = await ensureFooterTrustpilotThemeFiles(admin, true);
+    }
     return {
       settings,
       shopName,
       themeDeepLink: buildThemeEditorDeepLink(session.shop),
+      footerThemeSync,
     };
   } catch (error) {
     console.error("[vcom-reviews] appearance loader", error);
@@ -71,6 +77,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
   const form = await request.formData();
+  const intent = form.get("intent");
+
+  if (intent === "sync_footer_theme") {
+    const footerThemeSync = await ensureFooterTrustpilotThemeFiles(admin, true);
+    return {
+      ok: footerThemeSync.ok,
+      errors: footerThemeSync.ok ? [] : footerThemeSync.errors,
+      footerThemeSync,
+      syncOnly: true,
+    };
+  }
+
   const raw = form.get("settings_json");
   if (typeof raw !== "string" || !raw.trim()) {
     return { ok: false, errors: ["Nenhuma configuração recebida. Tente salvar novamente."] };
@@ -115,7 +133,8 @@ export function ErrorBoundary() {
 export default function AppearancePage() {
   const paths = useAppPaths();
   const loaderData = useLoaderData<typeof loader>();
-  const { shopName, themeDeepLink, loaderError } = loaderData;
+  const { shopName, themeDeepLink, loaderError, footerThemeSync: loaderFooterSync } =
+    loaderData;
   const actionData = useActionData<typeof action>();
   const submit = useEmbeddedSubmit();
   const [settings, setSettings] = useState(() =>
@@ -139,6 +158,12 @@ export default function AppearancePage() {
     submit(fd, { method: "post" });
   }, [settings, submit]);
 
+  const handleSyncFooterTheme = useCallback(() => {
+    const fd = new FormData();
+    fd.set("intent", "sync_footer_theme");
+    submit(fd, { method: "post" });
+  }, [submit]);
+
   return (
     <Page
       title="Aparência da vitrine"
@@ -153,11 +178,29 @@ export default function AppearancePage() {
           </Banner>
         ) : null}
 
+        {loaderFooterSync && !loaderFooterSync.ok ? (
+          <Banner
+            tone="critical"
+            title="Trustpilot no rodapé — tema não foi atualizado"
+            action={{ content: "Tentar aplicar no tema", onAction: handleSyncFooterTheme }}
+          >
+            {loaderFooterSync.accessDenied
+              ? "O app precisa da permissão write_themes. Desinstale e reinstale o app na loja, depois clique em Tentar aplicar no tema."
+              : loaderFooterSync.errors.join(" · ")}
+          </Banner>
+        ) : loaderFooterSync?.updated ? (
+          <Banner tone="success" title="Tema da loja atualizado">
+            O rodapé foi publicado automaticamente no tema ativo. Atualize a vitrine (F5).
+          </Banner>
+        ) : null}
+
         {actionData ? (
           actionData.ok ? (
             <BlockStack gap="300">
-              <Banner tone="success" title="Alterações salvas com sucesso">
-                Suas configurações já estão sendo aplicadas na loja.
+              <Banner tone="success" title={actionData.syncOnly ? "Tema atualizado" : "Alterações salvas com sucesso"}>
+                {actionData.syncOnly
+                  ? "Arquivos do rodapé publicados no tema ativo. Atualize a loja (F5)."
+                  : "Suas configurações já estão sendo aplicadas na loja."}
               </Banner>
               {actionData.themeSync && !actionData.themeSync.ok ? (
                 <Banner
@@ -721,6 +764,12 @@ export default function AppearancePage() {
                           checked={settings.footer_trustpilot_show}
                           onChange={(v) => set("footer_trustpilot_show", v)}
                         />
+                        <Button onClick={handleSyncFooterTheme}>
+                          Aplicar no tema agora
+                        </Button>
+                        <Text as="p" tone="subdued">
+                          Publica automaticamente no tema ativo ao salvar. Use o botão acima se a loja ainda não mostrar o badge.
+                        </Text>
                         <InlineGrid columns={2} gap="400">
                           <TextField
                             label="Altura da logo (px)"
