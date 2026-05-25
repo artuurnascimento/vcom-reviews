@@ -1,40 +1,5 @@
 {%- render 'footer-trustpilot-badge' -%}
-
-<script>
-(function () {
-  function placeFooterTrustpilot() {
-    var badge = document.querySelector('.vcom-footer-trustpilot--app');
-    if (!badge || badge.dataset.vcomPlaced === '1') return;
-
-    var footer = document.querySelector('footer.shopify-section--footer, footer.footer, .footer');
-    if (!footer) return;
-
-    var social = footer.querySelector('.social-media');
-    var brandCol =
-      footer.querySelector('.footer__brand-social-trustpilot') ||
-      footer.querySelector('.footer__block--text');
-
-    if (social && social.parentElement) {
-      social.parentElement.appendChild(badge);
-    } else if (brandCol) {
-      brandCol.appendChild(badge);
-    } else {
-      var wrapper = footer.querySelector('.footer__wrapper, .container');
-      (wrapper || footer).appendChild(badge);
-    }
-
-    badge.dataset.vcomPlaced = '1';
-    badge.style.marginTop = '16px';
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', placeFooterTrustpilot);
-  } else {
-    placeFooterTrustpilot();
-  }
-  document.addEventListener('shopify:section:load', placeFooterTrustpilot);
-})();
-</script>
+{%- render 'footer-trustpilot-place' -%}
 
 {% schema %}
 {

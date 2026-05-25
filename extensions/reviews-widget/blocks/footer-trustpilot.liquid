@@ -1,11 +1,13 @@
-<div class="vcom-footer-trustpilot-section" style="max-width:1200px;margin:0 auto;padding:0 16px 24px;">
-  {%- render 'footer-trustpilot-badge' -%}
-</div>
+{%- render 'footer-trustpilot-badge', force_show: true -%}
+{%- render 'footer-trustpilot-place' -%}
 
 {% schema %}
 {
   "name": "Trustpilot no rodapé",
   "target": "section",
+  "enabled_on": {
+    "groups": ["footer"]
+  },
   "settings": []
 }
 {% endschema %}

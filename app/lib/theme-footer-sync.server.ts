@@ -54,7 +54,6 @@ export async function ensureFooterTrustpilotPublished(
     appEmbed.activated ||
     appEmbed.alreadyActive ||
     footerGroup.updated ||
-    footerGroup.alreadyConfigured ||
     themeFiles.updated;
 
   const ok = appEmbed.ok || footerGroup.ok || themeFiles.ok;

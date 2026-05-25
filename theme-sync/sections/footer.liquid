@@ -151,6 +151,11 @@
                     {%- endform -%}
                   </div>
                 </div>
+
+              {%- when '@app' -%}
+                <div class="footer__block footer__block--app" {{ block.shopify_attributes }}>
+                  {%- render block -%}
+                </div>
             {%- endcase -%}
           {%- endfor -%}
         </div>
@@ -746,6 +751,9 @@
           "label": "Conteúdo"
         }
       ]
+    },
+    {
+      "type": "@app"
     }
   ]
 }

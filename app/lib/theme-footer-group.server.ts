@@ -1,4 +1,4 @@
-import { THEME_APP_HANDLE, getMainThemeId } from "./theme-homepage.server";
+import { getMainThemeId } from "./theme-homepage.server";
 
 type AdminApi = {
   graphql: (
@@ -19,10 +19,6 @@ export type ThemeFooterGroupResult = {
   errors: string[];
 };
 
-function footerBlockType(): string {
-  return `shopify://apps/${THEME_APP_HANDLE}/blocks/footer-trustpilot`;
-}
-
 type FooterGroupTemplate = {
   type?: string;
   name?: string;
@@ -39,70 +35,21 @@ type FooterGroupTemplate = {
   order: string[];
 };
 
+/** Remove seção apps legada — o badge fica no bloco da marca via app embed + footer.liquid. */
 function patchFooterGroup(template: FooterGroupTemplate): { changed: boolean; template: FooterGroupTemplate } {
   const next: FooterGroupTemplate = {
     ...template,
     sections: { ...template.sections },
     order: [...(template.order || [])],
   };
-  let changed = false;
 
   if (!next.sections[FOOTER_GROUP_SECTION_ID]) {
-    next.sections[FOOTER_GROUP_SECTION_ID] = {
-      type: "apps",
-      blocks: {
-        [FOOTER_GROUP_BLOCK_ID]: {
-          type: footerBlockType(),
-          settings: {},
-        },
-      },
-      block_order: [FOOTER_GROUP_BLOCK_ID],
-      settings: {},
-    };
-    if (!next.order.includes(FOOTER_GROUP_SECTION_ID)) {
-      const footerIdx = next.order.indexOf("footer");
-      if (footerIdx >= 0) {
-        next.order.splice(footerIdx + 1, 0, FOOTER_GROUP_SECTION_ID);
-      } else {
-        next.order.push(FOOTER_GROUP_SECTION_ID);
-      }
-    }
-    return { changed: true, template: next };
+    return { changed: false, template: next };
   }
 
-  const section = {
-    ...next.sections[FOOTER_GROUP_SECTION_ID],
-    blocks: { ...(next.sections[FOOTER_GROUP_SECTION_ID].blocks || {}) },
-    block_order: [...(next.sections[FOOTER_GROUP_SECTION_ID].block_order || [])],
-  };
-
-  if (section.type !== "apps") {
-    section.type = "apps";
-    changed = true;
-  }
-
-  const blockType = footerBlockType();
-  let hasBlock = false;
-  for (const block of Object.values(section.blocks)) {
-    if (block.type?.includes("footer-trustpilot")) {
-      hasBlock = true;
-      break;
-    }
-  }
-
-  if (!hasBlock) {
-    section.blocks[FOOTER_GROUP_BLOCK_ID] = { type: blockType, settings: {} };
-    if (!section.block_order.includes(FOOTER_GROUP_BLOCK_ID)) {
-      section.block_order.push(FOOTER_GROUP_BLOCK_ID);
-    }
-    changed = true;
-  }
-
-  if (changed) {
-    next.sections[FOOTER_GROUP_SECTION_ID] = section;
-  }
-
-  return { changed, template: next };
+  delete next.sections[FOOTER_GROUP_SECTION_ID];
+  next.order = next.order.filter((id) => id !== FOOTER_GROUP_SECTION_ID);
+  return { changed: true, template: next };
 }
 
 async function readFooterGroup(
