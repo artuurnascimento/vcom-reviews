@@ -308,19 +308,19 @@ export default function AppearancePage() {
                           Quantidade na vitrine
                         </Text>
                         <Text as="p" variant="bodySm" tone="subdued">
-                          Define quantos cards aparecem por linha no carrossel e na grade.
-                          Use &quot;Reviews por página&quot; em Cores &amp; estilo para a
-                          paginação (ex.: 3 colunas × 2 linhas = 6).
+                          Desktop: colunas × linhas na grade. Mobile: lista vertical (1
+                          coluna) — configure em &quot;Mobile&quot; abaixo.
                         </Text>
                         <InlineGrid columns={2} gap="400">
                           <RangeField
-                            label="Colunas no mobile"
+                            label="Colunas no mobile (legado)"
                             name="reviews_columns_mobile"
-                            value={settings.reviews_columns_mobile}
+                            value={1}
                             min={1}
-                            max={2}
+                            max={1}
                             suffix=" col."
-                            onChange={(v) => set("reviews_columns_mobile", v)}
+                            onChange={() => set("reviews_columns_mobile", 1)}
+                            helpText="No mobile as avaliações aparecem em lista vertical (1 coluna)."
                           />
                           <RangeField
                             label="Colunas no desktop"
@@ -525,6 +525,97 @@ export default function AppearancePage() {
                     <Card>
                       <BlockStack gap="400">
                         <Text as="h2" variant="headingMd">
+                          Mobile (≤991px)
+                        </Text>
+                        <Text as="p" variant="bodySm" tone="subdued">
+                          Lista vertical: uma avaliação abaixo da outra. Ao mudar de página,
+                          a página rola até o início da seção de reviews.
+                        </Text>
+                        <InlineGrid columns={2} gap="400">
+                          <RangeField
+                            label="Espaço superior"
+                            name="section_padding_top_mobile"
+                            value={settings.section_padding_top_mobile}
+                            min={0}
+                            max={80}
+                            onChange={(v) => set("section_padding_top_mobile", v)}
+                          />
+                          <RangeField
+                            label="Espaço inferior"
+                            name="section_padding_bottom_mobile"
+                            value={settings.section_padding_bottom_mobile}
+                            min={0}
+                            max={80}
+                            onChange={(v) => set("section_padding_bottom_mobile", v)}
+                          />
+                          <RangeField
+                            label="Espaço lateral"
+                            name="section_padding_sides_mobile"
+                            value={settings.section_padding_sides_mobile}
+                            min={0}
+                            max={48}
+                            onChange={(v) => set("section_padding_sides_mobile", v)}
+                          />
+                          <RangeField
+                            label="Título da seção"
+                            name="section_headline_font_size_mobile"
+                            value={settings.section_headline_font_size_mobile}
+                            min={14}
+                            max={32}
+                            suffix="px"
+                            onChange={(v) => set("section_headline_font_size_mobile", v)}
+                          />
+                          <RangeField
+                            label="Título do card"
+                            name="review_title_font_size_mobile"
+                            value={settings.review_title_font_size_mobile}
+                            min={12}
+                            max={28}
+                            suffix="px"
+                            onChange={(v) => set("review_title_font_size_mobile", v)}
+                          />
+                          <RangeField
+                            label="Texto do card"
+                            name="review_body_font_size_mobile"
+                            value={settings.review_body_font_size_mobile}
+                            min={11}
+                            max={20}
+                            suffix="px"
+                            onChange={(v) => set("review_body_font_size_mobile", v)}
+                          />
+                          <RangeField
+                            label="Raio do card"
+                            name="card_border_radius_mobile"
+                            value={settings.card_border_radius_mobile}
+                            min={0}
+                            max={24}
+                            suffix="px"
+                            onChange={(v) => set("card_border_radius_mobile", v)}
+                          />
+                          <RangeField
+                            label="Padding do card"
+                            name="card_padding_mobile"
+                            value={settings.card_padding_mobile}
+                            min={8}
+                            max={40}
+                            suffix="px"
+                            onChange={(v) => set("card_padding_mobile", v)}
+                          />
+                          <RangeField
+                            label="Espaço entre cards"
+                            name="cards_gap_mobile"
+                            value={settings.cards_gap_mobile}
+                            min={0}
+                            max={32}
+                            suffix="px"
+                            onChange={(v) => set("cards_gap_mobile", v)}
+                          />
+                        </InlineGrid>
+                      </BlockStack>
+                    </Card>
+                    <Card>
+                      <BlockStack gap="400">
+                        <Text as="h2" variant="headingMd">
                           Cabeçalho da seção
                         </Text>
                         <input type="hidden" name="header_style" value={settings.header_style} />
@@ -706,22 +797,35 @@ export default function AppearancePage() {
                             autoComplete="off"
                           />
                           <TextField
-                            label="Linhas na grade"
+                            label="Linhas na grade (desktop)"
                             name="reviews_rows"
                             type="number"
                             value={String(settings.reviews_rows)}
                             onChange={(v) => set("reviews_rows", Math.min(4, Math.max(1, parseInt(v, 10) || 2)))}
                             autoComplete="off"
-                            helpText="Com colunas × linhas define quantos cards cabem antes de criar outra página"
+                            helpText={`Desktop: até ${settings.reviews_columns_desktop}×${settings.reviews_rows} cards por página`}
                           />
                           <TextField
-                            label="Avaliações por página (mínimo)"
+                            label="Avaliações por página (desktop)"
                             name="reviews_per_page"
                             type="number"
                             value={String(settings.reviews_per_page)}
                             onChange={(v) => set("reviews_per_page", parseInt(v, 10) || 6)}
                             autoComplete="off"
-                            helpText={`Capacidade real: ${settings.reviews_columns_desktop}×${settings.reviews_rows} desktop, ${settings.reviews_columns_mobile}×${settings.reviews_rows} mobile`}
+                          />
+                          <TextField
+                            label="Avaliações por página (mobile)"
+                            name="reviews_per_page_mobile"
+                            type="number"
+                            value={String(settings.reviews_per_page_mobile)}
+                            onChange={(v) =>
+                              set(
+                                "reviews_per_page_mobile",
+                                Math.min(20, Math.max(1, parseInt(v, 10) || 10)),
+                              )
+                            }
+                            autoComplete="off"
+                            helpText="Lista vertical: 10 por página, depois paginação (volta ao topo ao trocar)"
                           />
                         </InlineGrid>
                         <Checkbox

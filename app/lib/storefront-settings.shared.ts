@@ -13,10 +13,14 @@ export interface StorefrontSettings {
   section_padding_top: number;
   section_padding_bottom: number;
   section_padding_sides: number;
+  section_padding_top_mobile: number;
+  section_padding_bottom_mobile: number;
+  section_padding_sides_mobile: number;
   /** aggregate = título + nota (imagem 1); shop_trusted = linha com nome da loja */
   header_style: "aggregate" | "shop_trusted";
   section_headline: string;
   section_headline_font_size: number;
+  section_headline_font_size_mobile: number;
   header_rating_color: string;
   header_stars_color: string;
   header_summary_color: string;
@@ -27,12 +31,17 @@ export interface StorefrontSettings {
   review_body_color: string;
   review_title_font_size: number;
   review_body_font_size: number;
+  review_title_font_size_mobile: number;
+  review_body_font_size_mobile: number;
   review_meta_color: string;
   card_background: string;
   card_border_color: string;
   card_border_radius: number;
   card_padding: number;
   cards_gap: number;
+  card_border_radius_mobile: number;
+  card_padding_mobile: number;
+  cards_gap_mobile: number;
   trusted_show_header: boolean;
   trusted_text_after: string;
   trusted_text_highlight: string;
@@ -50,6 +59,8 @@ export interface StorefrontSettings {
   reviews_text_max_chars: number;
   reviews_title_max_chars: number;
   reviews_per_page: number;
+  /** Avaliações por página no mobile (lista vertical) */
+  reviews_per_page_mobile: number;
   /** Linhas visíveis na grade antes de paginar */
   reviews_rows: number;
   /** Colunas visíveis na grade (mobile ≤991px) */
@@ -113,9 +124,13 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   section_padding_top: 24,
   section_padding_bottom: 24,
   section_padding_sides: 16,
+  section_padding_top_mobile: 20,
+  section_padding_bottom_mobile: 20,
+  section_padding_sides_mobile: 16,
   header_style: "aggregate",
   section_headline: "TRUSTED BY THOUSANDS",
   section_headline_font_size: 22,
+  section_headline_font_size_mobile: 20,
   header_rating_color: "#1d8a42",
   header_stars_color: "#e8a317",
   header_summary_color: "#6b6b6b",
@@ -126,12 +141,17 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   review_body_color: "#6b6b6b",
   review_title_font_size: 17,
   review_body_font_size: 15,
+  review_title_font_size_mobile: 16,
+  review_body_font_size_mobile: 14,
   review_meta_color: "#888888",
   card_background: "#ffffff",
   card_border_color: "rgba(0, 0, 0, 0.08)",
   card_border_radius: 10,
   card_padding: 20,
   cards_gap: 16,
+  card_border_radius_mobile: 10,
+  card_padding_mobile: 16,
+  cards_gap_mobile: 12,
   trusted_show_header: true,
   trusted_text_after: "is trusted by over",
   trusted_text_highlight: "28k+",
@@ -149,6 +169,7 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   reviews_text_max_chars: 150,
   reviews_title_max_chars: 80,
   reviews_per_page: 6,
+  reviews_per_page_mobile: 10,
   reviews_rows: 2,
   reviews_columns_mobile: 1,
   reviews_columns_desktop: 3,
@@ -231,6 +252,12 @@ export function coerceStorefrontSettings(
     section_padding_top: num(r.section_padding_top, d.section_padding_top),
     section_padding_bottom: num(r.section_padding_bottom, d.section_padding_bottom),
     section_padding_sides: num(r.section_padding_sides, d.section_padding_sides),
+    section_padding_top_mobile: num(r.section_padding_top_mobile, d.section_padding_top_mobile),
+    section_padding_bottom_mobile: num(
+      r.section_padding_bottom_mobile,
+      d.section_padding_bottom_mobile,
+    ),
+    section_padding_sides_mobile: num(r.section_padding_sides_mobile, d.section_padding_sides_mobile),
     header_style:
       r.header_style === "shop_trusted" || r.header_style === "aggregate"
         ? r.header_style
@@ -239,6 +266,10 @@ export function coerceStorefrontSettings(
     section_headline_font_size: num(
       r.section_headline_font_size,
       d.section_headline_font_size,
+    ),
+    section_headline_font_size_mobile: num(
+      r.section_headline_font_size_mobile,
+      d.section_headline_font_size_mobile,
     ),
     header_rating_color: str(r.header_rating_color, d.header_rating_color),
     header_stars_color: str(r.header_stars_color, d.header_stars_color),
@@ -256,12 +287,23 @@ export function coerceStorefrontSettings(
     review_body_color: str(r.review_body_color, d.review_body_color),
     review_title_font_size: num(r.review_title_font_size, d.review_title_font_size),
     review_body_font_size: num(r.review_body_font_size, d.review_body_font_size),
+    review_title_font_size_mobile: num(
+      r.review_title_font_size_mobile,
+      d.review_title_font_size_mobile,
+    ),
+    review_body_font_size_mobile: num(
+      r.review_body_font_size_mobile,
+      d.review_body_font_size_mobile,
+    ),
     review_meta_color: str(r.review_meta_color, d.review_meta_color),
     card_background: str(r.card_background, d.card_background),
     card_border_color: str(r.card_border_color, d.card_border_color),
     card_border_radius: num(r.card_border_radius, d.card_border_radius),
     card_padding: num(r.card_padding, d.card_padding),
     cards_gap: num(r.cards_gap, d.cards_gap),
+    card_border_radius_mobile: num(r.card_border_radius_mobile, d.card_border_radius_mobile),
+    card_padding_mobile: num(r.card_padding_mobile, d.card_padding_mobile),
+    cards_gap_mobile: num(r.cards_gap_mobile, d.cards_gap_mobile),
     trusted_show_header: bool(r.trusted_show_header, d.trusted_show_header),
     trusted_text_after: str(r.trusted_text_after, d.trusted_text_after),
     trusted_text_highlight: str(r.trusted_text_highlight, d.trusted_text_highlight),
@@ -279,6 +321,10 @@ export function coerceStorefrontSettings(
     reviews_text_max_chars: num(r.reviews_text_max_chars, d.reviews_text_max_chars),
     reviews_title_max_chars: num(r.reviews_title_max_chars, d.reviews_title_max_chars),
     reviews_per_page: num(r.reviews_per_page, d.reviews_per_page),
+    reviews_per_page_mobile: Math.min(
+      20,
+      Math.max(1, num(r.reviews_per_page_mobile, d.reviews_per_page_mobile)),
+    ),
     reviews_rows: num(r.reviews_rows, d.reviews_rows),
     reviews_columns_mobile: Math.min(
       2,
