@@ -706,13 +706,22 @@ export default function AppearancePage() {
                             autoComplete="off"
                           />
                           <TextField
-                            label="Avaliações por página (paginação)"
+                            label="Linhas na grade"
+                            name="reviews_rows"
+                            type="number"
+                            value={String(settings.reviews_rows)}
+                            onChange={(v) => set("reviews_rows", Math.min(4, Math.max(1, parseInt(v, 10) || 2)))}
+                            autoComplete="off"
+                            helpText="Com colunas × linhas define quantos cards cabem antes de criar outra página"
+                          />
+                          <TextField
+                            label="Avaliações por página (mínimo)"
                             name="reviews_per_page"
                             type="number"
                             value={String(settings.reviews_per_page)}
                             onChange={(v) => set("reviews_per_page", parseInt(v, 10) || 6)}
                             autoComplete="off"
-                            helpText="Total de cards por slide. Ex.: 3 colunas × 2 linhas = 6"
+                            helpText={`Capacidade real: ${settings.reviews_columns_desktop}×${settings.reviews_rows} desktop, ${settings.reviews_columns_mobile}×${settings.reviews_rows} mobile`}
                           />
                         </InlineGrid>
                         <Checkbox

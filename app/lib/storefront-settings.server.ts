@@ -242,6 +242,7 @@ export function parseStorefrontSettingsForm(form: FormData): StorefrontSettings 
     reviews_text_max_chars: num("reviews_text_max_chars", 150),
     reviews_title_max_chars: num("reviews_title_max_chars", 80),
     reviews_per_page: num("reviews_per_page", 6),
+    reviews_rows: num("reviews_rows", 2),
     reviews_columns_mobile: num("reviews_columns_mobile", 1),
     reviews_columns_desktop: num("reviews_columns_desktop", 3),
     pagination_active_color: str("pagination_active_color"),

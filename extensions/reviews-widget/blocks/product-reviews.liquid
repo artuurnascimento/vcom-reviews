@@ -66,13 +66,17 @@
 {%- if s_show_images == nil -%}{%- assign s_show_images = true -%}{%- endif -%}
 {%- assign text_max_chars = cfg.reviews_text_max_chars | default: 150 -%}
 {%- assign title_max_chars = cfg.reviews_title_max_chars | default: 80 -%}
-{%- assign reviews_per_page = cfg.reviews_per_page | default: 6 -%}
+{%- assign reviews_per_page_cfg = cfg.reviews_per_page | default: 6 -%}
+{%- assign reviews_rows = cfg.reviews_rows | default: 2 -%}
+{%- if reviews_rows < 1 -%}{%- assign reviews_rows = 1 -%}{%- endif -%}
+{%- if reviews_rows > 4 -%}{%- assign reviews_rows = 4 -%}{%- endif -%}
 {%- assign s_cols_mobile = cfg.reviews_columns_mobile | default: 1 -%}
 {%- assign s_cols_desktop = cfg.reviews_columns_desktop | default: 3 -%}
 {%- if s_cols_mobile < 1 -%}{%- assign s_cols_mobile = 1 -%}{%- endif -%}
 {%- if s_cols_mobile > 2 -%}{%- assign s_cols_mobile = 2 -%}{%- endif -%}
 {%- if s_cols_desktop < 1 -%}{%- assign s_cols_desktop = 1 -%}{%- endif -%}
 {%- if s_cols_desktop > 4 -%}{%- assign s_cols_desktop = 4 -%}{%- endif -%}
+{%- assign reviews_per_page = reviews_per_page_cfg -%}
 {%- assign s_pag_active = cfg.pagination_active_color | default: '#1d8a42' -%}
 {%- assign s_pag_inactive = cfg.pagination_inactive_color | default: '#dcdce6' -%}
 {%- assign s_show_empty = cfg.show_empty_message -%}
@@ -177,6 +181,16 @@
     {%- assign has_reviews = true -%}
   {%- else -%}
     {%- assign has_reviews = false -%}
+  {%- endif -%}
+{%- endif -%}
+{%- if s_layout == 'trustpilot_carousel' or s_layout == 'trustpilot_grid' or s_layout == 'trustpilot_mosaic' -%}
+  {%- assign grid_capacity_desktop = s_cols_desktop | times: reviews_rows -%}
+  {%- assign grid_capacity_mobile = s_cols_mobile | times: reviews_rows -%}
+  {%- assign grid_capacity = grid_capacity_desktop -%}
+  {%- if grid_capacity_mobile > grid_capacity -%}{%- assign grid_capacity = grid_capacity_mobile -%}{%- endif -%}
+  {%- if grid_capacity > reviews_per_page -%}{%- assign reviews_per_page = grid_capacity -%}{%- endif -%}
+  {%- if review_count > 0 and review_count <= grid_capacity -%}
+    {%- assign reviews_per_page = review_count -%}
   {%- endif -%}
 {%- endif -%}
 {%- assign total_pages = review_count | plus: reviews_per_page | minus: 1 | divided_by: reviews_per_page -%}
@@ -335,7 +349,7 @@
           </aside>
           <div class="vcom-split__reviews">
         {%- endif -%}
-        <div class="product-reviews__wrap" id="vcom-reviews-grid-{{ block.id }}" data-proxy-url="/apps/vcom-reviews/reviews?placement={{ submit_placement }}&product_id={{ submit_product_id | replace: 'gid://shopify/Product/', '' }}" data-layout="{{ s_layout }}">
+        <div class="product-reviews__wrap" id="vcom-reviews-grid-{{ block.id }}" data-proxy-url="/apps/vcom-reviews/reviews?placement={{ submit_placement }}&product_id={{ submit_product_id | replace: 'gid://shopify/Product/', '' }}" data-layout="{{ s_layout }}" data-cols-desktop="{{ s_cols_desktop }}" data-cols-mobile="{{ s_cols_mobile }}" data-reviews-rows="{{ reviews_rows }}" data-review-count="{{ review_count }}">
           
           {%- assign approved_index = 0 -%}
           {%- for review in all_reviews -%}
@@ -495,19 +509,20 @@
           })();
         </script>
 
-        {%- if total_pages > 1 -%}
-          <div class="product-reviews__pagination" id="vcom-reviews-pagination-{{ block.id }}" style="display:flex;justify-content:center;gap:8px;margin-top:20px;flex-wrap:wrap;">
-            {%- for p in (1..total_pages) -%}
-              <button type="button" class="product-reviews__pagination-dot" data-page="{{ p }}" aria-label="Página {{ p }}" style="width:10px;height:10px;border-radius:50%;border:none;cursor:pointer;padding:0;transition:background .2s,transform .2s;background:{% if p == 1 %}{{ s_pag_active}}{% else %}{{ s_pag_inactive}}{% endif %};transform:{% if p == 1 %}scale(1.2){% else %}scale(1){% endif %};"></button>
+        {%- if has_reviews -%}
+          <div class="product-reviews__pagination" id="vcom-reviews-pagination-{{ block.id }}" style="display:{% if total_pages > 1 %}flex{% else %}none{% endif %};justify-content:center;gap:8px;margin-top:20px;flex-wrap:wrap;">
+            {%- assign max_pagination_dots = 12 -%}
+            {%- for p in (1..max_pagination_dots) -%}
+              <button type="button" class="product-reviews__pagination-dot" data-page="{{ p }}" aria-label="Página {{ p }}" style="width:10px;height:10px;border-radius:50%;border:none;cursor:pointer;padding:0;transition:background .2s,transform .2s;{% if p > total_pages %}display:none;{% endif %}background:{% if p == 1 %}{{ s_pag_active}}{% else %}{{ s_pag_inactive}}{% endif %};transform:{% if p == 1 %}scale(1.2){% else %}scale(1){% endif %};"></button>
             {%- endfor -%}
           </div>
           <script>
-            !function(){var s='{{ block.id }}',g=document.getElementById('vcom-reviews-grid-'+s),p=document.getElementById('vcom-reviews-pagination-'+s);if(!g||!p)return;var c=g.querySelectorAll('.product-reviews__card'),d=p.querySelectorAll('.product-reviews__pagination-dot'),a='{{ s_pag_active}}',i='{{ s_pag_inactive}}';function go(n){c.forEach(function(x){x.style.display=x.dataset.page==n?'':'none'});d.forEach(function(x){x.style.background=x.dataset.page==n?a:i;x.style.transform=x.dataset.page==n?'scale(1.2)':'scale(1)'})}d.forEach(function(x){x.addEventListener('click',function(){go(this.dataset.page)})});go(1)}();
+            !function(){var s='{{ block.id }}',g=document.getElementById('vcom-reviews-grid-'+s),p=document.getElementById('vcom-reviews-pagination-'+s);if(!g||!p)return;var cards=Array.prototype.slice.call(g.querySelectorAll('.product-reviews__card')),dots=Array.prototype.slice.call(p.querySelectorAll('.product-reviews__pagination-dot')),a='{{ s_pag_active}}',i='{{ s_pag_inactive}}',colsD=parseInt(g.getAttribute('data-cols-desktop'),10)||3,colsM=parseInt(g.getAttribute('data-cols-mobile'),10)||1,rows=parseInt(g.getAttribute('data-reviews-rows'),10)||2,resizeTimer;function perPage(){return(window.matchMedia('(min-width:992px)').matches?colsD:colsM)*rows}function paintDot(dot,page,active){dot.style.display='';dot.dataset.page=String(page);dot.setAttribute('aria-label','Página '+page);dot.style.background=active?a:i;dot.style.transform=active?'scale(1.2)':'scale(1)'}function go(page){cards.forEach(function(card){card.style.display=card.dataset.page==String(page)?'':'none'});dots.forEach(function(dot){if(dot.style.display==='none')return;paintDot(dot,parseInt(dot.dataset.page,10),dot.dataset.page==String(page))})}function apply(){var pp=perPage();if(!pp||cards.length<=pp){p.style.display='none';cards.forEach(function(card){card.style.display=''});return}p.style.display='flex';var pages=Math.ceil(cards.length/pp);cards.forEach(function(card,idx){card.dataset.page=String(Math.floor(idx/pp)+1)});dots.forEach(function(dot,idx){if(idx>=pages){dot.style.display='none';return}paintDot(dot,idx+1,idx===0)});go(1)}dots.forEach(function(dot){dot.addEventListener('click',function(){if(this.style.display==='none')return;go(this.dataset.page)})});apply();window.addEventListener('resize',function(){clearTimeout(resizeTimer);resizeTimer=setTimeout(apply,150)});document.addEventListener('shopify:section:load',apply)}();
           </script>
         {%- endif -%}
       {%- else -%}
         <style>#vcom-reviews-{{ bid }} .product-reviews__verified{color:{{ verified_color }}}#vcom-reviews-{{ bid }}:not(.vcom-layout--trustpilot_list) .product-reviews__avatar,#vcom-reviews-{{ bid }}:not(.vcom-layout--trustpilot_list) .product-reviews__head{display:none}#vcom-reviews-{{ bid }}.vcom-layout--trustpilot_list .product-reviews__stars--default{display:none}#vcom-reviews-{{ bid }}.vcom-layout--trustpilot_list .product-reviews__meta-author{display:none}</style>
-        <div class="product-reviews__wrap" id="vcom-reviews-grid-{{ block.id }}" data-proxy-url="/apps/vcom-reviews/reviews?placement={{ submit_placement }}&product_id={{ submit_product_id | replace: 'gid://shopify/Product/', '' }}" data-layout="{{ s_layout }}"></div>
+        <div class="product-reviews__wrap" id="vcom-reviews-grid-{{ block.id }}" data-proxy-url="/apps/vcom-reviews/reviews?placement={{ submit_placement }}&product_id={{ submit_product_id | replace: 'gid://shopify/Product/', '' }}" data-layout="{{ s_layout }}" data-cols-desktop="{{ s_cols_desktop }}" data-cols-mobile="{{ s_cols_mobile }}" data-reviews-rows="{{ reviews_rows }}" data-review-count="{{ review_count }}"></div>
         {%- if s_show_empty -%}
           <p class="product-reviews__empty vcom-reviews-proxy-empty" style="text-align:center;font-size:14px;color:#666;margin:0;">
             {{ s_empty_message}}
