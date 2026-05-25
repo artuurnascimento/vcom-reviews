@@ -19,36 +19,42 @@
     badge.dataset.vcomPlaced = '1';
   }
 
-  function findTargetSocial(footerRoot) {
+  function hideAppHosts(footerRoot) {
+    footerRoot.querySelectorAll('.footer__block--app, .vcom-footer-app-host').forEach(function (host) {
+      var hasBadge = host.querySelector('.vcom-footer-trustpilot--app');
+      if (!hasBadge || host.querySelector('.vcom-footer-trustpilot--placed')) {
+        host.setAttribute('hidden', 'hidden');
+        host.style.cssText = 'display:none !important;height:0;margin:0;padding:0;border:0;overflow:hidden;';
+      }
+    });
+  }
+
+  function ensureBrandSlot(footerRoot) {
     var textBlock = footerRoot.querySelector('.footer__block--text');
-    if (textBlock) {
-      var inText = textBlock.querySelector('.social-media');
-      if (inText) return { social: inText, column: textBlock };
+    if (!textBlock) return null;
+
+    var slot = textBlock.querySelector('.footer__brand-social-trustpilot');
+    if (!slot) {
+      slot = document.createElement('div');
+      slot.className = 'footer__brand-social-trustpilot v-stack gap-4';
+      slot.style.cssText = 'align-items:flex-start;margin-top:var(--spacing-4,1rem);';
+      textBlock.appendChild(slot);
     }
 
-    var brandSlot = footerRoot.querySelector('.footer__brand-social-trustpilot');
-    if (brandSlot) {
-      var inBrand = brandSlot.querySelector('.social-media');
-      if (inBrand) return { social: inBrand, column: brandSlot };
-      return { social: null, column: brandSlot };
+    var socialInSlot = slot.querySelector('.social-media');
+    var socialInText = textBlock.querySelector(':scope > .social-media, :scope > .v-stack .social-media');
+    var socialAside = footerRoot.querySelector('.footer__aside .social-media');
+
+    if (!socialInSlot) {
+      if (socialInText && !slot.contains(socialInText)) {
+        slot.appendChild(socialInText);
+      } else if (socialAside && footerRoot.dataset.vcomSocialMoved !== '1') {
+        slot.appendChild(socialAside);
+        footerRoot.dataset.vcomSocialMoved = '1';
+      }
     }
 
-    var asideSocial = footerRoot.querySelector('.footer__aside .social-media');
-    if (asideSocial) {
-      var asideStack =
-        asideSocial.closest('.v-stack') ||
-        asideSocial.closest('.footer__aside-top') ||
-        asideSocial.parentElement;
-      return { social: asideSocial, column: asideStack || asideSocial.parentElement };
-    }
-
-    var anySocial = footerRoot.querySelector('.social-media');
-    if (anySocial) {
-      return { social: anySocial, column: anySocial.parentElement };
-    }
-
-    if (textBlock) return { social: null, column: textBlock };
-    return { social: null, column: footerRoot.querySelector('.footer__block-list') || footerRoot };
+    return slot;
   }
 
   function placeFooterTrustpilot() {
@@ -74,6 +80,7 @@
       badges.forEach(function (el) {
         el.remove();
       });
+      hideAppHosts(footerRoot);
       return;
     }
 
@@ -82,37 +89,25 @@
       badges[i].remove();
     }
 
-    if (badge.dataset.vcomPlaced === '1') return;
-
-    var target = findTargetSocial(footerRoot);
-    if (!target.column) {
+    var slot = ensureBrandSlot(footerRoot);
+    if (!slot) {
       showBadge(badge);
       return;
     }
 
-    var brandSlot = footerRoot.querySelector('.footer__brand-social-trustpilot');
-    if (brandSlot && !brandSlot.contains(badge)) {
-      brandSlot.appendChild(badge);
-      showBadge(badge);
-      return;
+    if (badge.parentElement !== slot) {
+      slot.appendChild(badge);
     }
 
-    if (target.social && !target.social.parentElement.contains(badge)) {
-      target.social.insertAdjacentElement('afterend', badge);
-      showBadge(badge);
-      return;
-    }
-
-    if (target.column && !target.column.contains(badge)) {
-      target.column.appendChild(badge);
-    }
     showBadge(badge);
+    hideAppHosts(footerRoot);
   }
 
   function schedulePlace() {
     placeFooterTrustpilot();
-    window.setTimeout(placeFooterTrustpilot, 120);
-    window.setTimeout(placeFooterTrustpilot, 500);
+    window.setTimeout(placeFooterTrustpilot, 150);
+    window.setTimeout(placeFooterTrustpilot, 600);
+    window.setTimeout(placeFooterTrustpilot, 1500);
   }
 
   if (document.readyState === 'loading') {
@@ -121,15 +116,5 @@
     schedulePlace();
   }
   document.addEventListener('shopify:section:load', schedulePlace);
-
-  if (typeof MutationObserver !== 'undefined') {
-    var observer = new MutationObserver(function () {
-      placeFooterTrustpilot();
-    });
-    observer.observe(document.documentElement, { childList: true, subtree: true });
-    window.setTimeout(function () {
-      observer.disconnect();
-    }, 8000);
-  }
 })();
 </script>

@@ -153,7 +153,12 @@
                 </div>
 
               {%- when '@app' -%}
-                <div class="footer__block footer__block--app" {{ block.shopify_attributes }}>
+                <div
+                  class="footer__block footer__block--app vcom-footer-app-host"
+                  hidden
+                  style="display:none !important;height:0;margin:0;padding:0;overflow:hidden;"
+                  {{ block.shopify_attributes }}
+                >
                   {%- render block -%}
                 </div>
             {%- endcase -%}
