@@ -28,6 +28,11 @@
 {%- assign s_header_show_trustpilot = cfg.header_show_trustpilot_logo -%}
 {%- if s_header_show_trustpilot == nil -%}{%- assign s_header_show_trustpilot = true -%}{%- endif -%}
 {%- assign s_trustpilot_logo_h = cfg.header_trustpilot_logo_height | default: 22 -%}
+{%- assign s_trustpilot_logo_h_m = cfg.header_trustpilot_logo_height_mobile | default: s_trustpilot_logo_h -%}
+{%- assign s_header_stars_size = cfg.header_stars_size | default: 20 -%}
+{%- assign s_header_stars_size_m = cfg.header_stars_size_mobile | default: s_header_stars_size -%}
+{%- assign s_header_rating_size = cfg.header_rating_font_size | default: 18 -%}
+{%- assign s_header_rating_size_m = cfg.header_rating_font_size_mobile | default: s_header_rating_size -%}
 {%- assign s_review_title_color = cfg.review_title_color | default: '#000000' -%}
 {%- assign s_review_body_color = cfg.review_body_color | default: '#6b6b6b' -%}
 {%- assign s_review_title_size = cfg.review_title_font_size | default: 17 -%}
@@ -226,9 +231,14 @@
     #vcom-reviews-{{ bid }} .product-reviews__form-success svg{stroke:{{ s_success_icon }}}
     #vcom-reviews-{{ bid }} .product-reviews__trustpilot-logo{height:{{ s_trustpilot_logo_h }}px;width:auto}
     #vcom-reviews-{{ bid }} .product-reviews__section-title{font-size:{{ s_section_headline_size }}px}
+    #vcom-reviews-{{ bid }} .product-reviews__section-score{font-size:{{ s_header_rating_size }}px}
+    #vcom-reviews-{{ bid }} .product-reviews__section-stars svg{width:{{ s_header_stars_size }}px;height:{{ s_header_stars_size }}px}
     @media (max-width:991px){
       #vcom-reviews-{{ bid }} .product-reviews__inner{padding:{{ s_pad_top_m }}px {{ s_pad_sides_m }}px {{ s_pad_bottom_m }}px}
       #vcom-reviews-{{ bid }} .product-reviews__section-title{font-size:{{ s_section_headline_size_m }}px}
+      #vcom-reviews-{{ bid }} .product-reviews__trustpilot-logo{height:{{ s_trustpilot_logo_h_m }}px !important;width:auto !important}
+      #vcom-reviews-{{ bid }} .product-reviews__section-score{font-size:{{ s_header_rating_size_m }}px}
+      #vcom-reviews-{{ bid }} .product-reviews__section-stars svg{width:{{ s_header_stars_size_m }}px;height:{{ s_header_stars_size_m }}px}
       #vcom-reviews-{{ bid }} .product-reviews__card{padding:{{ s_card_pad_m }}px;border-radius:{{ s_card_radius_m }}px}
       #vcom-reviews-{{ bid }} .product-reviews__wrap{gap:{{ s_cards_gap_m }}px !important}
       #vcom-reviews-{{ bid }} .product-reviews__title{font-size:{{ s_review_title_size_m }}px}

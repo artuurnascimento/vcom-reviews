@@ -27,6 +27,11 @@ export interface StorefrontSettings {
   header_based_on_prefix: string;
   header_show_trustpilot_logo: boolean;
   header_trustpilot_logo_height: number;
+  header_trustpilot_logo_height_mobile: number;
+  header_stars_size: number;
+  header_stars_size_mobile: number;
+  header_rating_font_size: number;
+  header_rating_font_size_mobile: number;
   review_title_color: string;
   review_body_color: string;
   review_title_font_size: number;
@@ -140,6 +145,11 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   header_based_on_prefix: "Based on",
   header_show_trustpilot_logo: true,
   header_trustpilot_logo_height: 22,
+  header_trustpilot_logo_height_mobile: 18,
+  header_stars_size: 20,
+  header_stars_size_mobile: 16,
+  header_rating_font_size: 18,
+  header_rating_font_size_mobile: 16,
   review_title_color: "#000000",
   review_body_color: "#6b6b6b",
   review_title_font_size: 17,
@@ -287,6 +297,23 @@ export function coerceStorefrontSettings(
     header_trustpilot_logo_height: Math.min(
       48,
       Math.max(12, num(r.header_trustpilot_logo_height, d.header_trustpilot_logo_height)),
+    ),
+    header_trustpilot_logo_height_mobile: Math.min(
+      48,
+      Math.max(10, num(r.header_trustpilot_logo_height_mobile, d.header_trustpilot_logo_height_mobile)),
+    ),
+    header_stars_size: Math.min(40, Math.max(10, num(r.header_stars_size, d.header_stars_size))),
+    header_stars_size_mobile: Math.min(
+      36,
+      Math.max(10, num(r.header_stars_size_mobile, d.header_stars_size_mobile)),
+    ),
+    header_rating_font_size: Math.min(
+      32,
+      Math.max(12, num(r.header_rating_font_size, d.header_rating_font_size)),
+    ),
+    header_rating_font_size_mobile: Math.min(
+      28,
+      Math.max(12, num(r.header_rating_font_size_mobile, d.header_rating_font_size_mobile)),
     ),
     review_title_color: str(r.review_title_color, d.review_title_color),
     review_body_color: str(r.review_body_color, d.review_body_color),

@@ -572,15 +572,50 @@ export default function AppearancePage() {
                             max={48}
                             onChange={(v) => set("section_padding_sides_mobile", v)}
                           />
+                          <Text as="h3" variant="headingSm">
+                            Cabeçalho Trustpilot (mobile)
+                          </Text>
                           <RangeField
-                            label="Título da seção"
+                            label="Título (TRUSTED BY…)"
                             name="section_headline_font_size_mobile"
                             value={settings.section_headline_font_size_mobile}
                             min={14}
-                            max={32}
+                            max={40}
                             suffix="px"
                             onChange={(v) => set("section_headline_font_size_mobile", v)}
                           />
+                          {settings.header_show_trustpilot_logo ? (
+                            <RangeField
+                              label="Logo Trustpilot"
+                              name="header_trustpilot_logo_height_mobile"
+                              value={settings.header_trustpilot_logo_height_mobile}
+                              min={10}
+                              max={40}
+                              suffix="px"
+                              onChange={(v) => set("header_trustpilot_logo_height_mobile", v)}
+                            />
+                          ) : null}
+                          <RangeField
+                            label="Estrelas do badge"
+                            name="header_stars_size_mobile"
+                            value={settings.header_stars_size_mobile}
+                            min={10}
+                            max={36}
+                            suffix="px"
+                            onChange={(v) => set("header_stars_size_mobile", v)}
+                          />
+                          <RangeField
+                            label="Nota numérica (ex.: 4.8)"
+                            name="header_rating_font_size_mobile"
+                            value={settings.header_rating_font_size_mobile}
+                            min={12}
+                            max={28}
+                            suffix="px"
+                            onChange={(v) => set("header_rating_font_size_mobile", v)}
+                          />
+                          <Text as="h3" variant="headingSm">
+                            Cards de avaliação (mobile)
+                          </Text>
                           <RangeField
                             label="Título do card"
                             name="review_title_font_size_mobile"
