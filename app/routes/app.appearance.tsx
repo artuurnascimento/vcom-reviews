@@ -528,9 +528,25 @@ export default function AppearancePage() {
                           Mobile (≤991px)
                         </Text>
                         <Text as="p" variant="bodySm" tone="subdued">
-                          Lista vertical: uma avaliação abaixo da outra. Ao mudar de página,
-                          a página rola até o início da seção de reviews.
+                          Só muda como os cards se organizam no mobile — cores, fontes e
+                          conteúdo dos cards vêm das outras opções. Paginação com scroll ao
+                          topo ao trocar de página.
                         </Text>
+                        <Select
+                          label="Organização no mobile"
+                          name="reviews_mobile_layout"
+                          options={[
+                            { label: "Mosaico 2 colunas (recomendado)", value: "masonry" },
+                            { label: "Lista vertical (1 coluna)", value: "stack" },
+                          ]}
+                          value={settings.reviews_mobile_layout}
+                          onChange={(v) =>
+                            set(
+                              "reviews_mobile_layout",
+                              v as StorefrontSettings["reviews_mobile_layout"],
+                            )
+                          }
+                        />
                         <InlineGrid columns={2} gap="400">
                           <RangeField
                             label="Espaço superior"

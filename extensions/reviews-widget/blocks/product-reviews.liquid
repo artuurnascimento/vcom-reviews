@@ -79,6 +79,13 @@
 {%- assign reviews_per_page_mobile = cfg.reviews_per_page_mobile | default: 10 -%}
 {%- if reviews_per_page_mobile < 1 -%}{%- assign reviews_per_page_mobile = 1 -%}{%- endif -%}
 {%- if reviews_per_page_mobile > 20 -%}{%- assign reviews_per_page_mobile = 20 -%}{%- endif -%}
+{%- assign reviews_mobile_layout = cfg.reviews_mobile_layout | default: 'masonry' -%}
+{%- unless reviews_mobile_layout == 'stack' or reviews_mobile_layout == 'masonry' -%}
+  {%- assign reviews_mobile_layout = 'masonry' -%}
+{%- endunless -%}
+{%- assign reviews_mobile_masonry_cols = cfg.reviews_mobile_masonry_columns | default: 2 -%}
+{%- if reviews_mobile_masonry_cols < 2 -%}{%- assign reviews_mobile_masonry_cols = 2 -%}{%- endif -%}
+{%- if reviews_mobile_masonry_cols > 2 -%}{%- assign reviews_mobile_masonry_cols = 2 -%}{%- endif -%}
 {%- assign reviews_rows = cfg.reviews_rows | default: 2 -%}
 {%- if reviews_rows < 1 -%}{%- assign reviews_rows = 1 -%}{%- endif -%}
 {%- if reviews_rows > 4 -%}{%- assign reviews_rows = 4 -%}{%- endif -%}
@@ -226,9 +233,7 @@
       #vcom-reviews-{{ bid }} .product-reviews__wrap{gap:{{ s_cards_gap_m }}px !important}
       #vcom-reviews-{{ bid }} .product-reviews__title{font-size:{{ s_review_title_size_m }}px}
       #vcom-reviews-{{ bid }} .product-reviews__text{font-size:{{ s_review_body_size_m }}px}
-      #vcom-reviews-{{ bid }}.vcom-layout--trustpilot_carousel .product-reviews__wrap,
-      #vcom-reviews-{{ bid }}.vcom-layout--trustpilot_grid .product-reviews__wrap,
-      #vcom-reviews-{{ bid }}.vcom-layout--trustpilot_mosaic .product-reviews__wrap{
+      #vcom-reviews-{{ bid }} .product-reviews__wrap.vcom-reviews-mobile--stack{
         display:grid !important;
         grid-template-columns:1fr !important;
         grid-auto-flow:row !important;
@@ -236,9 +241,26 @@
         overflow:visible !important;
         overflow-x:visible !important;
         scroll-snap-type:none !important;
-        -webkit-overflow-scrolling:auto;
       }
-      #vcom-reviews-{{ bid }}.vcom-layout--trustpilot_carousel .product-reviews__card{
+      #vcom-reviews-{{ bid }} .product-reviews__wrap.vcom-reviews-mobile--masonry{
+        display:block !important;
+        column-count:{{ reviews_mobile_masonry_cols }};
+        column-gap:{{ s_cards_gap_m }}px;
+        overflow:visible !important;
+      }
+      #vcom-reviews-{{ bid }} .product-reviews__wrap.vcom-reviews-mobile--masonry .product-reviews__card{
+        break-inside:avoid;
+        -webkit-column-break-inside:avoid;
+        page-break-inside:avoid;
+        display:inline-block;
+        width:100%;
+        max-width:100%;
+        margin:0 0 {{ s_cards_gap_m }}px;
+        vertical-align:top;
+        scroll-snap-align:unset;
+      }
+      #vcom-reviews-{{ bid }}.vcom-layout--trustpilot_carousel .product-reviews__wrap.vcom-reviews-mobile--stack .product-reviews__card,
+      #vcom-reviews-{{ bid }}.vcom-layout--trustpilot_carousel .product-reviews__wrap.vcom-reviews-mobile--masonry .product-reviews__card{
         scroll-snap-align:unset;
         width:100%;
         max-width:100%;
@@ -355,7 +377,7 @@
           </aside>
           <div class="vcom-split__reviews">
         {%- endif -%}
-        <div class="product-reviews__wrap" id="vcom-reviews-grid-{{ block.id }}" data-proxy-url="/apps/vcom-reviews/reviews?placement={{ submit_placement }}&product_id={{ submit_product_id | replace: 'gid://shopify/Product/', '' }}" data-layout="{{ s_layout }}" data-cols-desktop="{{ s_cols_desktop }}" data-cols-mobile="1" data-reviews-rows="{{ reviews_rows }}" data-per-page-mobile="{{ reviews_per_page_mobile }}" data-scroll-root="vcom-reviews-{{ bid }}" data-review-count="{{ review_count }}">
+        <div class="product-reviews__wrap vcom-reviews-mobile--{{ reviews_mobile_layout }}" id="vcom-reviews-grid-{{ block.id }}" data-proxy-url="/apps/vcom-reviews/reviews?placement={{ submit_placement }}&product_id={{ submit_product_id | replace: 'gid://shopify/Product/', '' }}" data-layout="{{ s_layout }}" data-cols-desktop="{{ s_cols_desktop }}" data-cols-mobile="1" data-mobile-layout="{{ reviews_mobile_layout }}" data-reviews-rows="{{ reviews_rows }}" data-per-page-mobile="{{ reviews_per_page_mobile }}" data-scroll-root="vcom-reviews-{{ bid }}" data-review-count="{{ review_count }}">
           
           {%- assign approved_index = 0 -%}
           {%- for review in all_reviews -%}
@@ -528,7 +550,7 @@
         {%- endif -%}
       {%- else -%}
         <style>#vcom-reviews-{{ bid }} .product-reviews__verified{color:{{ verified_color }}}#vcom-reviews-{{ bid }}:not(.vcom-layout--trustpilot_list) .product-reviews__avatar,#vcom-reviews-{{ bid }}:not(.vcom-layout--trustpilot_list) .product-reviews__head{display:none}#vcom-reviews-{{ bid }}.vcom-layout--trustpilot_list .product-reviews__stars--default{display:none}#vcom-reviews-{{ bid }}.vcom-layout--trustpilot_list .product-reviews__meta-author{display:none}</style>
-        <div class="product-reviews__wrap" id="vcom-reviews-grid-{{ block.id }}" data-proxy-url="/apps/vcom-reviews/reviews?placement={{ submit_placement }}&product_id={{ submit_product_id | replace: 'gid://shopify/Product/', '' }}" data-layout="{{ s_layout }}" data-cols-desktop="{{ s_cols_desktop }}" data-cols-mobile="1" data-reviews-rows="{{ reviews_rows }}" data-per-page-mobile="{{ reviews_per_page_mobile }}" data-scroll-root="vcom-reviews-{{ bid }}" data-review-count="{{ review_count }}"></div>
+        <div class="product-reviews__wrap vcom-reviews-mobile--{{ reviews_mobile_layout }}" id="vcom-reviews-grid-{{ block.id }}" data-proxy-url="/apps/vcom-reviews/reviews?placement={{ submit_placement }}&product_id={{ submit_product_id | replace: 'gid://shopify/Product/', '' }}" data-layout="{{ s_layout }}" data-cols-desktop="{{ s_cols_desktop }}" data-cols-mobile="1" data-mobile-layout="{{ reviews_mobile_layout }}" data-reviews-rows="{{ reviews_rows }}" data-per-page-mobile="{{ reviews_per_page_mobile }}" data-scroll-root="vcom-reviews-{{ bid }}" data-review-count="{{ review_count }}"></div>
         {%- if s_show_empty -%}
           <p class="product-reviews__empty vcom-reviews-proxy-empty" style="text-align:center;font-size:14px;color:#666;margin:0;">
             {{ s_empty_message}}

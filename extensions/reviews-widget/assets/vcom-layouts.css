@@ -106,23 +106,36 @@
   color: #888;
 }
 
-/* Carousel (default Trustpilot widget) — mobile: lista vertical */
+/* Mobile — organização do layout (estilo dos cards inalterado) */
 @media (max-width: 991px) {
-  .vcom-layout--trustpilot_carousel .product-reviews__wrap,
-  .vcom-layout--trustpilot_grid .product-reviews__wrap,
-  .vcom-layout--trustpilot_mosaic .product-reviews__wrap {
+  .vcom-reviews-app-block .product-reviews__wrap.vcom-reviews-mobile--stack {
     display: grid !important;
     grid-template-columns: 1fr !important;
     grid-auto-flow: row !important;
-    grid-auto-columns: unset !important;
     overflow: visible !important;
     scroll-snap-type: none !important;
   }
 
-  .vcom-layout--trustpilot_carousel .product-reviews__card {
-    scroll-snap-align: unset;
+  .vcom-reviews-app-block .product-reviews__wrap.vcom-reviews-mobile--masonry {
+    display: block !important;
+    column-count: 2;
+    column-gap: 12px;
+    overflow: visible !important;
+  }
+
+  .vcom-reviews-app-block .product-reviews__wrap.vcom-reviews-mobile--masonry .product-reviews__card {
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    page-break-inside: avoid;
+    display: inline-block;
     width: 100%;
     max-width: 100%;
+    margin: 0 0 12px;
+    vertical-align: top;
+  }
+
+  .vcom-layout--trustpilot_carousel .product-reviews__wrap .product-reviews__card {
+    scroll-snap-align: unset;
   }
 }
 

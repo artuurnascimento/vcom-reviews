@@ -59,8 +59,11 @@ export interface StorefrontSettings {
   reviews_text_max_chars: number;
   reviews_title_max_chars: number;
   reviews_per_page: number;
-  /** Avaliações por página no mobile (lista vertical) */
+  /** Avaliações por página no mobile */
   reviews_per_page_mobile: number;
+  /** stack = 1 coluna; masonry = 2 colunas estilo mosaico */
+  reviews_mobile_layout: "stack" | "masonry";
+  reviews_mobile_masonry_columns: number;
   /** Linhas visíveis na grade antes de paginar */
   reviews_rows: number;
   /** Colunas visíveis na grade (mobile ≤991px) */
@@ -170,6 +173,8 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   reviews_title_max_chars: 80,
   reviews_per_page: 6,
   reviews_per_page_mobile: 10,
+  reviews_mobile_layout: "masonry",
+  reviews_mobile_masonry_columns: 2,
   reviews_rows: 2,
   reviews_columns_mobile: 1,
   reviews_columns_desktop: 3,
@@ -324,6 +329,14 @@ export function coerceStorefrontSettings(
     reviews_per_page_mobile: Math.min(
       20,
       Math.max(1, num(r.reviews_per_page_mobile, d.reviews_per_page_mobile)),
+    ),
+    reviews_mobile_layout:
+      r.reviews_mobile_layout === "stack" || r.reviews_mobile_layout === "masonry"
+        ? r.reviews_mobile_layout
+        : d.reviews_mobile_layout,
+    reviews_mobile_masonry_columns: Math.min(
+      2,
+      Math.max(2, num(r.reviews_mobile_masonry_columns, d.reviews_mobile_masonry_columns)),
     ),
     reviews_rows: num(r.reviews_rows, d.reviews_rows),
     reviews_columns_mobile: Math.min(

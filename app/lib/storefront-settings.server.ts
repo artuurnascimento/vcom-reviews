@@ -247,6 +247,11 @@ export function parseStorefrontSettingsForm(form: FormData): StorefrontSettings 
     reviews_title_max_chars: num("reviews_title_max_chars", 80),
     reviews_per_page: num("reviews_per_page", 6),
     reviews_per_page_mobile: num("reviews_per_page_mobile", 10),
+    reviews_mobile_layout: (() => {
+      const v = str("reviews_mobile_layout");
+      return v === "stack" || v === "masonry" ? v : "masonry";
+    })(),
+    reviews_mobile_masonry_columns: num("reviews_mobile_masonry_columns", 2),
     reviews_rows: num("reviews_rows", 2),
     reviews_columns_mobile: num("reviews_columns_mobile", 1),
     reviews_columns_desktop: num("reviews_columns_desktop", 3),
