@@ -24,6 +24,7 @@ import {
   type GenerateLoaderData,
   type GenerateResult,
   type ProductLoadResult,
+  type SaveBatchResult,
   type SearchProductsResult,
 } from "./reviews-generate.shared";
 
@@ -143,7 +144,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }
     }
 
-    if (intent === "save") {
+    if (intent === "save" || intent === "saveBatch") {
       const payload = parseGenerateInput(form);
       const reviewsJson = String(form.get("reviews") || "[]");
       let reviews: GeneratedAiReview[] = [];
@@ -164,14 +165,29 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         } satisfies GenerateResult);
       }
 
-      const status = payload.saveAsPending ? "pending" : "approved";
+      let knownFileIds: Record<string, string> = {};
+      try {
+        knownFileIds = JSON.parse(String(form.get("knownFileIds") || "{}")) as Record<
+          string,
+          string
+        >;
+      } catch {
+        knownFileIds = {};
+      }
 
-      let urlToFileId: Record<string, string> = {};
+      const status = payload.saveAsPending ? "pending" : "approved";
+      const urlToFileId: Record<string, string> = { ...knownFileIds };
+
       if (payload.attachProductImages) {
-        const urls = reviews.map((r) => r.imageUrl).filter(Boolean) as string[];
-        if (urls.length > 0) {
+        const missingUrls = [
+          ...new Set(
+            reviews.map((r) => r.imageUrl).filter((url): url is string => Boolean(url && !urlToFileId[url])),
+          ),
+        ];
+        if (missingUrls.length > 0) {
           try {
-            urlToFileId = await createShopifyFilesFromUrls(admin, urls);
+            const created = await createShopifyFilesFromUrls(admin, missingUrls);
+            Object.assign(urlToFileId, created);
           } catch (e) {
             const msg = e instanceof Error ? e.message : "Erro ao anexar imagens do produto.";
             return json({ ok: false, error: msg } satisfies GenerateResult);
@@ -197,6 +213,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           imageFileIds,
           status,
         });
+      }
+
+      if (intent === "saveBatch") {
+        return json({
+          ok: true,
+          saved: reviews.length,
+          urlToFileId,
+        } satisfies SaveBatchResult);
       }
 
       return redirectWithEmbeddedSearch(

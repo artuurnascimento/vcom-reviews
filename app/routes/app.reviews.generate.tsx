@@ -2,12 +2,10 @@ import {
   isRouteErrorResponse,
   useActionData,
   useLoaderData,
+  useNavigate,
   useRouteError,
 } from "@remix-run/react";
-import {
-  useEmbeddedFetcher,
-  useEmbeddedSubmit,
-} from "../hooks/useEmbeddedAppPath";
+import { useEmbeddedFetcher } from "../hooks/useEmbeddedAppPath";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { filterProductsByTerm } from "../lib/product-search.shared";
 import {
@@ -53,8 +51,10 @@ import type { ReviewPlacement } from "../lib/constants";
 import {
   GENERATE_HTTP_CHUNK_SIZE,
   GENERATE_HTTP_CHUNK_THRESHOLD,
+  SAVE_HTTP_CHUNK_SIZE,
   isGenerateSuccess,
   postGenerateReviews,
+  postSaveReviews,
   productPreviewFromSearchRow,
   type GenerateLoaderData,
   type GenerateSuccess,
@@ -70,7 +70,7 @@ import {
 import { ProductHeroCard } from "../components/ProductHeroCard";
 import { PlacementDestinationPicker } from "../components/PlacementDestinationPicker";
 import { RatingRangeField } from "../components/RatingRangeField";
-import { useAppPaths } from "../hooks/useEmbeddedAppPath";
+import { useAppPaths, useEmbeddedAppPath } from "../hooks/useEmbeddedAppPath";
 
 export { loader, action } from "../lib/reviews-generate-route.server";
 
@@ -127,6 +127,8 @@ export function ErrorBoundary() {
 
 export default function GenerateReviewsPage() {
   const paths = useAppPaths();
+  const embedPath = useEmbeddedAppPath();
+  const navigate = useNavigate();
   const {
     aiConfigured,
     shopName,
@@ -137,7 +139,6 @@ export default function GenerateReviewsPage() {
   const actionData = useActionData<GenerateResult>();
   const generateFetcher = useEmbeddedFetcher<GenerateResult>("vcom-generate-reviews");
   const searchFetcher = useEmbeddedFetcher<SearchProductsResult>("vcom-search-products");
-  const saveSubmit = useEmbeddedSubmit();
   const generateAction = paths.reviewsGenerate;
 
   const [selectedTab, setSelectedTab] = useState(0);
@@ -174,6 +175,10 @@ export default function GenerateReviewsPage() {
     total: number;
   } | null>(null);
   const [clientGenerateError, setClientGenerateError] = useState<string | null>(null);
+  const [clientSaveError, setClientSaveError] = useState<string | null>(null);
+  const [saveProgress, setSaveProgress] = useState<{ done: number; total: number } | null>(
+    null,
+  );
   const [lastGenerateMeta, setLastGenerateMeta] = useState<GenerateSuccess | null>(null);
   const [previewPage, setPreviewPage] = useState(1);
   const bulkGenerateAbort = useRef<AbortController | null>(null);
@@ -425,9 +430,70 @@ export default function GenerateReviewsPage() {
     generateFetcher.submit(buildFormData("generate"), { method: "post" });
   }, [count, generateFetcher.submit, buildFormData, runBulkGenerate]);
 
+  const buildSaveChunkFormData = useCallback(
+    (chunk: GeneratedAiReview[], knownFileIds: Record<string, string>) => {
+      const fd = buildFormData("save");
+      fd.set("intent", "saveBatch");
+      fd.set("reviews", JSON.stringify(chunk));
+      fd.set("knownFileIds", JSON.stringify(knownFileIds));
+      return fd;
+    },
+    [buildFormData],
+  );
+
+  const runBulkSave = useCallback(async () => {
+    if (preview.length === 0) return;
+
+    setClientSaveError(null);
+    setSaveProgress({ done: 0, total: preview.length });
+
+    let knownFileIds: Record<string, string> = {};
+
+    try {
+      for (let offset = 0; offset < preview.length; offset += SAVE_HTTP_CHUNK_SIZE) {
+        const chunk = preview.slice(offset, offset + SAVE_HTTP_CHUNK_SIZE);
+        const result = await postSaveReviews(
+          generateAction,
+          buildSaveChunkFormData(chunk, knownFileIds),
+        );
+
+        if (!result.ok) {
+          const partial =
+            offset > 0
+              ? ` (${offset} de ${preview.length} já foram salvas — confira em Avaliações.)`
+              : "";
+          throw new Error(`${result.error}${partial}`);
+        }
+
+        knownFileIds = result.urlToFileId;
+        setSaveProgress({
+          done: Math.min(offset + chunk.length, preview.length),
+          total: preview.length,
+        });
+      }
+
+      const destination = saveAsPending
+        ? embedPath("/app/reviews/pending")
+        : embedPath("/app/reviews");
+      navigate(destination);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erro ao salvar avaliações.";
+      setClientSaveError(msg);
+    } finally {
+      setSaveProgress(null);
+    }
+  }, [
+    preview,
+    generateAction,
+    buildSaveChunkFormData,
+    saveAsPending,
+    embedPath,
+    navigate,
+  ]);
+
   const handleSave = useCallback(() => {
-    saveSubmit(buildFormData("save"), { method: "post" });
-  }, [saveSubmit, buildFormData]);
+    void runBulkSave();
+  }, [runBulkSave]);
 
   const updatePreview = useCallback(
     (index: number, field: keyof GeneratedAiReview, value: string) => {
@@ -445,6 +511,7 @@ export default function GenerateReviewsPage() {
   );
 
   const isBulkGenerating = generateProgress !== null;
+  const isSaving = saveProgress !== null;
   const isGenerating = generateFetcher.state !== "idle" || isBulkGenerating;
   const isSearching = searchFetcher.state !== "idle";
 
@@ -454,7 +521,7 @@ export default function GenerateReviewsPage() {
     actionData && "ok" in actionData && !actionData.ok && !("reviews" in actionData)
       ? actionData.error
       : null;
-  const error = clientGenerateError || generateError || saveError;
+  const error = clientSaveError || clientGenerateError || generateError || saveError;
 
   const generateMeta = lastGenerateMeta ?? (generateResult?.ok ? generateResult : null);
 
@@ -708,10 +775,13 @@ export default function GenerateReviewsPage() {
         preview.length > 0
           ? [
               {
-                content: isHomepage
-                  ? `Salvar ${preview.length} na homepage`
-                  : `Salvar ${preview.length} no produto`,
+                content: isSaving
+                  ? `Salvando ${saveProgress?.done ?? 0}/${saveProgress?.total ?? preview.length}…`
+                  : isHomepage
+                    ? `Salvar ${preview.length} na homepage`
+                    : `Salvar ${preview.length} no produto`,
                 onAction: handleSave,
+                disabled: isSaving || isGenerating,
               },
             ]
           : undefined
@@ -746,6 +816,15 @@ export default function GenerateReviewsPage() {
             <p>
               {generateProgress.done} de {generateProgress.total} prontas… Aguarde até concluir
               todas as etapas antes de salvar.
+            </p>
+          </Banner>
+        ) : null}
+
+        {isSaving && saveProgress ? (
+          <Banner tone="info" title="Salvando avaliações">
+            <p>
+              {saveProgress.done} de {saveProgress.total} salvas… Não feche esta aba até
+              redirecionar para a lista de avaliações.
             </p>
           </Banner>
         ) : null}
@@ -948,12 +1027,25 @@ export default function GenerateReviewsPage() {
 
                 {preview.length > 0 ? (
                   <InlineStack gap="200">
-                    <Button variant="primary" onClick={handleSave} fullWidth>
-                      {isHomepage
-                        ? `Salvar ${preview.length} na página inicial`
-                        : `Salvar ${preview.length} na página do produto`}
+                    <Button
+                      variant="primary"
+                      onClick={handleSave}
+                      loading={isSaving}
+                      disabled={isSaving || isGenerating}
+                      fullWidth
+                    >
+                      {isSaving && saveProgress
+                        ? `Salvando ${saveProgress.done}/${saveProgress.total}…`
+                        : isHomepage
+                          ? `Salvar ${preview.length} na página inicial`
+                          : `Salvar ${preview.length} na página do produto`}
                     </Button>
-                    <Button onClick={handleGenerate} loading={isGenerating} fullWidth>
+                    <Button
+                      onClick={handleGenerate}
+                      loading={isGenerating}
+                      disabled={isSaving || isGenerating}
+                      fullWidth
+                    >
                       Regenerar
                     </Button>
                   </InlineStack>
