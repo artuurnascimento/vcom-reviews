@@ -46,9 +46,13 @@ import {
 } from "../lib/ai-review-options";
 import type { ReviewPlacement } from "../lib/constants";
 import {
+  GENERATE_HTTP_CHUNK_SIZE,
+  GENERATE_HTTP_CHUNK_THRESHOLD,
   isGenerateSuccess,
+  postGenerateReviews,
   productPreviewFromSearchRow,
   type GenerateLoaderData,
+  type GenerateSuccess,
   type GenerateResult,
   type ProductPreview,
   type SearchProductsResult,
@@ -73,7 +77,21 @@ const TABS = [
 
 function getRouteErrorMessage(error: unknown): string {
   if (isRouteErrorResponse(error)) {
-    if (typeof error.data === "string" && error.data) return error.data;
+    if (error.status === 502 || error.status === 504) {
+      return (
+        "O servidor demorou demais (timeout). Para 100+ avaliações o app divide em lotes — " +
+        "atualize a página (Cmd+Shift+R) e gere de novo."
+      );
+    }
+    if (typeof error.data === "string" && error.data) {
+      try {
+        const parsed = JSON.parse(error.data) as { message?: string };
+        if (parsed.message) return parsed.message;
+      } catch {
+        /* plain text */
+      }
+      return error.data;
+    }
     if (error.data && typeof error.data === "object" && "message" in error.data) {
       return String((error.data as { message: unknown }).message);
     }
@@ -143,6 +161,13 @@ export default function GenerateReviewsPage() {
   const [attachProductImages, setAttachProductImages] = useState(true);
   const [preview, setPreview] = useState<GeneratedAiReview[]>([]);
   const [productPreview, setProductPreview] = useState<ProductPreview | null>(null);
+  const [generateProgress, setGenerateProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
+  const [clientGenerateError, setClientGenerateError] = useState<string | null>(null);
+  const [lastGenerateMeta, setLastGenerateMeta] = useState<GenerateSuccess | null>(null);
+  const bulkGenerateAbort = useRef<AbortController | null>(null);
 
   const generateResult = isGenerateSuccess(generateFetcher.data)
     ? generateFetcher.data
@@ -153,6 +178,8 @@ export default function GenerateReviewsPage() {
   useEffect(() => {
     if (isGenerateSuccess(generateFetcher.data)) {
       setPreview(generateFetcher.data.reviews);
+      setLastGenerateMeta(generateFetcher.data);
+      setClientGenerateError(null);
     }
   }, [generateFetcher.data]);
 
@@ -244,7 +271,7 @@ export default function GenerateReviewsPage() {
   const localeOptions = useMemo(() => getLocaleSelectOptions(country), [country]);
 
   const buildFormData = useCallback(
-    (intent: "generate" | "save") => {
+    (intent: "generate" | "save", generateCountOverride?: number) => {
       const fd = new FormData();
       fd.set("intent", intent);
       fd.set("productType", productType);
@@ -258,7 +285,7 @@ export default function GenerateReviewsPage() {
       fd.set("city", city);
       fd.set("ratingMin", String(ratingMin));
       fd.set("ratingMax", String(ratingMax));
-      fd.set("count", count);
+      fd.set("count", String(generateCountOverride ?? count));
       fd.set("placement", placement);
       fd.set("verifiedBuyer", String(verifiedBuyer));
       fd.set("saveAsPending", String(saveAsPending));
@@ -291,9 +318,74 @@ export default function GenerateReviewsPage() {
     ],
   );
 
+  const runBulkGenerate = useCallback(
+    async (total: number) => {
+      bulkGenerateAbort.current?.abort();
+      const controller = new AbortController();
+      bulkGenerateAbort.current = controller;
+
+      setClientGenerateError(null);
+      setPreview([]);
+      setGenerateProgress({ done: 0, total });
+
+      const accumulated: GeneratedAiReview[] = [];
+      let lastOk: GenerateSuccess | null = null;
+
+      try {
+        let remaining = total;
+        while (remaining > 0) {
+          if (controller.signal.aborted) return;
+
+          const chunkCount = Math.min(GENERATE_HTTP_CHUNK_SIZE, remaining);
+          const fd = buildFormData("generate", chunkCount);
+          const result = await postGenerateReviews(
+            generateAction,
+            fd,
+            controller.signal,
+          );
+
+          if (!result.ok) {
+            const partial =
+              accumulated.length > 0
+                ? ` (${accumulated.length} de ${total} já geradas — você pode salvar o parcial.)`
+                : "";
+            throw new Error(`${result.error}${partial}`);
+          }
+
+          accumulated.push(...result.reviews);
+          lastOk = result;
+          remaining -= chunkCount;
+          setPreview([...accumulated]);
+          setGenerateProgress({ done: accumulated.length, total });
+        }
+
+        if (lastOk) setLastGenerateMeta(lastOk);
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        const msg = err instanceof Error ? err.message : "Erro ao gerar avaliações.";
+        setClientGenerateError(msg);
+      } finally {
+        setGenerateProgress(null);
+        bulkGenerateAbort.current = null;
+      }
+    },
+    [buildFormData, generateAction],
+  );
+
   const handleGenerate = useCallback(() => {
+    const total = Math.min(
+      MAX_REVIEWS_TOTAL,
+      Math.max(1, parseInt(count, 10) || 3),
+    );
+
+    if (total > GENERATE_HTTP_CHUNK_THRESHOLD) {
+      void runBulkGenerate(total);
+      return;
+    }
+
+    setClientGenerateError(null);
     generateFetcher.submit(buildFormData("generate"), { method: "post" });
-  }, [generateFetcher.submit, buildFormData]);
+  }, [count, generateFetcher.submit, buildFormData, runBulkGenerate]);
 
   const handleSave = useCallback(() => {
     saveSubmit(buildFormData("save"), { method: "post" });
@@ -314,7 +406,8 @@ export default function GenerateReviewsPage() {
     [],
   );
 
-  const isGenerating = generateFetcher.state !== "idle";
+  const isBulkGenerating = generateProgress !== null;
+  const isGenerating = generateFetcher.state !== "idle" || isBulkGenerating;
   const isSearching = searchFetcher.state !== "idle";
 
   const generateError =
@@ -323,7 +416,9 @@ export default function GenerateReviewsPage() {
     actionData && "ok" in actionData && !actionData.ok && !("reviews" in actionData)
       ? actionData.error
       : null;
-  const error = generateError || saveError;
+  const error = clientGenerateError || generateError || saveError;
+
+  const generateMeta = lastGenerateMeta ?? (generateResult?.ok ? generateResult : null);
 
   const isHomepage = placement === "homepage";
   const isProductPage = placement === "product";
@@ -517,7 +612,7 @@ export default function GenerateReviewsPage() {
         min={1}
         max={MAX_REVIEWS_TOTAL}
         autoComplete="off"
-        helpText={`Até ${MAX_REVIEWS_TOTAL} por vez — o servidor gera em lotes de ${MAX_REVIEWS_PER_GEMINI_CALL} em paralelo (mais rápido que antes). Com fotos do produto, desmarque “Analisar imagens” para acelerar lotes grandes.`}
+        helpText={`Até ${MAX_REVIEWS_TOTAL}. Acima de ${GENERATE_HTTP_CHUNK_THRESHOLD}, o app envia ${GENERATE_HTTP_CHUNK_SIZE} por vez (evita erro 502). Desmarque “Analisar imagens” para ir mais rápido.`}
       />
       <Checkbox
         label="Salvar como pendente (revisar antes de publicar)"
@@ -540,9 +635,11 @@ export default function GenerateReviewsPage() {
       backAction={{ url: paths.reviews }}
       primaryAction={{
         content: isGenerating
-          ? parsedCount > MAX_REVIEWS_PER_GEMINI_CALL
-            ? `Gerando ${parsedCount} (paralelo)…`
-            : "Gerando…"
+          ? generateProgress
+            ? `Gerando ${generateProgress.done}/${generateProgress.total}…`
+            : parsedCount > GENERATE_HTTP_CHUNK_THRESHOLD
+              ? `Gerando ${parsedCount}…`
+              : "Gerando…"
           : "Gerar avaliações",
         onAction: handleGenerate,
         disabled: !canGenerate,
@@ -574,14 +671,22 @@ export default function GenerateReviewsPage() {
           ))}
         </InlineStack>
 
-        {parsedCount > 30 && !isGenerating ? (
+        {parsedCount > GENERATE_HTTP_CHUNK_THRESHOLD && !isGenerating ? (
           <Banner tone="info" title="Geração em volume">
             <p>
-              {parsedCount} avaliações serão geradas em{" "}
-              {Math.ceil(parsedCount / MAX_REVIEWS_PER_GEMINI_CALL)} lotes paralelos — costuma
-              levar cerca de 1–3 minutos. Para ir mais rápido: use{" "}
-              <strong>gemini-2.5-flash-lite</strong> no Railway e desative &quot;Analisar fotos&quot;
-              se não precisar de detalhes visuais.
+              {parsedCount} avaliações = {Math.ceil(parsedCount / GENERATE_HTTP_CHUNK_SIZE)}{" "}
+              etapas de {GENERATE_HTTP_CHUNK_SIZE} (evita timeout). Não feche a aba — o progresso
+              aparece no botão. Use <strong>gemini-2.5-flash-lite</strong> no Railway e desative
+              &quot;Analisar fotos&quot; para acelerar.
+            </p>
+          </Banner>
+        ) : null}
+
+        {isBulkGenerating && generateProgress ? (
+          <Banner tone="info" title="Gerando em etapas">
+            <p>
+              {generateProgress.done} de {generateProgress.total} prontas… Aguarde até concluir
+              todas as etapas antes de salvar.
             </p>
           </Banner>
         ) : null}
@@ -618,20 +723,20 @@ export default function GenerateReviewsPage() {
 
         {destinationSelector}
 
-        {generateResult?.ok && generateResult.usedImages && generateResult.productTitle ? (
+        {generateMeta && generateMeta.usedImages && generateMeta.productTitle ? (
           <Banner tone="success" title="Imagens analisadas">
             <p>
-              Fotos de <strong>{generateResult.productTitle}</strong> usadas como referência visual.
+              Fotos de <strong>{generateMeta.productTitle}</strong> usadas como referência visual.
             </p>
           </Banner>
         ) : null}
 
-        {generateResult?.ok && isHomepage ? (
+        {generateMeta && isHomepage ? (
           <Banner tone="info" title="Serão salvas na homepage">
             <p>
               Ao salvar, ficam vinculadas à <strong>página inicial</strong>
-              {generateResult.productTitle
-                ? ` (texto inspirado em ${generateResult.productTitle}, sem link na página do produto).`
+              {generateMeta.productTitle
+                ? ` (texto inspirado em ${generateMeta.productTitle}, sem link na página do produto).`
                 : ` de ${shopName}.`}
             </p>
           </Banner>

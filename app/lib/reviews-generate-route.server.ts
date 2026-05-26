@@ -18,11 +18,12 @@ import type { ReviewPlacement } from "./constants";
 import { listStoreProducts } from "./product-search.server";
 import { createReview, getProductDetails, searchProducts } from "./reviews.server";
 import { createShopifyFilesFromUrls } from "./upload.server";
-import type {
-  GenerateLoaderData,
-  GenerateResult,
-  ProductLoadResult,
-  SearchProductsResult,
+import {
+  GENERATE_HTTP_CHUNK_SIZE,
+  type GenerateLoaderData,
+  type GenerateResult,
+  type ProductLoadResult,
+  type SearchProductsResult,
 } from "./reviews-generate.shared";
 
 function parseGenerateInput(form: FormData) {
@@ -261,6 +262,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       payload.ratingMax,
     );
 
+    const generateCount = Math.min(payload.count, GENERATE_HTTP_CHUNK_SIZE);
+
     const reviews = await generateReviewsWithGemini({
       productType: payload.productType,
       customProductType: payload.customProductType,
@@ -277,7 +280,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       city: payload.city,
       ratingMin,
       ratingMax,
-      count: payload.count,
+      count: generateCount,
     });
 
     return json({

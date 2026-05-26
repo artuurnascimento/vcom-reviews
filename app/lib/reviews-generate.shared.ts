@@ -42,6 +42,73 @@ export type GenerateSuccess = {
 export type GenerateError = { ok: false; error: string };
 export type GenerateResult = GenerateSuccess | GenerateError;
 
+/** Por POST (evita timeout 502 no Railway). Acima do limiar, o browser envia vários POSTs. */
+export const GENERATE_HTTP_CHUNK_SIZE = 20;
+export const GENERATE_HTTP_CHUNK_THRESHOLD = 25;
+
+const GENERATE_ROUTE_DATA_ID = "routes/app.reviews.generate";
+
+function buildGenerateFetchUrl(actionUrl: string): string {
+  if (typeof window === "undefined") return actionUrl;
+  const url = new URL(actionUrl, window.location.origin);
+  url.searchParams.set("_data", GENERATE_ROUTE_DATA_ID);
+  return `${url.pathname}${url.search}`;
+}
+
+export async function postGenerateReviews(
+  actionUrl: string,
+  formData: FormData,
+  signal?: AbortSignal,
+): Promise<GenerateResult> {
+  const res = await fetch(buildGenerateFetchUrl(actionUrl), {
+    method: "POST",
+    body: formData,
+    credentials: "same-origin",
+    signal,
+    headers: { Accept: "application/json" },
+  });
+
+  const text = await res.text();
+
+  if (!res.ok) {
+    if (res.status === 502 || res.status === 504) {
+      return {
+        ok: false,
+        error:
+          "O servidor demorou demais neste lote (timeout). Aguarde um momento e tente de novo.",
+      };
+    }
+    try {
+      const json = JSON.parse(text) as { message?: string; error?: string };
+      const msg = json.message || json.error;
+      if (msg) return { ok: false, error: String(msg) };
+    } catch {
+      /* ignore */
+    }
+    return { ok: false, error: `Erro ${res.status} ao gerar avaliações.` };
+  }
+
+  try {
+    const data = JSON.parse(text) as unknown;
+    if (
+      data &&
+      typeof data === "object" &&
+      "ok" in data &&
+      (data as GenerateResult).ok === true &&
+      isGenerateSuccess(data)
+    ) {
+      return data;
+    }
+    if (data && typeof data === "object" && "ok" in data && !(data as GenerateSuccess).ok) {
+      return data as GenerateError;
+    }
+  } catch {
+    /* ignore */
+  }
+
+  return { ok: false, error: "Resposta inválida do servidor ao gerar avaliações." };
+}
+
 export function isGenerateSuccess(data: unknown): data is GenerateSuccess {
   return (
     typeof data === "object" &&
