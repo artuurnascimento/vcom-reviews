@@ -27,7 +27,7 @@
       {%- assign vcom_review_mo = shop.metaobjects['$app:review'] -%}
     {%- endif -%}
     {%- if vcom_review_mo -%}
-      {%- paginate vcom_review_mo.values by 5000 -%}
+      {%- paginate vcom_review_mo.values by 250 -%}
         {%- assign vcom_all_reviews = vcom_review_mo.values -%}
       {%- endpaginate -%}
     {%- endif -%}
