@@ -151,6 +151,11 @@ export async function listPendingReviews(admin: AdminApi) {
   return reviews.filter((r) => r.status === "pending");
 }
 
+export async function listRejectedReviews(admin: AdminApi) {
+  const reviews = await listAllReviews(admin);
+  return reviews.filter((r) => r.status === "rejected");
+}
+
 export async function getReview(admin: AdminApi, id: string) {
   const response = await admin.graphql(
     `#graphql
@@ -262,6 +267,15 @@ export async function approveAllPendingReviews(admin: AdminApi): Promise<number>
   const { processed } = await approveReviewsByIds(
     admin,
     pending.map((r) => r.id),
+  );
+  return processed;
+}
+
+export async function approveAllRejectedReviews(admin: AdminApi): Promise<number> {
+  const rejected = await listRejectedReviews(admin);
+  const { processed } = await approveReviewsByIds(
+    admin,
+    rejected.map((r) => r.id),
   );
   return processed;
 }

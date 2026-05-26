@@ -30,6 +30,7 @@ import {
   approveReviewsByIds,
   deleteReview,
   listPendingReviews,
+  listRejectedReviews,
   listAllReviews,
   rejectReview,
   rejectReviewsByIds,
@@ -44,12 +45,19 @@ const REVIEWS_INDEX_ROUTE_DATA_ID = "routes/app.reviews._index";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  const [stats, reviews, pending] = await Promise.all([
+  const [stats, reviews, pending, rejected] = await Promise.all([
     getDashboardStats(admin),
     listAllReviews(admin),
     listPendingReviews(admin),
+    listRejectedReviews(admin),
   ]);
-  return { reviews, stats, pendingIds: pending.map((r) => r.id) };
+  return {
+    reviews,
+    stats,
+    pendingIds: pending.map((r) => r.id),
+    rejectedIds: rejected.map((r) => r.id),
+    rejectedCount: rejected.length,
+  };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -81,6 +89,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     await approveReviewsByIds(
       admin,
       pending.map((r) => r.id),
+    );
+    return redirectWithEmbeddedSearch(request, "/app/reviews");
+  }
+
+  if (intent === "approveAllRejected") {
+    const rejected = await listRejectedReviews(admin);
+    await approveReviewsByIds(
+      admin,
+      rejected.map((r) => r.id),
     );
     return redirectWithEmbeddedSearch(request, "/app/reviews");
   }
@@ -118,12 +135,14 @@ export default function ReviewsIndex() {
   const embedPath = useEmbeddedAppPath();
   const navigate = useNavigate();
   const revalidator = useRevalidator();
-  const { reviews, stats, pendingIds } = useLoaderData<typeof loader>();
+  const { reviews, stats, pendingIds, rejectedIds, rejectedCount } =
+    useLoaderData<typeof loader>();
   const submit = useEmbeddedSubmit();
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(
     null,
   );
   const [batchError, setBatchError] = useState<string | null>(null);
+  const [batchMode, setBatchMode] = useState<"pending" | "rejected" | null>(null);
   const isBatchRunning = batchProgress !== null;
 
   const post = useCallback(
@@ -134,18 +153,19 @@ export default function ReviewsIndex() {
   );
 
   const runBulkModeration = useCallback(
-    async (mode: "approve" | "reject") => {
-      if (pendingIds.length === 0) return;
+    async (mode: "approve" | "reject", ids: string[], source: "pending" | "rejected") => {
+      if (ids.length === 0) return;
 
       setBatchError(null);
-      setBatchProgress({ done: 0, total: pendingIds.length });
+      setBatchMode(source);
+      setBatchProgress({ done: 0, total: ids.length });
 
       const intent = mode === "approve" ? "approveBatch" : "rejectBatch";
       let done = 0;
 
       try {
-        for (let offset = 0; offset < pendingIds.length; offset += MODERATION_BATCH_SIZE) {
-          const chunk = pendingIds.slice(offset, offset + MODERATION_BATCH_SIZE);
+        for (let offset = 0; offset < ids.length; offset += MODERATION_BATCH_SIZE) {
+          const chunk = ids.slice(offset, offset + MODERATION_BATCH_SIZE);
           const fd = new FormData();
           fd.set("intent", intent);
           fd.set("ids", JSON.stringify(chunk));
@@ -157,13 +177,12 @@ export default function ReviewsIndex() {
           );
 
           if (!result.ok) {
-            const partial =
-              done > 0 ? ` (${done} de ${pendingIds.length} já processadas.)` : "";
+            const partial = done > 0 ? ` (${done} de ${ids.length} já processadas.)` : "";
             throw new Error(`${result.error}${partial}`);
           }
 
           done += result.processed;
-          setBatchProgress({ done, total: pendingIds.length });
+          setBatchProgress({ done, total: ids.length });
         }
 
         revalidator.revalidate();
@@ -175,9 +194,10 @@ export default function ReviewsIndex() {
         revalidator.revalidate();
       } finally {
         setBatchProgress(null);
+        setBatchMode(null);
       }
     },
-    [pendingIds, paths.reviews, embedPath, navigate, revalidator],
+    [paths.reviews, embedPath, navigate, revalidator],
   );
 
   const handleApproveAll = useCallback(() => {
@@ -188,8 +208,19 @@ export default function ReviewsIndex() {
     ) {
       return;
     }
-    void runBulkModeration("approve");
-  }, [stats.pendingCount, runBulkModeration]);
+    void runBulkModeration("approve", pendingIds, "pending");
+  }, [stats.pendingCount, pendingIds, runBulkModeration]);
+
+  const handleApproveAllRejected = useCallback(() => {
+    if (
+      !window.confirm(
+        `Aprovar todas as ${rejectedCount} avaliações rejeitadas? Elas passarão a aparecer na vitrine.`,
+      )
+    ) {
+      return;
+    }
+    void runBulkModeration("approve", rejectedIds, "rejected");
+  }, [rejectedCount, rejectedIds, runBulkModeration]);
 
   const handleRejectAll = useCallback(() => {
     if (
@@ -199,13 +230,13 @@ export default function ReviewsIndex() {
     ) {
       return;
     }
-    void runBulkModeration("reject");
-  }, [stats.pendingCount, runBulkModeration]);
+    void runBulkModeration("reject", pendingIds, "pending");
+  }, [stats.pendingCount, pendingIds, runBulkModeration]);
 
   return (
     <Page
       title="Avaliações"
-      subtitle={`${stats.totalReviews} publicadas · ${stats.pendingCount} pendentes · média ${stats.averageRating}`}
+      subtitle={`${stats.totalReviews} publicadas · ${stats.pendingCount} pendentes · ${rejectedCount} rejeitadas · média ${stats.averageRating}`}
       backAction={{ url: paths.app }}
       primaryAction={{ content: "Nova avaliação", url: paths.reviewsNew }}
       secondaryActions={[
@@ -233,8 +264,35 @@ export default function ReviewsIndex() {
         {isBatchRunning && batchProgress ? (
           <Banner tone="info" title="Processando em lotes">
             <p>
-              {batchProgress.done} de {batchProgress.total} processadas… Não feche esta aba.
+              {batchMode === "rejected" ? "Aprovando rejeitadas" : "Processando"}:{" "}
+              {batchProgress.done} de {batchProgress.total}… Não feche esta aba.
             </p>
+          </Banner>
+        ) : null}
+
+        {rejectedCount > 0 ? (
+          <Banner
+            title={`${rejectedCount} avaliação(ões) rejeitada(s)`}
+            tone="warning"
+          >
+            <BlockStack gap="300">
+              <p>
+                Estas avaliações não aparecem na loja. Use <strong>Aprovar</strong> em cada
+                linha ou aprove todas de uma vez ({MODERATION_BATCH_SIZE} por lote).
+              </p>
+              <InlineStack gap="200" wrap>
+                <Button
+                  variant="primary"
+                  onClick={handleApproveAllRejected}
+                  loading={isBatchRunning && batchMode === "rejected"}
+                  disabled={isBatchRunning}
+                >
+                  {isBatchRunning && batchProgress && batchMode === "rejected"
+                    ? `Aprovando ${batchProgress.done}/${batchProgress.total}…`
+                    : `Aprovar todas rejeitadas (${rejectedCount})`}
+                </Button>
+              </InlineStack>
+            </BlockStack>
           </Banner>
         ) : null}
 

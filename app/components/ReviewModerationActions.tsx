@@ -17,8 +17,10 @@ export function ReviewModerationActions({
   compact = false,
 }: Props) {
   const isPending = status === "pending";
+  const isRejected = status === "rejected";
+  const canApprove = isPending || isRejected;
 
-  const approveBtn = isPending ? (
+  const approveBtn = canApprove ? (
     <Button
       variant="primary"
       size="slim"
@@ -61,6 +63,8 @@ export function ReviewModerationActions({
             {approveBtn}
             {rejectBtn}
           </InlineStack>
+        ) : isRejected ? (
+          <InlineStack gap="150" wrap>{approveBtn}</InlineStack>
         ) : null}
         <InlineStack gap="150" wrap>
           {editBtn}
