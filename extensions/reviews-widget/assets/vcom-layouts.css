@@ -513,3 +513,30 @@
 .vcom-layout--trustpilot_mosaic .product-reviews__verified {
   font-size: 11px;
 }
+
+.vcom-reviews-proxy-loading,
+.vcom-reviews-proxy-error {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+  margin: 12px 0;
+}
+
+.vcom-reviews-proxy-retry {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 8px 16px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.product-reviews__wrap.is-loading [data-proxy-cards] {
+  opacity: 0.55;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}

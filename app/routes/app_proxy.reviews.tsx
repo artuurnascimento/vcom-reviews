@@ -1,9 +1,9 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
-import { listAllReviews, getFileImageUrls } from "../lib/reviews.server";
-import { sortStorefrontReviews } from "../lib/review-sort.shared";
-import { getStorefrontSettings } from "../lib/storefront-settings.server";
+import { getFileImageUrls } from "../lib/reviews.server";
+import { getProxyApprovedReviews } from "../lib/review-proxy-cache.server";
+import { normalizeReviewsSortMode } from "../lib/review-sort.shared";
 import type { ReviewPlacement } from "../lib/constants";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -30,24 +30,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       50,
       Math.max(1, parseInt(url.searchParams.get("limit") || "8", 10) || 8),
     );
+    const sort = normalizeReviewsSortMode(url.searchParams.get("sort"));
 
     if (productId && !productId.startsWith("gid://")) {
       productId = `gid://shopify/Product/${productId.replace(/\D/g, "")}`;
     }
 
-    const reviews = await listAllReviews(admin);
-    let approved = reviews.filter((r) => r.status === "approved");
-
-    if (placement === "homepage") {
-      approved = approved.filter((r) => r.placement === "homepage");
-    } else {
-      approved = approved.filter(
-        (r) => r.placement === "product" && r.productId === productId,
-      );
-    }
-
-    const storefrontSettings = await getStorefrontSettings(admin);
-    approved = sortStorefrontReviews(approved, storefrontSettings.reviews_sort);
+    const approved = await getProxyApprovedReviews(
+      admin,
+      session.shop,
+      placement,
+      productId,
+      sort,
+    );
 
     const ratingSum = approved.reduce((sum, r) => sum + r.rating, 0);
     const count = approved.length;
@@ -85,15 +80,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     console.error("app_proxy reviews error", e);
     let msg = e instanceof Error ? e.message : String(e);
     try {
-      const maybeStatus = (e as any)?.status;
-      const maybeTextFn = (e as any)?.text;
+      const maybeStatus = (e as { status?: number; text?: () => Promise<string> })?.status;
+      const maybeTextFn = (e as { text?: () => Promise<string> })?.text;
       if (typeof maybeStatus === "number" && typeof maybeTextFn === "function") {
         const body = await maybeTextFn.call(e);
-        msg = `HTTP ${maybeStatus} ${(e as any).statusText || ""}${
+        msg = `HTTP ${maybeStatus} ${(e as { statusText?: string }).statusText || ""}${
           body ? ` - ${String(body).slice(0, 500)}` : ""
         }`;
       } else if (typeof maybeStatus === "number") {
-        msg = `HTTP ${maybeStatus} ${(e as any).statusText || ""} - ${String(e)}`;
+        msg = `HTTP ${maybeStatus} ${(e as { statusText?: string }).statusText || ""} - ${String(e)}`;
       }
     } catch {
       // ignore parse error

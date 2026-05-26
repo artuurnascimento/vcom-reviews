@@ -5,6 +5,7 @@ type AdminApi = {
   ) => Promise<Response>;
 };
 
+import { invalidateProxyReviewCache } from "./review-proxy-cache.server";
 import { publishAllReviewMetaobjects } from "./metaobject-publish.server";
 import { STOREFRONT_METAFIELD_NAMESPACE } from "./storefront-settings.server";
 import { listAllReviews } from "./reviews.server";
@@ -85,6 +86,13 @@ export async function syncStorefrontReviewStats(admin: AdminApi): Promise<void> 
     if (errors.length) {
       console.warn("[vcom-reviews] storefront stats save", errors);
     }
+    const shopDomain = (
+      await admin.graphql(`#graphql query ShopDomainForCache { shop { myshopifyDomain } }`)
+    )
+      .then((r) => r.json())
+      .then((j) => j.data?.shop?.myshopifyDomain as string | undefined)
+      .catch(() => undefined);
+    invalidateProxyReviewCache(await shopDomain);
   } catch (error) {
     console.error("[vcom-reviews] syncStorefrontReviewStats", error);
   }
