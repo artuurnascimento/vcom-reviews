@@ -712,7 +712,11 @@
               var resizeTimer,currentPage=1,totalPages=1,loading=false;
               var starColor='{{ star_color }}',starEmpty='{{ star_empty_color }}';
               var showVerified={{ s_show_verified}},verifiedLabel={{ s_verified_label | json }};
+              var verifiedColor='{{ verified_color }}';
               var titleMax={{ title_max_chars }},textMax={{ text_max_chars }};
+              function verifiedBadgeHtml(){
+                return '<div class="product-reviews__verified"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="'+verifiedColor+'" d="M1 12C1 5.925 5.925 1 12 1s11 4.925 11 11-4.925 11-11 11S1 18.075 1 12Zm10.207 4.207 7-7-1.414-1.414L10.5 14.086 7.207 10.793 5.793 12.207l4 4c.188.188.442.293.707.293s.519-.105.707-.293Z"/></svg><span>'+esc(String(verifiedLabel))+'</span></div>';
+              }
               function isDesktop(){return window.matchMedia('(min-width:992px)').matches}
               function perPage(){return isDesktop()?colsD*rows:perPageMobile}
               function getCards(){return Array.prototype.slice.call(g.querySelectorAll('.product-reviews__card'))}
@@ -819,7 +823,7 @@
                 if(author)html+='<span class="product-reviews__author-name">'+esc(author)+'</span>';
                 html+='<div class="product-reviews__stars" aria-hidden="true">'+starsHtml+'</div></div>';
                 html+='<div class="product-reviews__stars product-reviews__stars--default" aria-hidden="true">'+starsHtml+'</div>';
-                if(showVerified&&rv.verified_buyer)html+='<div class="product-reviews__verified"><span>'+esc(String(verifiedLabel))+'</span></div>';
+                if(showVerified&&rv.verified_buyer)html+=verifiedBadgeHtml();
                 if(title)html+='<h3 class="product-reviews__title">'+esc(title.length>titleMax?title.slice(0,titleMax)+'...':title)+'</h3>';
                 if(body)html+='<p class="product-reviews__text">'+esc(bodyShow)+'</p>';
                 html+='<div class="product-reviews__meta">';

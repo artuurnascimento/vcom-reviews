@@ -29,6 +29,11 @@
   font-weight: 700;
 }
 
+.vcom-reviews-app-block .product-reviews__verified svg {
+  flex: 0 0 auto;
+  display: block;
+}
+
 /* Cabeçalho estilo “TRUSTED BY THOUSANDS” + resumo com nota */
 .vcom-reviews-app-block .product-reviews__section-head {
   text-align: left;
