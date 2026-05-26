@@ -1,14 +1,14 @@
 import {
-  Autocomplete,
   BlockStack,
   Box,
   Icon,
   InlineStack,
   Text,
+  TextField,
   Thumbnail,
 } from "@shopify/polaris";
 import { ImageIcon, SearchIcon } from "@shopify/polaris-icons";
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 
 export type ProductSearchResult = {
   id: string;
@@ -29,7 +29,7 @@ type Props = {
   listTitle?: string;
   onQueryChange: (query: string) => void;
   onSelect: (product: ProductSearchResult) => void;
-  onClear?: () => void;
+  onClearSelection?: () => void;
 };
 
 export function ProductSearchPicker({
@@ -41,80 +41,13 @@ export function ProductSearchPicker({
   listTitle,
   onQueryChange,
   onSelect,
-  onClear,
+  onClearSelection,
 }: Props) {
-  const options = useMemo(
-    () =>
-      results.map((product) => ({
-        value: product.id,
-        label: product.title,
-        media: product.imageUrl ? (
-          <Thumbnail
-            source={product.imageUrl}
-            alt={product.imageAlt}
-            size="small"
-          />
-        ) : (
-          <Box
-            background="bg-surface-secondary"
-            borderRadius="200"
-            minWidth="28px"
-            minHeight="28px"
-          >
-            <Icon source={ImageIcon} tone="subdued" />
-          </Box>
-        ),
-      })),
-    [results],
-  );
-
   const handlePick = useCallback(
     (product: ProductSearchResult) => {
-      onQueryChange("");
       onSelect(product);
     },
-    [onQueryChange, onSelect],
-  );
-
-  const updateSelection = useCallback(
-    (selected: string[]) => {
-      const id = selected[0];
-      if (!id) {
-        onClear?.();
-        onQueryChange("");
-        return;
-      }
-      const product = results.find((p) => p.id === id);
-      if (product) handlePick(product);
-    },
-    [results, onClear, onQueryChange, handlePick],
-  );
-
-  const handleInputChange = useCallback(
-    (value: string) => {
-      onQueryChange(value);
-      if (!value.trim()) {
-        onClear?.();
-      }
-    },
-    [onClear, onQueryChange],
-  );
-
-  const textField = (
-    <Autocomplete.TextField
-      onChange={handleInputChange}
-      label="Buscar produto"
-      value={query}
-      prefix={<Icon source={SearchIcon} tone="base" />}
-      placeholder="Digite nome, SKU ou tipo do produto…"
-      autoComplete="off"
-      clearButton
-      onClearButtonClick={() => {
-        onQueryChange("");
-        onClear?.();
-      }}
-      helpText="Busca em tempo real no catálogo da loja"
-    />
+    [onSelect],
   );
 
   const panelTitle =
@@ -135,19 +68,42 @@ export function ProductSearchPicker({
           borderWidth="025"
           borderColor="border"
         >
-          <Text as="p" variant="bodySm">
-            Selecionado: <strong>{selectedLabel}</strong>
-          </Text>
+          <InlineStack align="space-between" blockAlign="center" gap="200">
+            <Text as="p" variant="bodySm">
+              Selecionado: <strong>{selectedLabel}</strong>
+            </Text>
+            {onClearSelection ? (
+              <button
+                type="button"
+                onClick={onClearSelection}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  color: "#1d8a42",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  textDecoration: "underline",
+                  padding: 0,
+                }}
+              >
+                Trocar
+              </button>
+            ) : null}
+          </InlineStack>
         </Box>
       ) : null}
 
-      <Autocomplete
-        options={options}
-        selected={selectedId ? [selectedId] : []}
-        onSelect={updateSelection}
-        textField={textField}
-        loading={loading}
-        listTitle={panelTitle}
+      <TextField
+        label="Buscar produto"
+        value={query}
+        onChange={onQueryChange}
+        prefix={<Icon source={SearchIcon} tone="base" />}
+        placeholder="Digite nome, SKU ou tipo do produto…"
+        autoComplete="off"
+        clearButton
+        onClearButtonClick={() => onQueryChange("")}
+        helpText="Busca em tempo real no catálogo da loja"
       />
 
       <Box

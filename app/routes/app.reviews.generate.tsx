@@ -121,6 +121,7 @@ export default function GenerateReviewsPage() {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [selectedProductTitle, setSelectedProductTitle] = useState("");
   const lastRemoteQuery = useRef("");
+  const loadedProductIdRef = useRef("");
 
   const [productType, setProductType] = useState("moda");
   const [customProductType, setCustomProductType] = useState("");
@@ -208,9 +209,13 @@ export default function GenerateReviewsPage() {
 
   useEffect(() => {
     if (!productId) {
+      loadedProductIdRef.current = "";
       setProductPreview(null);
       return;
     }
+    if (loadedProductIdRef.current === productId) return;
+
+    loadedProductIdRef.current = productId;
     const fd = new FormData();
     fd.set("intent", "loadProduct");
     fd.set("productId", productId);
@@ -220,24 +225,24 @@ export default function GenerateReviewsPage() {
 
   useEffect(() => {
     const data = productFetcher.data as ProductLoadResult | undefined;
-    if (data?.ok && data.product) {
-      setProductPreview(data.product);
-      if (data.product.title !== selectedProductTitle) {
-        setSelectedProductTitle(data.product.title);
-      }
-      if (data.product.productType) {
-        const shopifyType = data.product.productType.toLowerCase();
-        const match = AI_PRODUCT_TYPES.find(
-          (t) => shopifyType.includes(t.value) || t.label.toLowerCase().includes(shopifyType),
-        );
-        if (match && match.value !== "outro") {
-          setProductType(match.value);
-        }
-      }
-    } else if (data?.ok && !data.product) {
-      setProductPreview(null);
+    if (!data?.ok || !data.product) {
+      if (data?.ok && !data.product) setProductPreview(null);
+      return;
     }
-  }, [productFetcher.data, selectedProductTitle]);
+    if (data.product.id !== productId) return;
+
+    setProductPreview(data.product);
+    setSelectedProductTitle(data.product.title);
+    if (data.product.productType) {
+      const shopifyType = data.product.productType.toLowerCase();
+      const match = AI_PRODUCT_TYPES.find(
+        (t) => shopifyType.includes(t.value) || t.label.toLowerCase().includes(shopifyType),
+      );
+      if (match && match.value !== "outro") {
+        setProductType(match.value);
+      }
+    }
+  }, [productFetcher.data, productId]);
 
   const handleSelectProduct = useCallback((product: ProductSearchResult) => {
     setProductId(product.id);
@@ -249,6 +254,7 @@ export default function GenerateReviewsPage() {
   }, []);
 
   const handleClearProduct = useCallback(() => {
+    loadedProductIdRef.current = "";
     setProductId("");
     setSelectedProductTitle("");
     setSearchQuery("");
@@ -410,7 +416,7 @@ export default function GenerateReviewsPage() {
                 : "Produtos da loja"
         }
         onSelect={handleSelectProduct}
-        onClear={handleClearProduct}
+        onClearSelection={handleClearProduct}
       />
       <Text as="p" variant="bodySm" tone="subdued">
         {isHomepage
