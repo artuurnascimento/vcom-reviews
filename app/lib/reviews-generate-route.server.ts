@@ -18,6 +18,7 @@ import type { ReviewPlacement } from "./constants";
 import { listStoreProducts } from "./product-search.server";
 import { createReview, getProductDetails, searchProducts } from "./reviews.server";
 import { createShopifyFilesFromUrls } from "./upload.server";
+import type { AiCityMode } from "./ai-country-cities";
 import {
   GENERATE_HTTP_CHUNK_SIZE,
   type GenerateLoaderData,
@@ -25,6 +26,13 @@ import {
   type ProductLoadResult,
   type SearchProductsResult,
 } from "./reviews-generate.shared";
+
+function parseCityMode(form: FormData): AiCityMode {
+  const mode = String(form.get("cityMode") || "").trim();
+  if (mode === "random" || mode === "fixed" || mode === "none") return mode;
+  const city = String(form.get("city") || "").trim();
+  return city ? "fixed" : "random";
+}
 
 function parseGenerateInput(form: FormData) {
   return {
@@ -36,6 +44,7 @@ function parseGenerateInput(form: FormData) {
     tone: String(form.get("tone") || DEFAULT_AI_TONE),
     locale: String(form.get("locale") || "pt-BR"),
     country: String(form.get("country") || "random"),
+    cityMode: parseCityMode(form),
     city: String(form.get("city") || "").trim(),
     ratingMin: parseFloat(String(form.get("ratingMin") || "4.6")) || 4.6,
     ratingMax: parseFloat(String(form.get("ratingMax") || "5")) || 5,
@@ -277,6 +286,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       tone: payload.tone,
       locale: payload.locale,
       country: payload.country,
+      cityMode: payload.cityMode,
       city: payload.city,
       ratingMin,
       ratingMax,

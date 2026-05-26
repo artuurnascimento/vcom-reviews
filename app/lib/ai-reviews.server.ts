@@ -3,6 +3,10 @@ import type {
   GeneratedAiReview,
 } from "./ai-review-options";
 import {
+  resolveCitiesForReviews,
+  type AiCityMode,
+} from "./ai-country-cities";
+import {
   clampRating,
   distributeRatings,
   getAiTonePromptBlock,
@@ -131,11 +135,19 @@ function resolveProductType(input: AiReviewGenerateInput): string {
   return input.productType;
 }
 
+function resolveCityMode(input: AiReviewGenerateInput): AiCityMode {
+  if (input.cityMode === "random" || input.cityMode === "fixed" || input.cityMode === "none") {
+    return input.cityMode;
+  }
+  return input.city?.trim() ? "fixed" : "random";
+}
+
 function buildPrompt(
   input: AiReviewGenerateInput,
   hasImages: boolean,
   targetRatings: number[],
   batch?: { index: number; total: number },
+  reviewCities?: string[],
 ): string {
   const productType = resolveProductType(input);
   const toneBlock = getAiTonePromptBlock(input.tone, input.locale, input.placement);
@@ -159,19 +171,43 @@ function buildPrompt(
   const personaParts: string[] = [];
   if (input.gender !== "random") personaParts.push(`gênero ${input.gender}`);
   if (input.ageRange !== "random") personaParts.push(`idade ${input.ageRange}`);
-  if (input.country !== "random") {
-    const loc = input.city?.trim()
-      ? `${input.city.trim()}, ${input.country}`
-      : input.country;
-    personaParts.push(`localização ${loc}`);
-  } else if (input.city?.trim()) {
-    personaParts.push(`cidade ${input.city.trim()}`);
+
+  const hasPerReviewCities = reviewCities?.some((c) => c.trim()) ?? false;
+  const cityMode = resolveCityMode(input);
+
+  if (!hasPerReviewCities) {
+    if (input.country !== "random") {
+      const loc =
+        cityMode === "fixed" && input.city?.trim()
+          ? `${input.city.trim()}, ${input.country}`
+          : input.country;
+      personaParts.push(`localização ${loc}`);
+    } else if (cityMode === "fixed" && input.city?.trim()) {
+      personaParts.push(`cidade ${input.city.trim()}`);
+    }
   }
 
   const persona =
     personaParts.length > 0
       ? personaParts.join(", ")
       : "persona variada (gênero, idade e local aleatórios)";
+
+  const cityLines =
+    hasPerReviewCities && reviewCities
+      ? reviewCities
+          .map((cityName, i) => {
+            if (!cityName.trim()) return "";
+            const place =
+              input.country !== "random" ? `${cityName}, ${input.country}` : cityName;
+            return `- Avaliação ${i + 1}: cliente de ${place} (pode citar a cidade no texto de forma natural).`;
+          })
+          .filter(Boolean)
+          .join("\n")
+      : "";
+
+  const cityBlock = cityLines
+    ? `\nCidades (uma por avaliação — use exatamente a indicada, variando o tom):\n${cityLines}\n`
+    : "";
 
   const ratingLines = targetRatings
     .map((r, i) => `- Avaliação ${i + 1}: nota ${r.toFixed(1)}`)
@@ -205,7 +241,7 @@ ${shopLine}
 ${descriptionLine ? `- ${descriptionLine}` : ""}
 ${placementLine}
 - Idioma: ${input.locale}
-- Persona do autor: ${persona}${batchLine}
+- Persona do autor: ${persona}${batchLine}${cityBlock}
 
 ${toneBlock}
 - Faixa de notas: ${min.toFixed(1)} a ${max.toFixed(1)} (escala 0,5–5,0)
@@ -429,6 +465,13 @@ async function generateReviewsWithGeminiBatch(
 ): Promise<GeneratedAiReview[]> {
   const count = Math.min(Math.max(1, input.count), MAX_REVIEWS_PER_GEMINI_CALL);
   const payload = { ...input, count };
+  const cityMode = resolveCityMode(input);
+  const reviewCities = resolveCitiesForReviews(
+    count,
+    input.country,
+    cityMode,
+    input.city,
+  );
   const targetRatings =
     options.targetRatings ??
     distributeRatings(count, input.ratingMin, input.ratingMax);
@@ -441,7 +484,15 @@ async function generateReviewsWithGeminiBatch(
   const apiKey = getApiKey();
   const parts: Array<GeminiTextPart | GeminiInlinePart> = [
     ...visionParts,
-    { text: buildPrompt(payload, hasImages, targetRatings, options.batch) },
+    {
+      text: buildPrompt(
+        payload,
+        hasImages,
+        targetRatings,
+        options.batch,
+        reviewCities,
+      ),
+    },
   ];
 
   const models = getGeminiModelCandidates();

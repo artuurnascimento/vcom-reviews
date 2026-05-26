@@ -44,6 +44,10 @@ import {
   getLocaleSelectOptions,
   labelForOption,
 } from "../lib/ai-review-options";
+import {
+  getCityModeLabel,
+  type AiCityMode,
+} from "../lib/ai-country-cities";
 import type { ReviewPlacement } from "../lib/constants";
 import {
   GENERATE_HTTP_CHUNK_SIZE,
@@ -150,6 +154,7 @@ export default function GenerateReviewsPage() {
   const [tone, setTone] = useState(DEFAULT_AI_TONE);
   const [locale, setLocale] = useState("pt-BR");
   const [country, setCountry] = useState("Brasil");
+  const [cityMode, setCityMode] = useState<AiCityMode>("random");
   const [city, setCity] = useState("");
   const [ratingMin, setRatingMin] = useState(4.6);
   const [ratingMax, setRatingMax] = useState(5);
@@ -270,6 +275,18 @@ export default function GenerateReviewsPage() {
 
   const localeOptions = useMemo(() => getLocaleSelectOptions(country), [country]);
 
+  const cityModeOptions = useMemo(
+    () => [
+      {
+        label: getCityModeLabel(country, "random"),
+        value: "random",
+      },
+      { label: getCityModeLabel(country, "fixed"), value: "fixed" },
+      { label: getCityModeLabel(country, "none"), value: "none" },
+    ],
+    [country],
+  );
+
   const buildFormData = useCallback(
     (intent: "generate" | "save", generateCountOverride?: number) => {
       const fd = new FormData();
@@ -282,7 +299,8 @@ export default function GenerateReviewsPage() {
       fd.set("tone", tone);
       fd.set("locale", locale);
       fd.set("country", country);
-      fd.set("city", city);
+      fd.set("cityMode", cityMode);
+      fd.set("city", cityMode === "fixed" ? city : "");
       fd.set("ratingMin", String(ratingMin));
       fd.set("ratingMax", String(ratingMax));
       fd.set("count", String(generateCountOverride ?? count));
@@ -305,6 +323,7 @@ export default function GenerateReviewsPage() {
       tone,
       locale,
       country,
+      cityMode,
       city,
       ratingMin,
       ratingMax,
@@ -581,13 +600,34 @@ export default function GenerateReviewsPage() {
           autoComplete="off"
         />
       ) : null}
-      <TextField
-        label="Cidade (opcional)"
-        value={city}
-        onChange={setCity}
-        placeholder="Ex.: São Paulo, Lisboa, Miami"
-        autoComplete="off"
+      <Select
+        label="Cidade"
+        options={cityModeOptions}
+        value={cityMode}
+        onChange={(value) => setCityMode(value as AiCityMode)}
+        helpText={
+          cityMode === "random"
+            ? country === "random"
+              ? "Cada avaliação pode usar uma cidade de um país diferente."
+              : `Sorteia cidades reais de ${country} (ex.: Paris, Lyon…).`
+            : cityMode === "fixed"
+              ? "Todas as avaliações usam a mesma cidade."
+              : "A IA não precisa citar cidade no texto."
+        }
       />
+      {cityMode === "fixed" ? (
+        <TextField
+          label="Nome da cidade"
+          value={city}
+          onChange={setCity}
+          placeholder={
+            country === "random"
+              ? "Ex.: São Paulo, Paris, Miami"
+              : `Ex.: cidade em ${country}`
+          }
+          autoComplete="off"
+        />
+      ) : null}
       <Box padding="400" borderRadius="300" background="bg-surface-secondary" borderWidth="025" borderColor="border">
         <RatingRangeField
           min={ratingMin}

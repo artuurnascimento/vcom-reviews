@@ -267,6 +267,8 @@ export type AiReviewGenerateInput = {
   tone: string;
   locale: string;
   country: string;
+  /** random = cidades do país; fixed = city; none = sem cidade */
+  cityMode?: "random" | "fixed" | "none";
   city: string;
   ratingMin: number;
   ratingMax: number;
