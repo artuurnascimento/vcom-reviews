@@ -47,6 +47,37 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function getGeminiBatchConcurrency(hasVision: boolean): number {
+  const raw = parseInt(process.env.GEMINI_BATCH_CONCURRENCY || "", 10);
+  const configured = Number.isFinite(raw) && raw > 0 ? raw : hasVision ? 2 : 5;
+  return Math.min(8, Math.max(1, configured));
+}
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  if (items.length === 0) return [];
+
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (true) {
+      const index = nextIndex++;
+      if (index >= items.length) return;
+      results[index] = await fn(items[index], index);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, () => worker()),
+  );
+
+  return results;
+}
+
 export function formatGeminiErrorMessage(message: string): string {
   const retryMatch = message.match(/retry in ([\d.]+)s/i);
   const retryHint = retryMatch
@@ -219,12 +250,10 @@ async function fetchImageInlinePart(url: string): Promise<GeminiInlinePart | nul
 }
 
 async function loadVisionParts(urls: string[]): Promise<GeminiInlinePart[]> {
-  const parts: GeminiInlinePart[] = [];
-  for (const url of urls.slice(0, MAX_IMAGES_FOR_VISION)) {
-    const part = await fetchImageInlinePart(url);
-    if (part) parts.push(part);
-  }
-  return parts;
+  const settled = await Promise.all(
+    urls.slice(0, MAX_IMAGES_FOR_VISION).map((url) => fetchImageInlinePart(url)),
+  );
+  return settled.filter((part): part is GeminiInlinePart => part !== null);
 }
 
 function assignProductImages(
@@ -387,21 +416,32 @@ async function callGeminiWithRetries(
   throw lastError ?? new Error("Falha ao chamar a IA.");
 }
 
+type GeminiBatchOptions = {
+  batch?: { index: number; total: number };
+  targetRatings?: number[];
+  visionParts?: GeminiInlinePart[];
+  imageUrls?: string[];
+};
+
 async function generateReviewsWithGeminiBatch(
   input: AiReviewGenerateInput,
-  batch?: { index: number; total: number },
+  options: GeminiBatchOptions = {},
 ): Promise<GeneratedAiReview[]> {
   const count = Math.min(Math.max(1, input.count), MAX_REVIEWS_PER_GEMINI_CALL);
   const payload = { ...input, count };
-  const targetRatings = distributeRatings(count, input.ratingMin, input.ratingMax);
-  const imageUrls = (input.productImageUrls || []).filter(Boolean);
-  const visionParts = await loadVisionParts(imageUrls);
+  const targetRatings =
+    options.targetRatings ??
+    distributeRatings(count, input.ratingMin, input.ratingMax);
+  const imageUrls = (options.imageUrls ?? input.productImageUrls ?? []).filter(Boolean);
+  const visionParts =
+    options.visionParts ??
+    (imageUrls.length > 0 ? await loadVisionParts(imageUrls) : []);
   const hasImages = visionParts.length > 0;
 
   const apiKey = getApiKey();
   const parts: Array<GeminiTextPart | GeminiInlinePart> = [
     ...visionParts,
-    { text: buildPrompt(payload, hasImages, targetRatings, batch) },
+    { text: buildPrompt(payload, hasImages, targetRatings, options.batch) },
   ];
 
   const models = getGeminiModelCandidates();
@@ -451,21 +491,48 @@ export async function generateReviewsWithGemini(
   const total = Math.min(Math.max(1, input.count), MAX_REVIEWS_TOTAL);
   const batchSize = MAX_REVIEWS_PER_GEMINI_CALL;
   const totalBatches = Math.ceil(total / batchSize);
-  const all: GeneratedAiReview[] = [];
+  const allRatings = distributeRatings(total, input.ratingMin, input.ratingMax);
+  const imageUrls = (input.productImageUrls || []).filter(Boolean);
+  const visionParts =
+    imageUrls.length > 0 ? await loadVisionParts(imageUrls) : [];
+  const hasVision = visionParts.length > 0;
+  const concurrency = getGeminiBatchConcurrency(hasVision);
 
+  type BatchJob = {
+    count: number;
+    batch?: { index: number; total: number };
+    targetRatings: number[];
+  };
+
+  const jobs: BatchJob[] = [];
   for (let offset = 0; offset < total; offset += batchSize) {
     const batchCount = Math.min(batchSize, total - offset);
     const batchIndex = Math.floor(offset / batchSize) + 1;
-    const batch = await generateReviewsWithGeminiBatch(
-      { ...input, count: batchCount },
-      totalBatches > 1 ? { index: batchIndex, total: totalBatches } : undefined,
-    );
-    all.push(...batch);
-
-    if (offset + batchCount < total) {
-      await sleep(totalBatches > 5 ? 1_500 : 1_000);
-    }
+    jobs.push({
+      count: batchCount,
+      batch:
+        totalBatches > 1 ? { index: batchIndex, total: totalBatches } : undefined,
+      targetRatings: allRatings.slice(offset, offset + batchCount),
+    });
   }
 
-  return all;
+  if (jobs.length > 1) {
+    console.info(
+      `[vcom-reviews] Gemini parallel generate: ${total} reviews, ${jobs.length} batches, concurrency=${concurrency}`,
+    );
+  }
+
+  const batchResults = await mapWithConcurrency(jobs, concurrency, (job) =>
+    generateReviewsWithGeminiBatch(
+      { ...input, count: job.count },
+      {
+        batch: job.batch,
+        targetRatings: job.targetRatings,
+        visionParts,
+        imageUrls,
+      },
+    ),
+  );
+
+  return batchResults.flat();
 }

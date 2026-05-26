@@ -1,7 +1,7 @@
 /** Avaliações por chamada ao modelo (tamanho da resposta JSON). */
 export const MAX_REVIEWS_PER_GEMINI_CALL = 10;
-/** Total por clique em "Gerar avaliações" (várias chamadas em sequência). */
-export const MAX_REVIEWS_TOTAL = 100;
+/** Total por clique em "Gerar avaliações" (lotes paralelos no servidor). */
+export const MAX_REVIEWS_TOTAL = 200;
 
 export const AI_PRODUCT_TYPES = [
   { label: "Moda / vestuário", value: "moda" },

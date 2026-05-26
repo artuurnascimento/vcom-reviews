@@ -517,7 +517,7 @@ export default function GenerateReviewsPage() {
         min={1}
         max={MAX_REVIEWS_TOTAL}
         autoComplete="off"
-        helpText={`Até ${MAX_REVIEWS_TOTAL} por vez (${MAX_REVIEWS_PER_GEMINI_CALL} por chamada à API). Quantidades maiores levam mais tempo.`}
+        helpText={`Até ${MAX_REVIEWS_TOTAL} por vez — o servidor gera em lotes de ${MAX_REVIEWS_PER_GEMINI_CALL} em paralelo (mais rápido que antes). Com fotos do produto, desmarque “Analisar imagens” para acelerar lotes grandes.`}
       />
       <Checkbox
         label="Salvar como pendente (revisar antes de publicar)"
@@ -541,7 +541,7 @@ export default function GenerateReviewsPage() {
       primaryAction={{
         content: isGenerating
           ? parsedCount > MAX_REVIEWS_PER_GEMINI_CALL
-            ? `Gerando ${parsedCount}…`
+            ? `Gerando ${parsedCount} (paralelo)…`
             : "Gerando…"
           : "Gerar avaliações",
         onAction: handleGenerate,
@@ -573,6 +573,18 @@ export default function GenerateReviewsPage() {
             <Badge key={label}>{label}</Badge>
           ))}
         </InlineStack>
+
+        {parsedCount > 30 && !isGenerating ? (
+          <Banner tone="info" title="Geração em volume">
+            <p>
+              {parsedCount} avaliações serão geradas em{" "}
+              {Math.ceil(parsedCount / MAX_REVIEWS_PER_GEMINI_CALL)} lotes paralelos — costuma
+              levar cerca de 1–3 minutos. Para ir mais rápido: use{" "}
+              <strong>gemini-2.5-flash-lite</strong> no Railway e desative &quot;Analisar fotos&quot;
+              se não precisar de detalhes visuais.
+            </p>
+          </Banner>
+        ) : null}
 
         {!aiConfigured ? (
           <Banner tone="warning" title="Geração com IA indisponível">
