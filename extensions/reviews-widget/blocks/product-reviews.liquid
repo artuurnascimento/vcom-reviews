@@ -156,6 +156,8 @@
 {%- if all_reviews_primary == blank and all_reviews_legacy == blank -%}
   {%- assign use_proxy_reviews = true -%}
 {%- endif -%}
+{%- assign all_reviews = all_reviews_primary -%}
+{%- if all_reviews == blank -%}{%- assign all_reviews = all_reviews_legacy -%}{%- endif -%}
 
 {%- assign reviews_context = 'homepage' -%}
 {%- if ds == 'product' -%}
