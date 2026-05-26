@@ -102,54 +102,8 @@ async function publishDraftsForType(admin: AdminApi, type: string): Promise<numb
 export async function publishAllReviewMetaobjects(admin: AdminApi): Promise<{
   published: number;
 }> {
-  // Se publishable não estiver habilitado nas definições, as entradas podem continuar
-  // como DRAFT e não aparecerem na vitrine.
-  await ensureReviewDefinitionPublishable(admin, REVIEW_METAOBJECT_TYPE);
-  await ensureReviewDefinitionPublishable(admin, LEGACY_REVIEW_METAOBJECT_TYPE);
-
   let published = 0;
   published += await publishDraftsForType(admin, REVIEW_METAOBJECT_TYPE);
   published += await publishDraftsForType(admin, LEGACY_REVIEW_METAOBJECT_TYPE);
   return { published };
-}
-
-export async function ensureReviewDefinitionPublishable(
-  admin: AdminApi,
-  type: string,
-): Promise<void> {
-  const response = await admin.graphql(
-    `#graphql
-    query ReviewDefPublishable {
-      metaobjectDefinitionByType(type: "${type}") {
-        id
-        capabilities {
-          publishable {
-            enabled
-          }
-        }
-      }
-    }`,
-  );
-  const json = await response.json();
-  const def = json.data?.metaobjectDefinitionByType;
-  if (!def?.id) return;
-  if (def.capabilities?.publishable?.enabled) return;
-
-  const update = await admin.graphql(
-    `#graphql
-    mutation EnableReviewPublishable($id: ID!) {
-      metaobjectDefinitionUpdate(
-        id: $id
-        definition: { capabilities: { publishable: { enabled: true } } }
-      ) {
-        userErrors { message }
-      }
-    }`,
-    { variables: { id: def.id } },
-  );
-  const updateJson = await update.json();
-  const errors = updateJson.data?.metaobjectDefinitionUpdate?.userErrors || [];
-  if (errors.length) {
-    console.warn("[vcom-reviews] enable publishable on review definition", errors);
-  }
 }
