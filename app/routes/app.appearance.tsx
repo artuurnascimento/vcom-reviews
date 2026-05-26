@@ -26,7 +26,10 @@ import {
   saveStorefrontSettings,
 } from "../lib/storefront-settings.server";
 import { ensureFooterTrustpilotPublished } from "../lib/theme-footer-sync.server";
-import { buildFooterEmbedActivateUrl } from "../lib/theme-footer-embed.server";
+import {
+  buildFooterEmbedActivateUrl,
+  checkFooterTrustpilotAppEmbedActive,
+} from "../lib/theme-footer-embed.server";
 import {
   coerceStorefrontSettings,
   type StorefrontSettings,
@@ -54,14 +57,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     );
     const shopJson = await shopRes.json();
     const shopName = shopJson.data?.shop?.name ?? "Sua loja";
-    const footerPublish = settings.footer_trustpilot_show
-      ? await ensureFooterTrustpilotPublished(admin, session.shop, true)
+    const footerEmbedStatus = settings.footer_trustpilot_show
+      ? await checkFooterTrustpilotAppEmbedActive(admin)
       : null;
     return {
       settings,
       shopName,
       themeDeepLink: buildThemeEditorDeepLink(session.shop),
-      footerPublish,
+      footerEmbedStatus,
       footerEmbedActivateUrl: buildFooterEmbedActivateUrl(session.shop),
     };
   } catch (error) {
@@ -138,7 +141,7 @@ export default function AppearancePage() {
     shopName,
     themeDeepLink,
     loaderError,
-    footerPublish: loaderFooterPublish,
+    footerEmbedStatus: loaderFooterEmbedStatus,
     footerEmbedActivateUrl,
   } = loaderData;
   const actionData = useActionData<typeof action>();
@@ -184,23 +187,21 @@ export default function AppearancePage() {
           </Banner>
         ) : null}
 
-        {loaderFooterPublish && !loaderFooterPublish.ok ? (
+        {loaderFooterEmbedStatus && !loaderFooterEmbedStatus.ok ? (
           <Banner
             tone="critical"
-            title="Trustpilot no rodapé — ative no tema"
+            title="Trustpilot no rodapé — verifique o tema"
             action={{
-              content: "Ativar no Theme Editor",
+              content: "Abrir Theme Editor",
               url: footerEmbedActivateUrl,
               external: true,
             }}
           >
-            {loaderFooterPublish.errors.join(" · ")}
+            {loaderFooterEmbedStatus.errors.join(" · ")}
           </Banner>
-        ) : loaderFooterPublish?.published || loaderFooterPublish?.appEmbed.alreadyActive ? (
-          <Banner tone="success" title="Trustpilot publicado no tema">
-            App embed e arquivos do tema atualizados. Atualize a loja (F5).
-          </Banner>
-        ) : loaderFooterPublish && settings.footer_trustpilot_show ? (
+        ) : loaderFooterEmbedStatus &&
+          settings.footer_trustpilot_show &&
+          !loaderFooterEmbedStatus.alreadyActive ? (
           <Banner
             tone="warning"
             title="Ative o embed do app no tema"
@@ -238,8 +239,8 @@ export default function AppearancePage() {
                 </Banner>
               ) : null}
               {actionData.footerPublish?.published ? (
-                <Banner tone="info" title="Rodapé publicado no tema">
-                  Trustpilot ativado via app embed e/ou arquivos do tema.
+                <Banner tone="info" title="Trustpilot publicado no tema">
+                  App embed e arquivos do tema atualizados. Atualize a loja (F5).
                 </Banner>
               ) : null}
               {actionData.footerPublish && !actionData.footerPublish.ok ? (

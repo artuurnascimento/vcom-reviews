@@ -50,11 +50,9 @@ export async function ensureFooterTrustpilotPublished(
     ensureFooterTrustpilotAppEmbed(admin, shopDomain, true),
   ]);
 
+  /** Só true quando algo mudou nesta execução (não quando o embed já estava ativo). */
   const published =
-    appEmbed.activated ||
-    appEmbed.alreadyActive ||
-    footerGroup.updated ||
-    themeFiles.updated;
+    appEmbed.activated || footerGroup.updated || themeFiles.updated;
 
   const ok = appEmbed.ok || footerGroup.ok || themeFiles.ok;
   const errors = [

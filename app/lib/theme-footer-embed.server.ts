@@ -189,6 +189,33 @@ async function writeSettingsData(
   return { ok: true, errors: [], accessDenied: false };
 }
 
+/** Lê o tema sem alterar — para avisos no loader (sem republicar a cada visita). */
+export async function checkFooterTrustpilotAppEmbedActive(
+  admin: AdminApi,
+): Promise<{ ok: boolean; alreadyActive: boolean; errors: string[] }> {
+  const themeId = await getMainThemeId(admin);
+  if (!themeId) {
+    return { ok: false, alreadyActive: false, errors: ["Tema MAIN não encontrado."] };
+  }
+
+  const blockType = appEmbedBlockType();
+  const { raw, errors: readErrors } = await readSettingsData(admin, themeId);
+  if (!raw) {
+    return {
+      ok: false,
+      alreadyActive: false,
+      errors: readErrors.length ? readErrors : ["settings_data.json não encontrado."],
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(stripSettingsDataComments(raw)) as Record<string, unknown>;
+    return { ok: true, alreadyActive: isEmbedActive(parsed, blockType), errors: [] };
+  } catch {
+    return { ok: false, alreadyActive: false, errors: ["settings_data.json inválido no tema."] };
+  }
+}
+
 /** Ativa o app embed no tema publicado (settings_data.json). */
 export async function ensureFooterTrustpilotAppEmbed(
   admin: AdminApi,
