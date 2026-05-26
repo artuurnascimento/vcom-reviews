@@ -233,9 +233,13 @@
   {%- assign stats_home_count = vcom_stats.homepage_count | default: 0 -%}
   {%- assign stats_home_avg = vcom_stats.homepage_avg | default: 0 -%}
   {%- if stats_home_count > 0 -%}
+    {%- assign liquid_home_count = review_count -%}
     {%- assign review_count = stats_home_count -%}
     {%- assign rating_avg = stats_home_avg | plus: 0.0 -%}
     {%- assign has_reviews = true -%}
+    {%- if stats_home_count > liquid_home_count -%}
+      {%- assign use_proxy_reviews = true -%}
+    {%- endif -%}
   {%- endif -%}
 {%- endif -%}
 {%- if s_layout == 'trustpilot_carousel' or s_layout == 'trustpilot_grid' or s_layout == 'trustpilot_mosaic' -%}
