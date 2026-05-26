@@ -678,9 +678,7 @@
             aria-label="Paginação das avaliações"
             hidden
           >
-            <button type="button" class="product-reviews__pag-btn product-reviews__pag-prev" aria-label="Página anterior" disabled>Anterior</button>
-            <span class="product-reviews__pag-status"><span data-current>1</span> / <span data-total>1</span></span>
-            <button type="button" class="product-reviews__pag-btn product-reviews__pag-next" aria-label="Próxima página" disabled>Próxima</button>
+            <div class="product-reviews__pagination-dots" data-mobile-dots></div>
           </nav>
           <script>
             !function(){
@@ -694,17 +692,17 @@
               var proxyUrl=g.getAttribute('data-proxy-url')||'';
               var totalCount=parseInt(g.getAttribute('data-review-count')||'0',10)||0;
               var prevBtns=[],nextBtns=[],statusEls=[];
+              var mobileDotsWrap=pMobile.querySelector('[data-mobile-dots]');
               function collectNav(){
                 prevBtns=[];nextBtns=[];statusEls=[];
-                [pMobile,pDesktop].forEach(function(nav){
-                  if(!nav)return;
-                  var prev=nav.querySelector('.product-reviews__nav-prev,.product-reviews__pag-prev');
-                  var next=nav.querySelector('.product-reviews__nav-next,.product-reviews__pag-next');
-                  var status=nav.querySelector('.product-reviews__nav-status,.product-reviews__pag-status');
+                if(pDesktop){
+                  var prev=pDesktop.querySelector('.product-reviews__nav-prev');
+                  var next=pDesktop.querySelector('.product-reviews__nav-next');
+                  var status=pDesktop.querySelector('.product-reviews__nav-status');
                   if(prev)prevBtns.push(prev);
                   if(next)nextBtns.push(next);
                   if(status)statusEls.push(status);
-                });
+                }
               }
               collectNav();
               var colsD=parseInt(g.getAttribute('data-cols-desktop'),10)||3;
@@ -723,6 +721,20 @@
                 var y=el.getBoundingClientRect().top+window.pageYOffset-12;
                 window.scrollTo({top:y,behavior:'smooth'});
               }
+              function renderMobileDots(pages,active){
+                if(!mobileDotsWrap)return;
+                mobileDotsWrap.innerHTML='';
+                for(var page=1;page<=pages;page++){
+                  var dot=document.createElement('button');
+                  dot.type='button';
+                  dot.className='product-reviews__pagination-dot';
+                  dot.setAttribute('data-page',String(page));
+                  dot.setAttribute('aria-label','Página '+page);
+                  if(page===active)dot.classList.add('is-active');
+                  dot.addEventListener('click',function(){go(this.getAttribute('data-page'),true)});
+                  mobileDotsWrap.appendChild(dot);
+                }
+              }
               function updatePaginationUI(pages,active){
                 totalPages=pages;
                 currentPage=active;
@@ -735,7 +747,8 @@
                   pDesktop.hidden=!show;
                   pDesktop.classList.toggle('is-visible',show&&isDesktop());
                 }
-                if(!show)return;
+                if(!show){if(mobileDotsWrap)mobileDotsWrap.innerHTML='';return}
+                renderMobileDots(pages,active);
                 statusEls.forEach(function(el){
                   var cur=el.querySelector('[data-current]');
                   var tot=el.querySelector('[data-total]');
@@ -831,8 +844,8 @@
                 updatePaginationUI(pages,Math.min(currentPage,pages));
                 goLocal(Math.min(currentPage,pages),false);
               }
-              function onPrev(){go(currentPage-1,!isDesktop())}
-              function onNext(){go(currentPage+1,!isDesktop())}
+              function onPrev(){go(currentPage-1,false)}
+              function onNext(){go(currentPage+1,false)}
               prevBtns.forEach(function(btn){btn.addEventListener('click',onPrev)});
               nextBtns.forEach(function(btn){btn.addEventListener('click',onNext)});
               if(useProxy&&proxyUrl&&totalCount>0){

@@ -56,8 +56,7 @@
   flex-shrink: 0;
 }
 
-.vcom-reviews-app-block .product-reviews__nav-btn,
-.vcom-reviews-app-block .product-reviews__pag-btn {
+.vcom-reviews-app-block .product-reviews__nav-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -72,30 +71,18 @@
   transition: background 0.2s, border-color 0.2s, opacity 0.2s;
 }
 
-.vcom-reviews-app-block .product-reviews__pag-btn {
-  width: auto;
-  min-width: 88px;
-  height: 40px;
-  padding: 0 16px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-}
-
 .vcom-reviews-app-block .product-reviews__nav-btn:hover:not(:disabled),
-.vcom-reviews-app-block .product-reviews__pag-btn:hover:not(:disabled) {
+.vcom-reviews-app-block .product-reviews__pagination-dot:hover:not(.is-active) {
   background: rgba(0, 0, 0, 0.04);
   border-color: rgba(0, 0, 0, 0.2);
 }
 
-.vcom-reviews-app-block .product-reviews__nav-btn:disabled,
-.vcom-reviews-app-block .product-reviews__pag-btn:disabled {
+.vcom-reviews-app-block .product-reviews__nav-btn:disabled {
   opacity: 0.35;
   cursor: not-allowed;
 }
 
-.vcom-reviews-app-block .product-reviews__nav-status,
-.vcom-reviews-app-block .product-reviews__pag-status {
+.vcom-reviews-app-block .product-reviews__nav-status {
   font-size: 13px;
   font-weight: 600;
   color: #6b6b6b;
@@ -108,6 +95,33 @@
   justify-content: center;
   margin-top: 20px;
   flex-wrap: wrap;
+}
+
+.vcom-reviews-app-block .product-reviews__pagination-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.vcom-reviews-app-block .product-reviews__pagination-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  background: #fff;
+  color: #555;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.vcom-reviews-app-block .product-reviews__pagination-dot.is-active {
+  background: #1d8a42;
+  border-color: #1d8a42;
+  color: #fff;
 }
 
 @media (min-width: 992px) {
