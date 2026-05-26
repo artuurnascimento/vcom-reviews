@@ -43,12 +43,13 @@ import {
   labelForOption,
 } from "../lib/ai-review-options";
 import type { ReviewPlacement } from "../lib/constants";
-import type {
-  GenerateLoaderData,
-  GenerateResult,
-  ProductLoadResult,
-  ProductPreview,
-  SearchProductsResult,
+import {
+  isGenerateSuccess,
+  productPreviewFromSearchRow,
+  type GenerateLoaderData,
+  type GenerateResult,
+  type ProductPreview,
+  type SearchProductsResult,
 } from "../lib/reviews-generate.shared";
 import { AiReviewPreviewCard } from "../components/AiReviewPreviewCard";
 import {
@@ -107,9 +108,8 @@ export default function GenerateReviewsPage() {
     productsLoadError,
   } = useLoaderData<GenerateLoaderData>();
   const actionData = useActionData<GenerateResult>();
-  const generateFetcher = useEmbeddedFetcher<GenerateResult>();
-  const productFetcher = useEmbeddedFetcher<ProductLoadResult>();
-  const searchFetcher = useEmbeddedFetcher<SearchProductsResult>();
+  const generateFetcher = useEmbeddedFetcher<GenerateResult>("vcom-generate-reviews");
+  const searchFetcher = useEmbeddedFetcher<SearchProductsResult>("vcom-search-products");
   const saveSubmit = useEmbeddedSubmit();
   const generateAction = paths.reviewsGenerate;
 
@@ -121,7 +121,6 @@ export default function GenerateReviewsPage() {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [selectedProductTitle, setSelectedProductTitle] = useState("");
   const lastRemoteQuery = useRef("");
-  const loadedProductIdRef = useRef("");
 
   const [productType, setProductType] = useState("moda");
   const [customProductType, setCustomProductType] = useState("");
@@ -143,18 +142,17 @@ export default function GenerateReviewsPage() {
   const [preview, setPreview] = useState<GeneratedAiReview[]>([]);
   const [productPreview, setProductPreview] = useState<ProductPreview | null>(null);
 
-  const generateResult =
-    generateFetcher.data && "ok" in generateFetcher.data && "reviews" in generateFetcher.data
-      ? (generateFetcher.data as GenerateResult)
-      : actionData && "ok" in actionData && "reviews" in actionData
-        ? (actionData as GenerateResult)
-        : null;
+  const generateResult = isGenerateSuccess(generateFetcher.data)
+    ? generateFetcher.data
+    : isGenerateSuccess(actionData)
+      ? actionData
+      : null;
 
   useEffect(() => {
-    if (generateResult?.ok) {
-      setPreview(generateResult.reviews);
+    if (isGenerateSuccess(generateFetcher.data)) {
+      setPreview(generateFetcher.data.reviews);
     }
-  }, [generateResult]);
+  }, [generateFetcher.data]);
 
   const catalogProducts = useMemo(() => initialProducts ?? [], [initialProducts]);
 
@@ -207,59 +205,31 @@ export default function GenerateReviewsPage() {
     }
   }, [searchFetcher.data]);
 
-  useEffect(() => {
-    if (!productId) {
-      loadedProductIdRef.current = "";
-      setProductPreview(null);
-      return;
+  const applyShopifyProductType = useCallback((shopifyType: string) => {
+    if (!shopifyType) return;
+    const normalized = shopifyType.toLowerCase();
+    const match = AI_PRODUCT_TYPES.find(
+      (t) => normalized.includes(t.value) || t.label.toLowerCase().includes(normalized),
+    );
+    if (match && match.value !== "outro") {
+      setProductType(match.value);
     }
-    if (loadedProductIdRef.current === productId) return;
-
-    loadedProductIdRef.current = productId;
-    const fd = new FormData();
-    fd.set("intent", "loadProduct");
-    fd.set("productId", productId);
-    productFetcher.submit(fd, { method: "post", action: generateAction });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productId, generateAction]);
-
-  useEffect(() => {
-    const data = productFetcher.data as ProductLoadResult | undefined;
-    if (!data?.ok || !data.product) {
-      if (data?.ok && !data.product) setProductPreview(null);
-      return;
-    }
-    if (data.product.id !== productId) return;
-
-    setProductPreview(data.product);
-    setSelectedProductTitle(data.product.title);
-    if (data.product.productType) {
-      const shopifyType = data.product.productType.toLowerCase();
-      const match = AI_PRODUCT_TYPES.find(
-        (t) => shopifyType.includes(t.value) || t.label.toLowerCase().includes(shopifyType),
-      );
-      if (match && match.value !== "outro") {
-        setProductType(match.value);
-      }
-    }
-  }, [productFetcher.data, productId]);
-
-  const handleSelectProduct = useCallback((product: ProductSearchResult) => {
-    setProductId(product.id);
-    setSelectedProductTitle(product.title);
-    setSearchQuery("");
-    setRemoteSearchResults(null);
-    lastRemoteQuery.current = "";
-    setPreview([]);
   }, []);
 
+  const handleSelectProduct = useCallback(
+    (product: ProductSearchResult) => {
+      setProductId(product.id);
+      setSelectedProductTitle(product.title);
+      setProductPreview(productPreviewFromSearchRow(product));
+      applyShopifyProductType(product.productType);
+      setPreview([]);
+    },
+    [applyShopifyProductType],
+  );
+
   const handleClearProduct = useCallback(() => {
-    loadedProductIdRef.current = "";
     setProductId("");
     setSelectedProductTitle("");
-    setSearchQuery("");
-    setRemoteSearchResults(null);
-    lastRemoteQuery.current = "";
     setProductPreview(null);
     setPreview([]);
   }, []);
@@ -321,7 +291,7 @@ export default function GenerateReviewsPage() {
 
   const handleGenerate = useCallback(() => {
     generateFetcher.submit(buildFormData("generate"), { method: "post" });
-  }, [generateFetcher, buildFormData]);
+  }, [generateFetcher.submit, buildFormData]);
 
   const handleSave = useCallback(() => {
     saveSubmit(buildFormData("save"), { method: "post" });
@@ -343,7 +313,6 @@ export default function GenerateReviewsPage() {
   );
 
   const isGenerating = generateFetcher.state !== "idle";
-  const isLoadingProduct = productFetcher.state !== "idle" && Boolean(productId);
   const isSearching = searchFetcher.state !== "idle";
 
   const generateError =
@@ -425,7 +394,6 @@ export default function GenerateReviewsPage() {
       </Text>
       <ProductHeroCard
         product={productPreview}
-        loading={isLoadingProduct}
         onChangeProduct={handleClearProduct}
         emptyHint={
           isHomepage

@@ -34,8 +34,8 @@ export function useEmbeddedSubmit() {
   );
 }
 
-export function useEmbeddedFetcher<T = unknown>() {
-  const fetcher = useFetcher<T>();
+export function useEmbeddedFetcher<T = unknown>(key?: string) {
+  const fetcher = useFetcher<T>(key ? { key } : undefined);
   const embedAction = useEmbedAction();
 
   const submit = useCallback(
@@ -43,22 +43,22 @@ export function useEmbeddedFetcher<T = unknown>() {
       target: Parameters<typeof fetcher.submit>[0],
       options?: FetcherSubmitOptions,
     ) => {
-      fetcher.submit(target, {
+      return fetcher.submit(target, {
         ...options,
         action: embedAction(options?.action),
       });
     },
-    [fetcher, embedAction],
+    [fetcher.submit, embedAction],
   );
 
   const load = useCallback(
     (href: string) => {
-      fetcher.load(embedAction(href));
+      return fetcher.load(embedAction(href));
     },
-    [fetcher, embedAction],
+    [fetcher.load, embedAction],
   );
 
-  return Object.assign(fetcher, { submit, load });
+  return { ...fetcher, submit, load };
 }
 
 /** Mantém parâmetros de sessão do Shopify Admin em links internos. */

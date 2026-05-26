@@ -12,6 +12,22 @@ export type ProductPreview = {
   images: Array<{ url: string; altText: string }>;
 };
 
+export function productPreviewFromSearchRow(
+  product: ProductSearchResult,
+): ProductPreview {
+  return {
+    id: product.id,
+    title: product.title,
+    description: "",
+    productType: product.productType,
+    vendor: "",
+    tags: [],
+    images: product.imageUrl
+      ? [{ url: product.imageUrl, altText: product.imageAlt || product.title }]
+      : [],
+  };
+}
+
 export type GenerateSuccess = {
   ok: true;
   reviews: GeneratedAiReview[];
@@ -25,6 +41,15 @@ export type GenerateSuccess = {
 
 export type GenerateError = { ok: false; error: string };
 export type GenerateResult = GenerateSuccess | GenerateError;
+
+export function isGenerateSuccess(data: unknown): data is GenerateSuccess {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    (data as GenerateSuccess).ok === true &&
+    Array.isArray((data as GenerateSuccess).reviews)
+  );
+}
 
 export type ProductLoadResult =
   | { ok: true; product: ProductPreview | null }
