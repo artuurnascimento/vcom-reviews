@@ -2,25 +2,11 @@ import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 import { listAllReviews, getFileImageUrls } from "../lib/reviews.server";
-import { publishAllReviewMetaobjects } from "../lib/metaobject-publish.server";
 import type { ReviewPlacement } from "../lib/constants";
-
-let lastPublishAtMs = 0;
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
     const { admin } = await authenticate.public.appProxy(request);
-    const now = Date.now();
-    // Garante que as reviews existentes estejam como ACTIVE na vitrine.
-    // (Quando publishable está habilitado, itens DRAFT não aparecem no storefront.)
-    if (now - lastPublishAtMs > 5 * 60_000) {
-      lastPublishAtMs = now;
-      try {
-        await publishAllReviewMetaobjects(admin);
-      } catch (e) {
-        console.warn("[vcom-reviews] publishAllReviewMetaobjects failed", e);
-      }
-    }
 
     const url = new URL(request.url);
     const placement = (url.searchParams.get("placement") || "homepage") as ReviewPlacement;
