@@ -1,3 +1,4 @@
+import { ratingToDistributionBucket } from "./ai-review-options";
 import type { ReviewRecord } from "./constants";
 import { REVIEW_METAOBJECT_TYPE } from "./constants";
 import { listPendingReviews, listReviews } from "./reviews.server";
@@ -29,8 +30,7 @@ export async function getDashboardStats(admin: AdminApi): Promise<DashboardStats
   const sum = approved.reduce((a, r) => a + r.rating, 0);
   const buckets: DashboardStats["ratingBuckets"] = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   for (const r of approved) {
-    const bucket = Math.min(5, Math.max(1, Math.round(r.rating))) as 1 | 2 | 3 | 4 | 5;
-    buckets[bucket] += 1;
+    buckets[ratingToDistributionBucket(r.rating)] += 1;
   }
 
   return {

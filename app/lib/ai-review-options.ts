@@ -295,6 +295,13 @@ export function clampRating(value: number): number {
   return Math.min(5, Math.max(0.5, Math.round(value * 10) / 10));
 }
 
+/** Barra 1–5 no painel: 4,6 e 4,9 contam como 4 estrelas; só 5,0 conta como 5. */
+export function ratingToDistributionBucket(rating: number): 1 | 2 | 3 | 4 | 5 {
+  const n = clampRating(rating);
+  if (n >= 5) return 5;
+  return Math.max(1, Math.floor(n)) as 1 | 2 | 3 | 4;
+}
+
 export function normalizeRatingRange(
   min: number,
   max: number,

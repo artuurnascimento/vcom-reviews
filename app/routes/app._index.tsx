@@ -193,6 +193,11 @@ export default function AppHome() {
                   <Text as="h2" variant="headingMd">
                     Distribuição de notas
                   </Text>
+                  {stats.totalReviews > 0 ? (
+                    <Text as="p" variant="bodySm" tone="subdued">
+                      Notas como 4,6 ou 4,9 entram na barra de 4 estrelas; só 5,0 na de 5.
+                    </Text>
+                  ) : null}
                   {stats.totalReviews === 0 ? (
                     <Text as="p" tone="subdued">
                       Sem dados ainda.
