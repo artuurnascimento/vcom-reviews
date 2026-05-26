@@ -15,6 +15,11 @@ import {
   type ReviewStatus,
 } from "./constants";
 import { ensureReviewDefinitionReady } from "./metaobject-setup.server";
+import { syncStorefrontReviewStats } from "./storefront-stats.server";
+
+function scheduleStorefrontStatsSync(admin: AdminApi) {
+  void syncStorefrontReviewStats(admin);
+}
 
 function parseStatus(raw: string | null | undefined): ReviewStatus {
   if (raw === "pending" || raw === "rejected") return raw;
@@ -206,6 +211,7 @@ export async function approveReview(admin: AdminApi, id: string) {
   if (review.status === "approved") return id;
 
   await updateMetaobjectStatus(admin, id, "approved", review);
+  scheduleStorefrontStatsSync(admin);
   return id;
 }
 
@@ -213,6 +219,7 @@ export async function rejectReview(admin: AdminApi, id: string) {
   const review = await getReview(admin, id);
   if (!review) throw new Error("Avaliação não encontrada.");
   await updateMetaobjectStatus(admin, id, "rejected", review);
+  scheduleStorefrontStatsSync(admin);
   return id;
 }
 
@@ -279,6 +286,7 @@ export async function updateReview(
   const status = data.status ?? existing.status;
   const fields = buildMetaobjectFields({ ...data, status });
   await metaobjectUpdate(admin, id, fields);
+  scheduleStorefrontStatsSync(admin);
   return id;
 }
 
@@ -293,6 +301,7 @@ export async function deleteReview(admin: AdminApi, id: string) {
     }`,
     { variables: { id } },
   );
+  scheduleStorefrontStatsSync(admin);
 }
 
 async function createMetaobject(admin: AdminApi, data: ReviewFormData) {
@@ -319,7 +328,9 @@ async function createMetaobject(admin: AdminApi, data: ReviewFormData) {
   if (userErrors.length) {
     throw new Error(userErrors.map((e: { message: string }) => e.message).join(", "));
   }
-  return json.data?.metaobjectCreate?.metaobject?.id as string;
+  const id = json.data?.metaobjectCreate?.metaobject?.id as string;
+  scheduleStorefrontStatsSync(admin);
+  return id;
 }
 
 async function metaobjectUpdate(

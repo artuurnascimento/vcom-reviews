@@ -139,11 +139,21 @@
 {%- assign s_footer_text_color = cfg.footer_text_color | default: '#000000' -%}
 {%- assign s_layout = cfg.layout | default: 'trustpilot_carousel' -%}
 
-{%- comment -%} Não usar {% render %} aqui — variáveis do snippet não voltam ao bloco. {%- endcomment -%}
+{%- comment -%} Usa o tipo com MAIS entradas (review vs $app:review). elsif ignorava o legado. {%- endcomment -%}
+{%- assign mo_count_review = 0 -%}
+{%- assign mo_count_app = 0 -%}
+{%- if shop.metaobjects.review -%}
+  {%- assign mo_count_review = shop.metaobjects.review.values_count | default: 0 -%}
+{%- endif -%}
+{%- if shop.metaobjects["$app:review"] -%}
+  {%- assign mo_count_app = shop.metaobjects["$app:review"].values_count | default: 0 -%}
+{%- endif -%}
 {%- assign all_reviews = nil -%}
 {%- assign use_proxy_reviews = false -%}
 {%- assign vcom_review_mo = nil -%}
-{%- if shop.metaobjects.review -%}
+{%- if mo_count_app > mo_count_review and shop.metaobjects["$app:review"] -%}
+  {%- assign vcom_review_mo = shop.metaobjects["$app:review"] -%}
+{%- elsif shop.metaobjects.review -%}
   {%- assign vcom_review_mo = shop.metaobjects.review -%}
 {%- elsif shop.metaobjects["$app:review"] -%}
   {%- assign vcom_review_mo = shop.metaobjects["$app:review"] -%}
@@ -151,7 +161,7 @@
   {%- assign use_proxy_reviews = true -%}
 {%- endif -%}
 {%- if vcom_review_mo -%}
-  {%- paginate vcom_review_mo.values by 5000 -%}
+  {%- paginate vcom_review_mo.values by 250 -%}
     {%- assign all_reviews = vcom_review_mo.values -%}
   {%- endpaginate -%}
 {%- endif -%}
@@ -215,6 +225,16 @@
     {%- assign has_reviews = true -%}
   {%- else -%}
     {%- assign has_reviews = false -%}
+  {%- endif -%}
+{%- endif -%}
+{%- assign vcom_stats = shop.metafields.vcom_reviews.storefront_stats.value -%}
+{%- if vcom_stats != blank -%}
+  {%- assign stats_home_count = vcom_stats.homepage_count | default: 0 -%}
+  {%- assign stats_home_avg = vcom_stats.homepage_avg | default: 0 -%}
+  {%- if stats_home_count > review_count -%}
+    {%- assign review_count = stats_home_count -%}
+    {%- assign rating_avg = stats_home_avg | plus: 0.0 -%}
+    {%- assign has_reviews = true -%}
   {%- endif -%}
 {%- endif -%}
 {%- if s_layout == 'trustpilot_carousel' or s_layout == 'trustpilot_grid' or s_layout == 'trustpilot_mosaic' -%}
@@ -687,17 +707,15 @@
             }
             fetch(url,{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(data){
               if(!data||!data.ok||!data.reviews||!data.reviews.length)return;
+              updateAggregateStats(data);
               var existing=grid.querySelectorAll('.product-reviews__card').length;
-              if(existing>0&&data.count<=existing&&data.count<=liquidCount){
-                updateAggregateStats(data);
-                return;
-              }
+              if(existing>0&&data.count<=existing&&data.reviews.length<=existing)return;
               var empty=document.querySelector('#vcom-reviews-'+bid+' .vcom-reviews-proxy-empty');
               if(empty)empty.style.display='none';
               var html='';
               data.reviews.forEach(function(rv){html+=buildCard(rv);});
               grid.innerHTML=html;
-              updateAggregateStats(data);
+              document.dispatchEvent(new Event('shopify:section:load'));
               if(layout==='trustpilot_split'){
                 var dist=[0,0,0,0,0];
                 data.reviews.forEach(function(rv){

@@ -18,12 +18,14 @@ import {
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import { getDashboardStats } from "../lib/dashboard.server";
+import { syncStorefrontReviewStats } from "../lib/storefront-stats.server";
 import { StatCard, RatingBar } from "../components/StatCard";
 import { ReviewStars } from "../components/ReviewStars";
 import { useAppPaths } from "../hooks/useEmbeddedAppPath";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
+  await syncStorefrontReviewStats(admin);
   return getDashboardStats(admin);
 };
 

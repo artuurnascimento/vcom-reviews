@@ -35,9 +35,19 @@
 {%- assign tp_score_label = cfg.footer_trustpilot_score_label | default: 'TrustScore' -%}
 {%- assign tp_reviews_word = cfg.footer_trustpilot_reviews_word | default: 'reviews' -%}
 
+{%- assign mo_count_review = 0 -%}
+{%- assign mo_count_app = 0 -%}
+{%- if shop.metaobjects.review -%}
+  {%- assign mo_count_review = shop.metaobjects.review.values_count | default: 0 -%}
+{%- endif -%}
+{%- if shop.metaobjects["$app:review"] -%}
+  {%- assign mo_count_app = shop.metaobjects["$app:review"].values_count | default: 0 -%}
+{%- endif -%}
 {%- assign all_reviews = nil -%}
 {%- assign vcom_review_mo = nil -%}
-{%- if shop.metaobjects.review -%}
+{%- if mo_count_app > mo_count_review and shop.metaobjects["$app:review"] -%}
+  {%- assign vcom_review_mo = shop.metaobjects["$app:review"] -%}
+{%- elsif shop.metaobjects.review -%}
   {%- assign vcom_review_mo = shop.metaobjects.review -%}
 {%- elsif shop.metaobjects["$app:review"] -%}
   {%- assign vcom_review_mo = shop.metaobjects["$app:review"] -%}
@@ -70,6 +80,12 @@
 {%- endif -%}
 {%- assign header_stars = display_rating | plus: 0.0 -%}
 {%- assign display_count = review_count -%}
+{%- assign vcom_stats = shop.metafields.vcom_reviews.storefront_stats.value -%}
+{%- if vcom_stats != blank and vcom_stats.homepage_count > display_count -%}
+  {%- assign display_count = vcom_stats.homepage_count -%}
+  {%- assign display_rating = vcom_stats.homepage_avg | default: display_rating -%}
+  {%- assign header_stars = display_rating | plus: 0.0 -%}
+{%- endif -%}
 {%- if display_count == 0 -%}
   {%- assign display_count = cfg.footer_trustpilot_fallback_count | default: 0 -%}
 {%- endif -%}
