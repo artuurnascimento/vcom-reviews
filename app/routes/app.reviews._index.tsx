@@ -1,8 +1,14 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import { redirectWithEmbeddedSearch } from "../lib/embedded-app-path.server";
-import { useLoaderData } from "@remix-run/react";
+import { useLoaderData, useNavigate, useRevalidator } from "@remix-run/react";
 import { useEmbeddedSubmit } from "../hooks/useEmbeddedAppPath";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
+import {
+  MODERATION_BATCH_SIZE,
+  parseIdsJson,
+  postModerationBatch,
+} from "../lib/moderation-batch.shared";
 import {
   Page,
   Layout,
@@ -20,26 +26,30 @@ import {
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import {
-  approveAllPendingReviews,
   approveReview,
+  approveReviewsByIds,
   deleteReview,
+  listPendingReviews,
   listReviews,
-  rejectAllPendingReviews,
   rejectReview,
+  rejectReviewsByIds,
 } from "../lib/reviews.server";
 import { getDashboardStats } from "../lib/dashboard.server";
 import { StatCard } from "../components/StatCard";
 import { ReviewStars } from "../components/ReviewStars";
 import { ReviewModerationActions } from "../components/ReviewModerationActions";
-import { useAppPaths } from "../hooks/useEmbeddedAppPath";
+import { useAppPaths, useEmbeddedAppPath } from "../hooks/useEmbeddedAppPath";
+
+const REVIEWS_INDEX_ROUTE_DATA_ID = "routes/app.reviews._index";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  const [stats, { reviews }] = await Promise.all([
+  const [stats, { reviews }, pending] = await Promise.all([
     getDashboardStats(admin),
     listReviews(admin, { first: 250 }),
+    listPendingReviews(admin),
   ]);
-  return { reviews, stats };
+  return { reviews, stats, pendingIds: pending.map((r) => r.id) };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -48,13 +58,39 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const intent = String(form.get("intent") || "");
   const id = String(form.get("id") || "");
 
+  if (intent === "approveBatch" || intent === "rejectBatch") {
+    const ids = parseIdsJson(String(form.get("ids") || "[]"));
+    if (ids.length === 0) {
+      return json({ ok: false, error: "Nenhuma avaliação no lote." });
+    }
+    const { processed, errors } =
+      intent === "approveBatch"
+        ? await approveReviewsByIds(admin, ids)
+        : await rejectReviewsByIds(admin, ids);
+    if (processed === 0) {
+      return json({
+        ok: false,
+        error: errors[0] || "Não foi possível processar o lote.",
+      });
+    }
+    return json({ ok: true, processed });
+  }
+
   if (intent === "approveAll") {
-    await approveAllPendingReviews(admin);
+    const pending = await listPendingReviews(admin);
+    await approveReviewsByIds(
+      admin,
+      pending.map((r) => r.id),
+    );
     return redirectWithEmbeddedSearch(request, "/app/reviews");
   }
 
   if (intent === "rejectAll") {
-    await rejectAllPendingReviews(admin);
+    const pending = await listPendingReviews(admin);
+    await rejectReviewsByIds(
+      admin,
+      pending.map((r) => r.id),
+    );
     return redirectWithEmbeddedSearch(request, "/app/reviews");
   }
 
@@ -79,14 +115,69 @@ function truncate(text: string, max: number) {
 
 export default function ReviewsIndex() {
   const paths = useAppPaths();
-  const { reviews, stats } = useLoaderData<typeof loader>();
+  const embedPath = useEmbeddedAppPath();
+  const navigate = useNavigate();
+  const revalidator = useRevalidator();
+  const { reviews, stats, pendingIds } = useLoaderData<typeof loader>();
   const submit = useEmbeddedSubmit();
+  const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(
+    null,
+  );
+  const [batchError, setBatchError] = useState<string | null>(null);
+  const isBatchRunning = batchProgress !== null;
 
   const post = useCallback(
     (data: Record<string, string>) => {
       submit(data, { method: "post" });
     },
     [submit],
+  );
+
+  const runBulkModeration = useCallback(
+    async (mode: "approve" | "reject") => {
+      if (pendingIds.length === 0) return;
+
+      setBatchError(null);
+      setBatchProgress({ done: 0, total: pendingIds.length });
+
+      const intent = mode === "approve" ? "approveBatch" : "rejectBatch";
+      let done = 0;
+
+      try {
+        for (let offset = 0; offset < pendingIds.length; offset += MODERATION_BATCH_SIZE) {
+          const chunk = pendingIds.slice(offset, offset + MODERATION_BATCH_SIZE);
+          const fd = new FormData();
+          fd.set("intent", intent);
+          fd.set("ids", JSON.stringify(chunk));
+
+          const result = await postModerationBatch(
+            paths.reviews,
+            REVIEWS_INDEX_ROUTE_DATA_ID,
+            fd,
+          );
+
+          if (!result.ok) {
+            const partial =
+              done > 0 ? ` (${done} de ${pendingIds.length} já processadas.)` : "";
+            throw new Error(`${result.error}${partial}`);
+          }
+
+          done += result.processed;
+          setBatchProgress({ done, total: pendingIds.length });
+        }
+
+        revalidator.revalidate();
+        if (mode === "approve") {
+          navigate(embedPath("/app/reviews"));
+        }
+      } catch (err) {
+        setBatchError(err instanceof Error ? err.message : "Erro ao processar lote.");
+        revalidator.revalidate();
+      } finally {
+        setBatchProgress(null);
+      }
+    },
+    [pendingIds, paths.reviews, embedPath, navigate, revalidator],
   );
 
   const handleApproveAll = useCallback(() => {
@@ -97,8 +188,8 @@ export default function ReviewsIndex() {
     ) {
       return;
     }
-    post({ intent: "approveAll" });
-  }, [post, stats.pendingCount]);
+    void runBulkModeration("approve");
+  }, [stats.pendingCount, runBulkModeration]);
 
   const handleRejectAll = useCallback(() => {
     if (
@@ -108,8 +199,8 @@ export default function ReviewsIndex() {
     ) {
       return;
     }
-    post({ intent: "rejectAll" });
-  }, [post, stats.pendingCount]);
+    void runBulkModeration("reject");
+  }, [stats.pendingCount, runBulkModeration]);
 
   return (
     <Page
@@ -133,6 +224,20 @@ export default function ReviewsIndex() {
           <StatCard label="Homepage" value={stats.homepagePublished} />
         </InlineGrid>
 
+        {batchError ? (
+          <Banner tone="critical" title="Erro na moderação em lote">
+            <p>{batchError}</p>
+          </Banner>
+        ) : null}
+
+        {isBatchRunning && batchProgress ? (
+          <Banner tone="info" title="Processando em lotes">
+            <p>
+              {batchProgress.done} de {batchProgress.total} processadas… Não feche esta aba.
+            </p>
+          </Banner>
+        ) : null}
+
         {stats.pendingCount > 0 ? (
           <Banner
             title={`${stats.pendingCount} avaliação(ões) aguardando aprovação`}
@@ -144,13 +249,25 @@ export default function ReviewsIndex() {
           >
             <BlockStack gap="300">
               <p>
-                Use <strong>Aprovar</strong> em cada linha ou aprove/rejeite todas de uma vez.
+                Use <strong>Aprovar</strong> em cada linha ou aprove/rejeite todas de uma vez (
+                {MODERATION_BATCH_SIZE} por lote).
               </p>
               <InlineStack gap="200" wrap>
-                <Button variant="primary" onClick={handleApproveAll}>
-                  Aprovar todas ({stats.pendingCount})
+                <Button
+                  variant="primary"
+                  onClick={handleApproveAll}
+                  loading={isBatchRunning}
+                  disabled={isBatchRunning}
+                >
+                  {isBatchRunning && batchProgress
+                    ? `Aprovando ${batchProgress.done}/${batchProgress.total}…`
+                    : `Aprovar todas (${stats.pendingCount})`}
                 </Button>
-                <Button tone="critical" onClick={handleRejectAll}>
+                <Button
+                  tone="critical"
+                  onClick={handleRejectAll}
+                  disabled={isBatchRunning}
+                >
                   Rejeitar todas ({stats.pendingCount})
                 </Button>
               </InlineStack>

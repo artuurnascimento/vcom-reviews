@@ -185,20 +185,56 @@ export async function rejectReview(admin: AdminApi, id: string) {
   return id;
 }
 
+export async function approveReviewsByIds(
+  admin: AdminApi,
+  ids: string[],
+): Promise<{ processed: number; errors: string[] }> {
+  let processed = 0;
+  const errors: string[] = [];
+  for (const id of ids) {
+    try {
+      await approveReview(admin, id);
+      processed++;
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+  return { processed, errors };
+}
+
+export async function rejectReviewsByIds(
+  admin: AdminApi,
+  ids: string[],
+): Promise<{ processed: number; errors: string[] }> {
+  let processed = 0;
+  const errors: string[] = [];
+  for (const id of ids) {
+    try {
+      await rejectReview(admin, id);
+      processed++;
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+  return { processed, errors };
+}
+
 export async function approveAllPendingReviews(admin: AdminApi): Promise<number> {
   const pending = await listPendingReviews(admin);
-  for (const review of pending) {
-    await approveReview(admin, review.id);
-  }
-  return pending.length;
+  const { processed } = await approveReviewsByIds(
+    admin,
+    pending.map((r) => r.id),
+  );
+  return processed;
 }
 
 export async function rejectAllPendingReviews(admin: AdminApi): Promise<number> {
   const pending = await listPendingReviews(admin);
-  for (const review of pending) {
-    await rejectReview(admin, review.id);
-  }
-  return pending.length;
+  const { processed } = await rejectReviewsByIds(
+    admin,
+    pending.map((r) => r.id),
+  );
+  return processed;
 }
 
 export async function updateReview(
