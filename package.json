@@ -6,7 +6,7 @@
     "build": "remix vite:build",
     "dev": "shopify app dev",
     "deploy": "shopify app deploy",
-    "start": "remix-serve ./build/server/index.js",
+    "start": "node ./node_modules/@remix-run/serve/dist/cli.js ./build/server/index.js",
     "setup": "shopify app config link",
     "typecheck": "tsc --noEmit"
   },
