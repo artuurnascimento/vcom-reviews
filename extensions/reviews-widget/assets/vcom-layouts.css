@@ -514,9 +514,17 @@
   font-size: 11px;
 }
 
+/* Cards injetados via JS ficam dentro de [data-proxy-cards]; contents repõe o grid/flex do wrap */
+.product-reviews__wrap [data-proxy-cards] {
+  display: contents;
+}
+
 .vcom-reviews-proxy-loading,
-.vcom-reviews-proxy-error {
+.vcom-reviews-proxy-error,
+.product-reviews__wrap [data-proxy-loading],
+.product-reviews__wrap [data-proxy-error] {
   grid-column: 1 / -1;
+  width: 100%;
   text-align: center;
   font-size: 14px;
   color: #666;
@@ -535,7 +543,7 @@
   cursor: pointer;
 }
 
-.product-reviews__wrap.is-loading [data-proxy-cards] {
+.product-reviews__wrap.is-loading .product-reviews__card {
   opacity: 0.55;
   pointer-events: none;
   transition: opacity 0.15s ease;

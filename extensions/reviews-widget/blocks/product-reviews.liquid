@@ -279,6 +279,9 @@
   <style>
     #vcom-reviews-{{ bid }} .product-reviews__card{background:{{ s_card_bg }};border:1px solid {{ s_card_border }};border-radius:{{ s_card_radius }}px;padding:{{ s_card_pad }}px}
     #vcom-reviews-{{ bid }} .product-reviews__wrap{gap:{{ s_cards_gap }}px !important}
+    #vcom-reviews-{{ bid }} .product-reviews__wrap [data-proxy-cards]{display:contents}
+    #vcom-reviews-{{ bid }} .product-reviews__wrap [data-proxy-loading],
+    #vcom-reviews-{{ bid }} .product-reviews__wrap [data-proxy-error]{grid-column:1/-1;width:100%}
     #vcom-reviews-{{ bid }} .product-reviews__title{color:{{ s_review_title_color }};font-size:{{ s_review_title_size }}px;font-weight:800}
     #vcom-reviews-{{ bid }} .product-reviews__text{color:{{ s_review_body_color }};font-size:{{ s_review_body_size }}px;font-weight:400}
     #vcom-reviews-{{ bid }} .product-reviews__meta{color:{{ s_review_meta_color }}}
