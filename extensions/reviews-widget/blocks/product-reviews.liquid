@@ -157,7 +157,13 @@
   {%- assign use_proxy_reviews = true -%}
 {%- endif -%}
 {%- assign all_reviews = all_reviews_primary -%}
-{%- if all_reviews == blank -%}{%- assign all_reviews = all_reviews_legacy -%}{%- endif -%}
+{%- assign primary_size = all_reviews_primary.size | default: 0 -%}
+{%- assign legacy_size = all_reviews_legacy.size | default: 0 -%}
+{%- if legacy_size > primary_size -%}
+  {%- assign all_reviews = all_reviews_legacy -%}
+{%- elsif all_reviews == blank -%}
+  {%- assign all_reviews = all_reviews_legacy -%}
+{%- endif -%}
 
 {%- assign reviews_context = 'homepage' -%}
 {%- if ds == 'product' -%}
