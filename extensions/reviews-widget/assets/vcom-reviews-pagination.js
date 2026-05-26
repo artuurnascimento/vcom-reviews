@@ -307,14 +307,19 @@
       if (errEl) errEl.hidden = true;
       fetch(proxyFetchUrl(page, pp), { credentials: "same-origin" })
         .then(function (r) {
-          if (!r.ok) throw new Error("HTTP " + r.status);
-          return r.json();
+          return r.json().then(function (data) {
+            return { ok: r.ok, status: r.status, data: data };
+          });
         })
-        .then(function (data) {
+        .then(function (res) {
           if (gen !== fetchGen) return;
           g.classList.remove("is-loading");
-          if (!data || !data.ok) {
-            showProxyError((data && data.error) || "Erro ao carregar avaliações");
+          var data = res.data;
+          if (!res.ok || !data || !data.ok) {
+            showProxyError(
+              (data && data.error) ||
+                (res.status ? "Erro HTTP " + res.status : "Erro ao carregar avaliações"),
+            );
             return;
           }
           pageCache[key] = data;

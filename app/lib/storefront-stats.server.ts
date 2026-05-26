@@ -7,7 +7,14 @@ type AdminApi = {
 
 import { invalidateProxyReviewCache } from "./review-proxy-cache.server";
 import { publishAllReviewMetaobjects } from "./metaobject-publish.server";
-import { STOREFRONT_METAFIELD_NAMESPACE } from "./storefront-settings.server";
+import {
+  buildHomepageReviewsCache,
+  saveHomepageReviewsCache,
+} from "./storefront-reviews-cache.server";
+import {
+  getStorefrontSettings,
+  STOREFRONT_METAFIELD_NAMESPACE,
+} from "./storefront-settings.server";
 import { listAllReviews } from "./reviews.server";
 
 export const STOREFRONT_STATS_METAFIELD_KEY = "storefront_stats";
@@ -49,6 +56,9 @@ export async function syncStorefrontReviewStats(admin: AdminApi): Promise<void> 
     }
     const reviews = await listAllReviews(admin);
     const stats = computeStorefrontReviewStats(reviews);
+    const settings = await getStorefrontSettings(admin);
+    const homepageCache = buildHomepageReviewsCache(reviews, settings.reviews_sort);
+    await saveHomepageReviewsCache(admin, homepageCache);
 
     const shopRes = await admin.graphql(
       `#graphql

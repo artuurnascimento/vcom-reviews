@@ -100,7 +100,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
   try {
     const settings = parseStorefrontSettingsJson(raw);
-    return saveStorefrontSettings(admin, settings, session.shop);
+    const result = await saveStorefrontSettings(admin, settings, session.shop);
+    if (result.ok) {
+      const { syncStorefrontReviewStats } = await import("../lib/storefront-stats.server");
+      void syncStorefrontReviewStats(admin);
+    }
+    return result;
   } catch {
     return { ok: false, errors: ["Formato de configurações inválido. Recarregue a página e tente de novo."] };
   }

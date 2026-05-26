@@ -8,7 +8,24 @@ import type { ReviewPlacement } from "../lib/constants";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   try {
-    const { admin, session } = await authenticate.public.appProxy(request);
+    let admin: Awaited<ReturnType<typeof authenticate.public.appProxy>>["admin"];
+    let session: Awaited<ReturnType<typeof authenticate.public.appProxy>>["session"];
+    try {
+      ({ admin, session } = await authenticate.public.appProxy(request));
+    } catch (authError) {
+      console.error("[vcom-reviews] app_proxy auth", authError);
+      return json(
+        {
+          ok: false,
+          reviews: [],
+          count: 0,
+          avg: 0,
+          error:
+            "Sessão do app expirada. Abra o app VCOM Reviews no admin da Shopify e clique em Salvar em Aparência.",
+        },
+        { status: 503 },
+      );
+    }
     if (!admin || !session) {
       return json(
         {
