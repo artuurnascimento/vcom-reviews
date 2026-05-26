@@ -14,6 +14,7 @@ import {
   isAiGenerationConfigured,
 } from "./ai-reviews.server";
 import type { ReviewPlacement } from "./constants";
+import { listStoreProducts } from "./product-search.server";
 import { createReview, getProductDetails, searchProducts } from "./reviews.server";
 import { createShopifyFilesFromUrls } from "./upload.server";
 import type {
@@ -65,9 +66,24 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       throw new Error(shopJson.errors[0]?.message || "Erro ao carregar dados da loja.");
     }
 
+    let initialProducts: Awaited<ReturnType<typeof listStoreProducts>> = [];
+    let productsLoadError: string | undefined;
+
+    try {
+      initialProducts = await listStoreProducts(admin, { first: 30 });
+    } catch (productError) {
+      productsLoadError =
+        productError instanceof Error
+          ? productError.message
+          : "Não foi possível carregar o catálogo.";
+      console.error("[vcom-reviews] generate loader products", productError);
+    }
+
     return json({
       aiConfigured: isAiGenerationConfigured(),
       shopName: shopJson.data?.shop?.name || "Sua loja",
+      initialProducts,
+      productsLoadError,
     } satisfies GenerateLoaderData);
   } catch (error) {
     if (error instanceof Response) throw error;
@@ -75,6 +91,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     return json({
       aiConfigured: isAiGenerationConfigured(),
       shopName: "Sua loja",
+      initialProducts: [],
       loaderError:
         error instanceof Error ? error.message : "Não foi possível carregar a página.",
     } satisfies GenerateLoaderData);

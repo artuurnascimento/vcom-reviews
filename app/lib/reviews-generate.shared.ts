@@ -37,5 +37,7 @@ export type SearchProductsResult =
 export type GenerateLoaderData = {
   aiConfigured: boolean;
   shopName: string;
+  initialProducts: ProductSearchResult[];
+  productsLoadError?: string;
   loaderError?: string;
 };

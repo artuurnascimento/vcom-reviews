@@ -361,114 +361,13 @@ export async function getReviewPlacement(
   return { placement: "homepage" };
 }
 
-/** Monta query no formato Admin API (status:active + termos com curinga). */
-export function buildProductSearchQuery(raw: string): string {
-  const term = raw.trim();
-  if (!term) {
-    return "status:active";
-  }
-
-  const words = term
-    .replace(/["*:]/g, " ")
-    .split(/\s+/)
-    .map((w) => w.trim())
-    .filter((w) => w.length >= 1);
-
-  if (words.length === 0) {
-    return "status:active";
-  }
-
-  const clauses = words.flatMap((w) => [
-    `title:*${w}*`,
-    `tag:*${w}*`,
-    `product_type:*${w}*`,
-    `vendor:*${w}*`,
-    `sku:*${w}*`,
-  ]);
-
-  return `status:active AND (${clauses.join(" OR ")})`;
-}
-
-export async function searchProducts(
-  admin: AdminApi,
-  query: string,
-  { first = 10 }: { first?: number } = {},
-) {
-  const runQuery = async (searchQuery: string) => {
-  const response = await admin.graphql(
-    `#graphql
-    query SearchProducts($query: String!, $first: Int!) {
-      products(first: $first, query: $query, sortKey: UPDATED_AT, reverse: true) {
-        nodes {
-          id
-          title
-          handle
-          productType
-          status
-          images(first: 1) {
-            nodes {
-              url
-              altText
-            }
-          }
-        }
-      }
-    }`,
-    { variables: { query: searchQuery, first } },
-  );
-  const json = (await response.json()) as {
-    data?: {
-      products?: {
-        nodes?: Array<{
-          id: string;
-          title: string;
-          handle: string;
-          productType?: string;
-          status?: string;
-          images?: { nodes?: Array<{ url?: string; altText?: string }> };
-        }>;
-      };
-    };
-    errors?: Array<{ message: string }>;
-  };
-
-  if (json.errors?.length) {
-    const msg = json.errors.map((e) => e.message).join("; ");
-    if (/access denied|read_products/i.test(msg)) {
-      throw new Error(
-        "Sem permissão read_products. Reinstale o app na loja e aceite as permissões de catálogo.",
-      );
-    }
-    throw new Error(msg);
-  }
-
-  const nodes = json.data?.products?.nodes || [];
-  return nodes.map((node) => {
-    const image = node.images?.nodes?.[0];
-    return {
-      id: node.id,
-      title: node.title,
-      handle: node.handle,
-      productType: node.productType || "",
-      status: node.status || "",
-      imageUrl: image?.url || "",
-      imageAlt: image?.altText || node.title,
-    };
-  });
-  };
-
-  const primary = buildProductSearchQuery(query);
-  let results = await runQuery(primary);
-
-  if (results.length === 0 && query.trim()) {
-    const loose = `status:active ${query.trim().replace(/["*:]/g, " ")}`;
-    if (loose !== primary) {
-      results = await runQuery(loose);
-    }
-  }
-
-  return results;
-}
+export {
+  buildProductSearchQuery,
+  filterProductsByTerm,
+  listStoreProducts,
+  searchProducts,
+  type StoreProductSearchRow,
+} from "./product-search.server";
 
 export async function getProductDetails(admin: AdminApi, id: string) {
   const response = await admin.graphql(

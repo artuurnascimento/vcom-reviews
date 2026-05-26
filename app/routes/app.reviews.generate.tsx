@@ -98,7 +98,13 @@ export function ErrorBoundary() {
 
 export default function GenerateReviewsPage() {
   const paths = useAppPaths();
-  const { aiConfigured, shopName, loaderError } = useLoaderData<GenerateLoaderData>();
+  const {
+    aiConfigured,
+    shopName,
+    loaderError,
+    initialProducts,
+    productsLoadError,
+  } = useLoaderData<GenerateLoaderData>();
   const actionData = useActionData<GenerateResult>();
   const generateFetcher = useEmbeddedFetcher<GenerateResult>();
   const productFetcher = useEmbeddedFetcher<ProductLoadResult>();
@@ -107,7 +113,9 @@ export default function GenerateReviewsPage() {
 
   const [selectedTab, setSelectedTab] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<ProductSearchResult[]>([]);
+  const [searchResults, setSearchResults] = useState<ProductSearchResult[]>(
+    () => initialProducts ?? [],
+  );
   const [searchError, setSearchError] = useState<string | null>(null);
   const [selectedProductTitle, setSelectedProductTitle] = useState("");
 
@@ -145,16 +153,21 @@ export default function GenerateReviewsPage() {
   }, [generateResult]);
 
   useEffect(() => {
-    const delay = searchQuery.trim() ? 280 : 0;
+    if (!searchQuery.trim()) {
+      setSearchResults(initialProducts ?? []);
+      setSearchError(productsLoadError ?? null);
+      return;
+    }
+
     const timer = setTimeout(() => {
       const fd = new FormData();
       fd.set("intent", "searchProducts");
       fd.set("query", searchQuery);
-      searchFetcher.submit(fd, { method: "post" });
-    }, delay);
+      searchFetcher.submit(fd, { method: "post", action: paths.reviewsGenerate });
+    }, 280);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery]);
+  }, [searchQuery, initialProducts, productsLoadError, paths.reviewsGenerate]);
 
   useEffect(() => {
     const data = searchFetcher.data as SearchProductsResult | undefined;
@@ -337,6 +350,11 @@ export default function GenerateReviewsPage() {
 
   const renderProductTab = () => (
     <BlockStack gap="400">
+      {productsLoadError && !searchQuery.trim() ? (
+        <Banner tone="critical" title="Catálogo indisponível">
+          {productsLoadError}
+        </Banner>
+      ) : null}
       {searchError ? (
         <Banner tone="critical" title="Não foi possível buscar produtos">
           {searchError}
