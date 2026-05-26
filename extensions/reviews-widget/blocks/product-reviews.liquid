@@ -461,10 +461,19 @@
           </aside>
           <div class="vcom-split__reviews">
         {%- endif -%}
-        <div class="product-reviews__wrap vcom-reviews-mobile--{{ reviews_mobile_layout }}" id="vcom-reviews-grid-{{ block.id }}" data-proxy-url="/apps/vcom-reviews/reviews?placement={{ submit_placement }}&product_id={{ submit_product_id | replace: 'gid://shopify/Product/', '' }}" data-layout="{{ s_layout }}" data-cols-desktop="{{ s_cols_desktop }}" data-cols-mobile="1" data-mobile-layout="{{ reviews_mobile_layout }}" data-reviews-rows="{{ reviews_rows }}" data-per-page-mobile="{{ reviews_per_page_mobile }}" data-scroll-root="vcom-reviews-{{ bid }}" data-review-count="{{ review_count }}">
+        <div class="product-reviews__wrap vcom-reviews-mobile--{{ reviews_mobile_layout }}" id="vcom-reviews-grid-{{ block.id }}" data-proxy-url="/apps/vcom-reviews/reviews?placement={{ submit_placement }}{% if submit_product_id != blank %}&product_id={{ submit_product_id | replace: 'gid://shopify/Product/', '' }}{% endif %}" data-layout="{{ s_layout }}" data-cols-desktop="{{ s_cols_desktop }}" data-cols-mobile="1" data-mobile-layout="{{ reviews_mobile_layout }}" data-reviews-rows="{{ reviews_rows }}" data-per-page-mobile="{{ reviews_per_page_mobile }}" data-scroll-root="vcom-reviews-{{ bid }}" data-review-count="{{ review_count }}" data-use-proxy="{% if use_proxy_reviews %}true{% else %}false{% endif %}">
           
+          {%- unless use_proxy_reviews -%}
           {%- assign approved_index = 0 -%}
-          {%- for review in all_reviews -%}
+          {%- assign seen_card_handles = '||' -%}
+          {%- for mo_list in (1..2) -%}
+            {%- assign mo_reviews = all_reviews_primary -%}
+            {%- if mo_list == 2 -%}{%- assign mo_reviews = all_reviews_legacy -%}{%- endif -%}
+            {%- if mo_reviews == blank -%}{%- continue -%}{%- endif -%}
+            {%- for review in mo_reviews -%}
+            {%- assign r_handle = review.handle | default: '' -%}
+            {%- assign card_handle_key = r_handle | prepend: '||' | append: '||' -%}
+            {%- if r_handle == blank or seen_card_handles contains card_handle_key -%}{%- continue -%}{%- endif -%}
             {%- assign r_status = 'approved' -%}
             {%- if review.status != blank -%}{%- assign r_status = review.status.value | default: review.status -%}{%- endif -%}
             {%- if r_status == 'pending' or r_status == 'rejected' -%}{%- continue -%}{%- endif -%}
@@ -478,6 +487,7 @@
               {%- if review.product_id != blank -%}{%- assign r_pid = review.product_id.value | default: review.product_id -%}{%- endif -%}
               {%- unless product != blank and r_pid == product.id -%}{%- continue -%}{%- endunless -%}
             {%- endif -%}
+            {%- assign seen_card_handles = seen_card_handles | append: r_handle | append: '||' -%}
             {%- assign page_num = approved_index | divided_by: reviews_per_page | plus: 1 -%}
             {%- assign approved_index = approved_index | plus: 1 -%}
             {%- assign stars_raw = '5' -%}
@@ -586,7 +596,9 @@
               </div>
               </div>
             </article>
+            {%- endfor -%}
           {%- endfor -%}
+          {%- endunless -%}
         </div>
         {%- if s_layout == 'trustpilot_split' -%}
           </div>
@@ -630,134 +642,163 @@
         </script>
 
         {%- if has_reviews -%}
-          <div class="product-reviews__pagination" id="vcom-reviews-pagination-{{ block.id }}" style="display:{% if total_pages > 1 %}flex{% else %}none{% endif %};justify-content:center;gap:8px;margin-top:20px;flex-wrap:wrap;">
-            {%- assign max_pagination_dots = 12 -%}
+          <div class="product-reviews__pagination" id="vcom-reviews-pagination-{{ block.id }}" style="display:{% if total_pages > 1 or use_proxy_reviews %}flex{% else %}none{% endif %};justify-content:center;gap:8px;margin-top:20px;flex-wrap:wrap;">
+            {%- assign max_pagination_dots = 40 -%}
             {%- for p in (1..max_pagination_dots) -%}
               <button type="button" class="product-reviews__pagination-dot" data-page="{{ p }}" aria-label="Página {{ p }}" style="width:10px;height:10px;border-radius:50%;border:none;cursor:pointer;padding:0;transition:background .2s,transform .2s;{% if p > total_pages %}display:none;{% endif %}background:{% if p == 1 %}{{ s_pag_active}}{% else %}{{ s_pag_inactive}}{% endif %};transform:{% if p == 1 %}scale(1.2){% else %}scale(1){% endif %};"></button>
             {%- endfor -%}
           </div>
           <script>
-            !function(){var s='{{ block.id }}',g=document.getElementById('vcom-reviews-grid-'+s),p=document.getElementById('vcom-reviews-pagination-'+s),root=document.getElementById(g&&g.getAttribute('data-scroll-root')||'vcom-reviews-{{ bid }}');if(!g||!p)return;function getCards(){return Array.prototype.slice.call(g.querySelectorAll('.product-reviews__card'))}var dots=Array.prototype.slice.call(p.querySelectorAll('.product-reviews__pagination-dot')),a='{{ s_pag_active}}',i='{{ s_pag_inactive}}',colsD=parseInt(g.getAttribute('data-cols-desktop'),10)||3,rows=parseInt(g.getAttribute('data-reviews-rows'),10)||2,perPageMobile=parseInt(g.getAttribute('data-per-page-mobile'),10)||10,resizeTimer,currentPage=1;function isDesktop(){return window.matchMedia('(min-width:992px)').matches}function perPage(){return isDesktop()?colsD*rows:perPageMobile}function scrollToReviews(){var el=root||g;if(!el)return;var y=el.getBoundingClientRect().top+window.pageYOffset-12;window.scrollTo({top:y,behavior:'smooth'})}function paintDot(dot,page,active){dot.style.display='';dot.dataset.page=String(page);dot.setAttribute('aria-label','Página '+page);dot.style.background=active?a:i;dot.style.transform=active?'scale(1.2)':'scale(1)'}function go(page,scroll){currentPage=parseInt(page,10)||1;getCards().forEach(function(card){card.style.display=card.dataset.page==String(currentPage)?'':'none'});dots.forEach(function(dot){if(dot.style.display==='none')return;paintDot(dot,parseInt(dot.dataset.page,10),dot.dataset.page==String(currentPage))});if(scroll&&!isDesktop())scrollToReviews()}function apply(){var pp=perPage(),cards=getCards();if(!pp||cards.length<=pp){p.style.display='none';cards.forEach(function(card){card.style.display=''});return}p.style.display='flex';var pages=Math.ceil(cards.length/pp);cards.forEach(function(card,idx){card.dataset.page=String(Math.floor(idx/pp)+1)});dots.forEach(function(dot,idx){if(idx>=pages){dot.style.display='none';return}paintDot(dot,idx+1,idx+1===currentPage)});go(Math.min(currentPage,pages),false)}dots.forEach(function(dot){dot.addEventListener('click',function(){if(this.style.display==='none')return;go(this.dataset.page,true)})});apply();window.addEventListener('resize',function(){clearTimeout(resizeTimer);resizeTimer=setTimeout(function(){currentPage=1;apply()},150)});document.addEventListener('shopify:section:load',function(){currentPage=1;apply()})}();
+            !function(){
+              var s='{{ block.id }}',bid='{{ bid }}';
+              var g=document.getElementById('vcom-reviews-grid-'+s);
+              var p=document.getElementById('vcom-reviews-pagination-'+s);
+              var root=document.getElementById(g&&g.getAttribute('data-scroll-root')||'vcom-reviews-{{ bid }}');
+              if(!g||!p)return;
+              var useProxy=g.getAttribute('data-use-proxy')==='true';
+              var proxyUrl=g.getAttribute('data-proxy-url')||'';
+              var totalCount=parseInt(g.getAttribute('data-review-count')||'0',10)||0;
+              var dots=Array.prototype.slice.call(p.querySelectorAll('.product-reviews__pagination-dot'));
+              var a='{{ s_pag_active}}',i='{{ s_pag_inactive}}';
+              var colsD=parseInt(g.getAttribute('data-cols-desktop'),10)||3;
+              var rows=parseInt(g.getAttribute('data-reviews-rows'),10)||2;
+              var perPageMobile=parseInt(g.getAttribute('data-per-page-mobile'),10)||10;
+              var resizeTimer,currentPage=1,loading=false;
+              var starColor='{{ star_color }}',starEmpty='{{ star_empty_color }}';
+              var showVerified={{ s_show_verified}},verifiedLabel={{ s_verified_label | json }};
+              var titleMax={{ title_max_chars }},textMax={{ text_max_chars }};
+              function isDesktop(){return window.matchMedia('(min-width:992px)').matches}
+              function perPage(){return isDesktop()?colsD*rows:perPageMobile}
+              function getCards(){return Array.prototype.slice.call(g.querySelectorAll('.product-reviews__card'))}
+              function scrollToReviews(){var el=root||g;if(!el)return;var y=el.getBoundingClientRect().top+window.pageYOffset-12;window.scrollTo({top:y,behavior:'smooth'})}
+              function paintDot(dot,page,active){dot.style.display='';dot.dataset.page=String(page);dot.setAttribute('aria-label','Página '+page);dot.style.background=active?a:i;dot.style.transform=active?'scale(1.2)':'scale(1)'}
+              function ensureDots(pages){
+                while(dots.length<pages){
+                  var dot=document.createElement('button');
+                  dot.type='button';
+                  dot.className='product-reviews__pagination-dot';
+                  dot.style.cssText='width:10px;height:10px;border-radius:50%;border:none;cursor:pointer;padding:0;transition:background .2s,transform .2s;background:'+i;
+                  dot.addEventListener('click',function(){if(this.style.display==='none')return;go(this.dataset.page,true)});
+                  p.appendChild(dot);
+                  dots.push(dot);
+                }
+              }
+              function updatePaginationUI(pages,active){
+                if(pages<=1){p.style.display='none';return}
+                p.style.display='flex';
+                ensureDots(pages);
+                dots.forEach(function(dot,idx){
+                  if(idx>=pages){dot.style.display='none';return}
+                  paintDot(dot,idx+1,idx+1===active);
+                });
+              }
+              function starSvg(stars,idx){
+                var n=idx+1,min=n-1;
+                if(stars>=n)return '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="'+starColor+'"/><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="#fff"/></svg>';
+                if(stars>min){var w=Math.round((stars-min)*32);return '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="'+starEmpty+'"/><rect width="'+w+'" height="32" fill="'+starColor+'"/><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="#fff"/></svg>';}
+                return '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="'+starEmpty+'"/><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="#fff"/></svg>';
+              }
+              function esc(v){var d=document.createElement('div');d.textContent=v||'';return d.innerHTML;}
+              function buildCard(rv){
+                var stars=parseFloat(rv.rating)||5,starsHtml='',n;
+                for(n=0;n<5;n++)starsHtml+=starSvg(stars,n);
+                var author=rv.author||'',avatar=author?author.charAt(0).toUpperCase():'?';
+                var title=rv.title||'',body=rv.body||'';
+                var bodyShow=body.length>textMax?body.slice(0,textMax)+'...':body;
+                var html='<article class="product-reviews__card">';
+                html+='<div class="product-reviews__avatar" aria-hidden="true">'+esc(avatar)+'</div><div class="product-reviews__card-body">';
+                html+='<div class="product-reviews__head">';
+                if(author)html+='<span class="product-reviews__author-name">'+esc(author)+'</span>';
+                html+='<div class="product-reviews__stars" aria-hidden="true">'+starsHtml+'</div></div>';
+                html+='<div class="product-reviews__stars product-reviews__stars--default" aria-hidden="true">'+starsHtml+'</div>';
+                if(showVerified&&rv.verified_buyer)html+='<div class="product-reviews__verified"><span>'+esc(String(verifiedLabel))+'</span></div>';
+                if(title)html+='<h3 class="product-reviews__title">'+esc(title.length>titleMax?title.slice(0,titleMax)+'...':title)+'</h3>';
+                if(body)html+='<p class="product-reviews__text">'+esc(bodyShow)+'</p>';
+                html+='<div class="product-reviews__meta">';
+                if(author)html+='<span class="product-reviews__meta-author">'+esc(author)+'</span>';
+                if(author&&rv.time)html+='<span class="product-reviews__meta-sep"> - </span>';
+                if(rv.time)html+='<span>'+esc(rv.time)+'</span>';
+                html+='</div></div></article>';
+                return html;
+              }
+              function updateAggregateStats(data){
+                if(!data||!data.count)return;
+                totalCount=data.count;
+                g.setAttribute('data-review-count',String(totalCount));
+                var countLabel=totalCount+(totalCount>=1000?'+':'');
+                var headCount=document.querySelector('#vcom-reviews-'+bid+' .product-reviews__section-count');
+                if(headCount){var prefix={{ s_header_based_on_prefix | json }};headCount.textContent=prefix+' '+countLabel+' reviews';}
+              }
+              function fetchProxyPage(page,scroll){
+                if(!proxyUrl||loading)return;
+                var pp=perPage();
+                loading=true;
+                g.classList.add('is-loading');
+                fetch(proxyUrl+(proxyUrl.indexOf('?')>=0?'&':'?')+'page='+page+'&limit='+pp,{credentials:'same-origin'})
+                  .then(function(r){return r.json();})
+                  .then(function(data){
+                    loading=false;
+                    g.classList.remove('is-loading');
+                    if(!data||!data.ok)return;
+                    updateAggregateStats(data);
+                    var empty=document.querySelector('#vcom-reviews-'+bid+' .vcom-reviews-proxy-empty');
+                    if(empty)empty.style.display='none';
+                    var html='';
+                    (data.reviews||[]).forEach(function(rv){html+=buildCard(rv);});
+                    g.innerHTML=html;
+                    currentPage=page;
+                    var pages=data.total_pages||Math.ceil((data.count||totalCount)/pp);
+                    updatePaginationUI(pages,currentPage);
+                    if(scroll&&!isDesktop())scrollToReviews();
+                  })
+                  .catch(function(){loading=false;g.classList.remove('is-loading');});
+              }
+              function goLocal(page,scroll){
+                currentPage=parseInt(page,10)||1;
+                getCards().forEach(function(card){card.style.display=card.dataset.page==String(currentPage)?'':'none';});
+                dots.forEach(function(dot){if(dot.style.display==='none')return;paintDot(dot,parseInt(dot.dataset.page,10),dot.dataset.page==String(currentPage));});
+                if(scroll&&!isDesktop())scrollToReviews();
+              }
+              function go(page,scroll){
+                page=parseInt(page,10)||1;
+                if(useProxy&&proxyUrl){fetchProxyPage(page,scroll);return}
+                goLocal(page,scroll);
+              }
+              function applyLocal(){
+                var pp=perPage(),cards=getCards();
+                if(!pp||cards.length<=pp){p.style.display='none';cards.forEach(function(card){card.style.display=''});return}
+                p.style.display='flex';
+                var pages=Math.ceil(cards.length/pp);
+                cards.forEach(function(card,idx){card.dataset.page=String(Math.floor(idx/pp)+1)});
+                updatePaginationUI(pages,Math.min(currentPage,pages));
+                goLocal(Math.min(currentPage,pages),false);
+              }
+              dots.forEach(function(dot){dot.addEventListener('click',function(){if(this.style.display==='none')return;go(this.dataset.page,true);});});
+              if(useProxy&&proxyUrl&&totalCount>0){
+                fetchProxyPage(1,false);
+              }else{
+                applyLocal();
+              }
+              window.addEventListener('resize',function(){
+                clearTimeout(resizeTimer);
+                resizeTimer=setTimeout(function(){
+                  currentPage=1;
+                  if(useProxy&&proxyUrl&&totalCount>0)fetchProxyPage(1,false);
+                  else applyLocal();
+                },150);
+              });
+            }();
           </script>
         {%- endif -%}
       {%- else -%}
         <style>#vcom-reviews-{{ bid }} .product-reviews__verified{color:{{ verified_color }}}#vcom-reviews-{{ bid }}:not(.vcom-layout--trustpilot_list) .product-reviews__avatar,#vcom-reviews-{{ bid }}:not(.vcom-layout--trustpilot_list) .product-reviews__head{display:none}#vcom-reviews-{{ bid }}.vcom-layout--trustpilot_list .product-reviews__stars--default{display:none}#vcom-reviews-{{ bid }}.vcom-layout--trustpilot_list .product-reviews__meta-author{display:none}</style>
-        <div class="product-reviews__wrap vcom-reviews-mobile--{{ reviews_mobile_layout }}" id="vcom-reviews-grid-{{ block.id }}" data-proxy-url="/apps/vcom-reviews/reviews?placement={{ submit_placement }}&product_id={{ submit_product_id | replace: 'gid://shopify/Product/', '' }}" data-layout="{{ s_layout }}" data-cols-desktop="{{ s_cols_desktop }}" data-cols-mobile="1" data-mobile-layout="{{ reviews_mobile_layout }}" data-reviews-rows="{{ reviews_rows }}" data-per-page-mobile="{{ reviews_per_page_mobile }}" data-scroll-root="vcom-reviews-{{ bid }}" data-review-count="{{ review_count }}"></div>
+        <div class="product-reviews__wrap vcom-reviews-mobile--{{ reviews_mobile_layout }}" id="vcom-reviews-grid-{{ block.id }}" data-proxy-url="/apps/vcom-reviews/reviews?placement={{ submit_placement }}{% if submit_product_id != blank %}&product_id={{ submit_product_id | replace: 'gid://shopify/Product/', '' }}{% endif %}" data-layout="{{ s_layout }}" data-cols-desktop="{{ s_cols_desktop }}" data-cols-mobile="1" data-mobile-layout="{{ reviews_mobile_layout }}" data-reviews-rows="{{ reviews_rows }}" data-per-page-mobile="{{ reviews_per_page_mobile }}" data-scroll-root="vcom-reviews-{{ bid }}" data-review-count="{{ review_count }}" data-use-proxy="true">
         {%- if s_show_empty -%}
           <p class="product-reviews__empty vcom-reviews-proxy-empty" style="text-align:center;font-size:14px;color:#666;margin:0;">
             {{ s_empty_message}}
           </p>
         {%- endif -%}
       {%- endif -%}
-
-      <script>
-          (function(){
-            var sid='{{ block.id }}';
-            var bid='{{ bid }}';
-            var grid=document.getElementById('vcom-reviews-grid-'+sid);
-            if(!grid)return;
-            var url=grid.getAttribute('data-proxy-url');
-            if(!url)return;
-            var liquidCount=parseInt(grid.getAttribute('data-review-count')||'0',10)||0;
-            var starColor='{{ star_color }}';
-            var starEmpty='{{ star_empty_color }}';
-            var verifiedColor='{{ verified_color }}';
-            var showVerified={{ s_show_verified}};
-            var verifiedLabel={{ s_verified_label}};
-            var titleMax={{ title_max_chars }};
-            var textMax={{ text_max_chars }};
-            var layout=grid.getAttribute('data-layout')||'trustpilot_carousel';
-            function starSvg(stars,i){
-              var idx=i+1;var min=idx-1;
-              if(stars>=idx)return '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="'+starColor+'"/><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="#fff"/></svg>';
-              if(stars>min){var w=Math.round((stars-min)*32);return '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="'+starEmpty+'"/><rect width="'+w+'" height="32" fill="'+starColor+'"/><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="#fff"/></svg>';}
-              return '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="'+starEmpty+'"/><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="#fff"/></svg>';
-            }
-            function esc(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
-            function buildCard(rv){
-              var stars=parseFloat(rv.rating)||5;
-              var starsHtml='';
-              for(var i=0;i<5;i++)starsHtml+=starSvg(stars,i);
-              var author=rv.author||'';
-              var avatar=author?author.charAt(0).toUpperCase():'?';
-              var title=rv.title||'';
-              var body=rv.body||'';
-              var bodyShow=body.length>textMax?body.slice(0,textMax)+'...':body;
-              var html='<article class="product-reviews__card">';
-              html+='<div class="product-reviews__avatar" aria-hidden="true">'+esc(avatar)+'</div>';
-              html+='<div class="product-reviews__card-body">';
-              html+='<div class="product-reviews__head">';
-              if(author)html+='<span class="product-reviews__author-name">'+esc(author)+'</span>';
-              html+='<div class="product-reviews__stars" aria-hidden="true">'+starsHtml+'</div></div>';
-              html+='<div class="product-reviews__stars product-reviews__stars--default" aria-hidden="true">'+starsHtml+'</div>';
-              if(showVerified&&rv.verified_buyer){html+='<div class="product-reviews__verified"><span>'+esc(String(verifiedLabel))+'</span></div>';}
-              if(title)html+='<h3 class="product-reviews__title">'+esc(title.length>titleMax?title.slice(0,titleMax)+'...':title)+'</h3>';
-              if(body)html+='<p class="product-reviews__text">'+esc(bodyShow)+'</p>';
-              html+='<div class="product-reviews__meta">';
-              if(author)html+='<span class="product-reviews__meta-author">'+esc(author)+'</span>';
-              if(author&&rv.time)html+='<span class="product-reviews__meta-sep"> - </span>';
-              if(rv.time)html+='<span>'+esc(rv.time)+'</span>';
-              html+='</div></div></article>';
-              return html;
-            }
-            function updateAggregateStats(data){
-              if(!data||!data.count)return;
-              var count=data.count;
-              var avg=parseFloat(data.avg)||0;
-              var countLabel=count+(count>=1000?'+':'');
-              var headCount=document.querySelector('#vcom-reviews-'+bid+' .product-reviews__section-count');
-              if(headCount){
-                var prefix={{ s_header_based_on_prefix | json }};
-                headCount.textContent=prefix+' '+countLabel+' reviews';
-              }
-              var splitScore=document.querySelector('#vcom-reviews-'+bid+' .vcom-split__score');
-              if(splitScore)splitScore.textContent=avg.toFixed(1);
-              var splitCount=document.querySelector('#vcom-reviews-'+bid+' .vcom-split__count');
-              if(splitCount)splitCount.textContent=count+' avaliações';
-              grid.setAttribute('data-review-count',String(count));
-            }
-            fetch(url,{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(data){
-              if(!data||!data.ok)return;
-              updateAggregateStats(data);
-              if(!data.reviews||!data.reviews.length)return;
-              var empty=document.querySelector('#vcom-reviews-'+bid+' .vcom-reviews-proxy-empty');
-              if(empty)empty.style.display='none';
-              var html='';
-              data.reviews.forEach(function(rv){html+=buildCard(rv);});
-              grid.innerHTML=html;
-              document.dispatchEvent(new Event('shopify:section:load'));
-              if(layout==='trustpilot_split'){
-                var dist=[0,0,0,0,0];
-                data.reviews.forEach(function(rv){
-                  var r=Math.round(parseFloat(rv.rating)||5);
-                  if(r<1)r=1;if(r>5)r=5;dist[r-1]++;
-                });
-                var avg=parseFloat(data.avg)||0;
-                var count=data.count||data.reviews.length;
-                var avgStars='';
-                for(var si=0;si<5;si++)avgStars+=starSvg(avg,si);
-                var bars='';
-                for(var lvl=5;lvl>=1;lvl--){
-                  var dc=dist[lvl-1];
-                  var pct=count>0?Math.round(dc*100/count):0;
-                  bars+='<div class="vcom-bar-row"><span>'+lvl+'</span><div class="vcom-bar-track"><div class="vcom-bar-fill" style="width:'+pct+'%;background:'+starColor+';"></div></div><span>'+dc+'</span></div>';
-                }
-                var split=document.createElement('div');
-                split.className='vcom-split';
-                split.innerHTML='<aside class="vcom-split__summary"><div class="vcom-split__score">'+avg.toFixed(1)+'</div><div class="product-reviews__stars" style="justify-content:center;margin-bottom:8px;">'+avgStars+'</div><p class="vcom-split__label">TrustScore</p>'+bars+'<p class="vcom-split__count">'+count+' avaliações</p></aside><div class="vcom-split__reviews"></div>';
-                var col=split.querySelector('.vcom-split__reviews');
-                grid.parentNode.insertBefore(split,grid);
-                col.appendChild(grid);
-              }
-              var footer=document.querySelector('#vcom-reviews-'+bid+' .product-reviews__footer');
-              if(footer&&data.count>0){
-                var strongs=footer.querySelectorAll('strong');
-                if(strongs[0])strongs[0].textContent=String(data.avg);
-                if(strongs[1])strongs[1].textContent=data.count+(data.count>=1000?'+':'')+' customers';
-              }
-            }).catch(function(){});
-          })();
-        </script>
 
       {%- comment -%} Schema aggregateRating para SEO {%- endcomment -%}
       {%- if has_reviews and s_footer_show and product != blank and product.url != blank -%}

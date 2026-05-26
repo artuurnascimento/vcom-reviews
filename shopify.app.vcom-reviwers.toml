@@ -34,6 +34,9 @@ access.admin = "merchant_read_write"
 access.storefront = "public_read"
 display_name_field = "author"
 
+[metaobjects.app.review.capabilities]
+publishable = true
+
 [metaobjects.app.review.fields.rating]
 name = "Rating"
 type = "number_decimal"

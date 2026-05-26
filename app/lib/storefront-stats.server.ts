@@ -5,6 +5,7 @@ type AdminApi = {
   ) => Promise<Response>;
 };
 
+import { publishAllReviewMetaobjects } from "./metaobject-publish.server";
 import { STOREFRONT_METAFIELD_NAMESPACE } from "./storefront-settings.server";
 import { listAllReviews } from "./reviews.server";
 
@@ -40,6 +41,11 @@ export function computeStorefrontReviewStats(
 
 export async function syncStorefrontReviewStats(admin: AdminApi): Promise<void> {
   try {
+    try {
+      await publishAllReviewMetaobjects(admin);
+    } catch (publishError) {
+      console.warn("[vcom-reviews] publish before stats sync", publishError);
+    }
     const reviews = await listAllReviews(admin);
     const stats = computeStorefrontReviewStats(reviews);
 

@@ -402,7 +402,7 @@ export async function getFileImageUrls(
   admin: AdminApi,
   fileIds: string[],
 ): Promise<Record<string, string>> {
-  const ids = fileIds.filter(Boolean).slice(0, 6);
+  const ids = fileIds.filter(Boolean).slice(0, 250);
   if (!ids.length) return {};
 
   const response = await admin.graphql(
