@@ -17,6 +17,7 @@ type Props = {
   selectedTitle?: string;
   results: ProductSearchResult[];
   loading?: boolean;
+  listTitle?: string;
   onQueryChange: (query: string) => void;
   onSelect: (product: ProductSearchResult) => void;
   onClear?: () => void;
@@ -27,6 +28,7 @@ export function ProductSearchPicker({
   selectedTitle,
   results,
   loading = false,
+  listTitle,
   onQueryChange,
   onSelect,
   onClear,
@@ -108,7 +110,7 @@ export function ProductSearchPicker({
       onSelect={updateSelection}
       textField={textField}
       loading={loading}
-      listTitle={results.length ? "Produtos encontrados" : "Nenhum produto"}
+      listTitle={listTitle ?? (results.length ? "Produtos encontrados" : "Nenhum produto")}
     />
   );
 }

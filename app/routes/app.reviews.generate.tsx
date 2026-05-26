@@ -108,6 +108,7 @@ export default function GenerateReviewsPage() {
   const [selectedTab, setSelectedTab] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<ProductSearchResult[]>([]);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [selectedProductTitle, setSelectedProductTitle] = useState("");
 
   const [productType, setProductType] = useState("moda");
@@ -144,24 +145,26 @@ export default function GenerateReviewsPage() {
   }, [generateResult]);
 
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
-      return;
-    }
+    const delay = searchQuery.trim() ? 280 : 0;
     const timer = setTimeout(() => {
       const fd = new FormData();
       fd.set("intent", "searchProducts");
       fd.set("query", searchQuery);
       searchFetcher.submit(fd, { method: "post" });
-    }, 280);
+    }, delay);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
   useEffect(() => {
     const data = searchFetcher.data as SearchProductsResult | undefined;
-    if (data?.ok) {
+    if (!data) return;
+    if (data.ok) {
       setSearchResults(data.results);
+      setSearchError(null);
+    } else {
+      setSearchResults([]);
+      setSearchError(data.error);
     }
   }, [searchFetcher.data]);
 
@@ -334,11 +337,25 @@ export default function GenerateReviewsPage() {
 
   const renderProductTab = () => (
     <BlockStack gap="400">
+      {searchError ? (
+        <Banner tone="critical" title="Não foi possível buscar produtos">
+          {searchError}
+        </Banner>
+      ) : null}
       <ProductSearchPicker
         selectedId={productId}
         selectedTitle={selectedProductTitle}
         results={searchResults}
         loading={isSearching}
+        listTitle={
+          isSearching
+            ? "Buscando…"
+            : searchResults.length
+              ? "Produtos encontrados"
+              : searchQuery.trim()
+                ? "Nenhum produto para essa busca"
+                : "Produtos da loja"
+        }
         onQueryChange={setSearchQuery}
         onSelect={handleSelectProduct}
         onClear={handleClearProduct}
