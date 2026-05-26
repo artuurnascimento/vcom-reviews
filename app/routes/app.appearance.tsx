@@ -35,6 +35,7 @@ import {
   type StorefrontSettings,
 } from "../lib/storefront-settings.shared";
 import { STOREFRONT_LAYOUTS } from "../lib/storefront-layouts";
+import { REVIEWS_SORT_OPTIONS } from "../lib/storefront-settings.shared";
 import { buildThemeEditorDeepLink } from "../lib/theme-homepage.server";
 import { ColorPickerField } from "../components/ColorPickerField";
 import { RangeField } from "../components/RangeField";
@@ -908,6 +909,20 @@ export default function AppearancePage() {
                               set("reviews_title_max_chars", parseInt(v, 10) || 80)
                             }
                             autoComplete="off"
+                          />
+                          <Select
+                            label="Ordem das avaliações na vitrine"
+                            name="reviews_sort"
+                            options={REVIEWS_SORT_OPTIONS.map((o) => ({
+                              label: o.label,
+                              value: o.value,
+                            }))}
+                            value={settings.reviews_sort}
+                            onChange={(v) => set("reviews_sort", v as typeof settings.reviews_sort)}
+                            helpText={
+                              REVIEWS_SORT_OPTIONS.find((o) => o.value === settings.reviews_sort)
+                                ?.helpText
+                            }
                           />
                           <TextField
                             label="Linhas na grade (desktop)"

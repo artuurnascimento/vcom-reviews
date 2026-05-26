@@ -1,8 +1,16 @@
 import {
+  DEFAULT_REVIEWS_SORT,
+  normalizeReviewsSortMode,
+  type ReviewsSortMode,
+} from "./review-sort.shared";
+import {
   DEFAULT_STOREFRONT_LAYOUT,
   normalizeStorefrontLayout,
   type StorefrontLayoutId,
 } from "./storefront-layouts";
+
+export type { ReviewsSortMode };
+export { DEFAULT_REVIEWS_SORT, REVIEWS_SORT_OPTIONS } from "./review-sort.shared";
 
 export type { StorefrontLayoutId };
 
@@ -80,6 +88,8 @@ export interface StorefrontSettings {
   reviews_columns_mobile: number;
   /** Colunas visíveis na grade (desktop ≥992px) */
   reviews_columns_desktop: number;
+  /** Ordem das avaliações na vitrine */
+  reviews_sort: ReviewsSortMode;
   pagination_active_color: string;
   pagination_inactive_color: string;
   show_empty_message: boolean;
@@ -198,6 +208,7 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   reviews_rows: 2,
   reviews_columns_mobile: 1,
   reviews_columns_desktop: 3,
+  reviews_sort: DEFAULT_REVIEWS_SORT,
   pagination_active_color: "#1d8a42",
   pagination_inactive_color: "#dcdce6",
   show_empty_message: false,
@@ -401,6 +412,7 @@ export function coerceStorefrontSettings(
       4,
       Math.max(1, num(r.reviews_columns_desktop, d.reviews_columns_desktop)),
     ),
+    reviews_sort: normalizeReviewsSortMode(r.reviews_sort ?? d.reviews_sort),
     pagination_active_color: str(r.pagination_active_color, d.pagination_active_color),
     pagination_inactive_color: str(r.pagination_inactive_color, d.pagination_inactive_color),
     show_empty_message: bool(r.show_empty_message, d.show_empty_message),

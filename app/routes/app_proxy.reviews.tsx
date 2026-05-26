@@ -2,6 +2,8 @@ import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 import { listAllReviews, getFileImageUrls } from "../lib/reviews.server";
+import { sortStorefrontReviews } from "../lib/review-sort.shared";
+import { getStorefrontSettings } from "../lib/storefront-settings.server";
 import type { ReviewPlacement } from "../lib/constants";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -43,6 +45,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         (r) => r.placement === "product" && r.productId === productId,
       );
     }
+
+    const storefrontSettings = await getStorefrontSettings(admin);
+    approved = sortStorefrontReviews(approved, storefrontSettings.reviews_sort);
 
     const ratingSum = approved.reduce((sum, r) => sum + r.rating, 0);
     const count = approved.length;

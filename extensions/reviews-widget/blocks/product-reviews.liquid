@@ -138,6 +138,7 @@
 {%- assign s_footer_suffix = cfg.footer_suffix | default: '.' -%}
 {%- assign s_footer_text_color = cfg.footer_text_color | default: '#000000' -%}
 {%- assign s_layout = cfg.layout | default: 'trustpilot_carousel' -%}
+{%- assign s_reviews_sort = cfg.reviews_sort | default: 'photos_first' -%}
 
 {%- comment -%} Carrega review + $app:review (geradas pelo app) — não usar elsif. {%- endcomment -%}
 {%- assign all_reviews_primary = nil -%}
@@ -247,6 +248,9 @@
       {%- assign use_proxy_reviews = true -%}
     {%- endif -%}
   {%- endif -%}
+{%- endif -%}
+{%- if s_reviews_sort != 'photos_first' -%}
+  {%- assign use_proxy_reviews = true -%}
 {%- endif -%}
 {%- if s_layout == 'trustpilot_carousel' or s_layout == 'trustpilot_grid' or s_layout == 'trustpilot_mosaic' -%}
   {%- assign grid_capacity_desktop = s_cols_desktop | times: reviews_rows -%}
@@ -482,6 +486,9 @@
           {%- unless use_proxy_reviews -%}
           {%- assign approved_index = 0 -%}
           {%- assign seen_card_handles = '||' -%}
+          {%- assign sort_photo_passes = 1 -%}
+          {%- if s_reviews_sort == 'photos_first' -%}{%- assign sort_photo_passes = 2 -%}{%- endif -%}
+          {%- for photo_pass in (1..sort_photo_passes) -%}
           {%- for mo_list in (1..2) -%}
             {%- assign mo_reviews = all_reviews_primary -%}
             {%- if mo_list == 2 -%}{%- assign mo_reviews = all_reviews_legacy -%}{%- endif -%}
@@ -523,6 +530,12 @@
               {%- assign r_images = review.images.value | default: review.images -%}
             {%- endif -%}
             {%- assign r_images = r_images | default: nil -%}
+            {%- assign has_review_photo = false -%}
+            {%- if r_images != blank and r_images.size > 0 -%}{%- assign has_review_photo = true -%}{%- endif -%}
+            {%- if s_reviews_sort == 'photos_first' -%}
+              {%- if photo_pass == 1 and has_review_photo == false -%}{%- continue -%}{%- endif -%}
+              {%- if photo_pass == 2 and has_review_photo -%}{%- continue -%}{%- endif -%}
+            {%- endif -%}
             <article class="product-reviews__card product-reviews__card--page-{{ page_num }}" data-page="{{ page_num }}"{% if total_pages > 1 and page_num > 1 %} style="display:none"{% endif %}>
               {%- assign r_avatar = r_author | slice: 0, 1 | upcase -%}
               {%- if r_avatar == blank -%}{%- assign r_avatar = '?' -%}{%- endif -%}
@@ -613,6 +626,7 @@
               </div>
             </article>
             {%- endfor -%}
+          {%- endfor -%}
           {%- endfor -%}
           {%- endunless -%}
         </div>
