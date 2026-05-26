@@ -115,26 +115,40 @@ export function StorefrontPreview({ settings, shopName = "Sua loja" }: Props) {
                     gap: "6px 10px",
                   }}
                 >
-                  {settings.header_show_trustpilot_logo ? (
-                    <TrustpilotLogoMark height={settings.header_trustpilot_logo_height_mobile} />
-                  ) : null}
-                  <span
+                  <div
                     style={{
-                      fontSize: settings.header_rating_font_size_mobile,
-                      fontWeight: 700,
-                      color: settings.header_rating_color,
-                      lineHeight: 1,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      flexWrap: "nowrap",
+                      gap: 6,
+                      lineHeight: 0,
                     }}
                   >
-                    4.8
-                  </span>
-                  <ReviewStars
-                    rating={4.8}
-                    size={settings.header_stars_size_mobile}
-                    fillColor={settings.header_stars_color}
-                    emptyColor={settings.stars_empty_color}
-                  />
-                  <span style={{ fontSize: 15, color: settings.header_summary_color }}>
+                    {settings.header_show_trustpilot_logo ? (
+                      <TrustpilotLogoMark height={settings.header_trustpilot_logo_height_mobile} />
+                    ) : null}
+                    <span
+                      style={{
+                        fontSize: settings.header_rating_font_size_mobile,
+                        fontWeight: 700,
+                        color: settings.header_rating_color,
+                        lineHeight: 1,
+                        display: "inline-flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      4.8
+                    </span>
+                    <div style={{ display: "inline-flex", alignItems: "center", lineHeight: 0 }}>
+                      <ReviewStars
+                        rating={4.8}
+                        size={settings.header_stars_size_mobile}
+                        fillColor={settings.header_stars_color}
+                        emptyColor={settings.stars_empty_color}
+                      />
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 15, color: settings.header_summary_color, lineHeight: 1.4 }}>
                     {settings.header_based_on_prefix} 128 reviews
                   </span>
                 </div>

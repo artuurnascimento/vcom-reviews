@@ -30,7 +30,7 @@ import {
   approveReviewsByIds,
   deleteReview,
   listPendingReviews,
-  listReviews,
+  listAllReviews,
   rejectReview,
   rejectReviewsByIds,
 } from "../lib/reviews.server";
@@ -44,9 +44,9 @@ const REVIEWS_INDEX_ROUTE_DATA_ID = "routes/app.reviews._index";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  const [stats, { reviews }, pending] = await Promise.all([
+  const [stats, reviews, pending] = await Promise.all([
     getDashboardStats(admin),
-    listReviews(admin, { first: 250 }),
+    listAllReviews(admin),
     listPendingReviews(admin),
   ]);
   return { reviews, stats, pendingIds: pending.map((r) => r.id) };

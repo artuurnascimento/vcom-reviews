@@ -7,6 +7,8 @@ type AdminApi = {
 import {
   REVIEW_METAOBJECT_TYPE,
   LEGACY_REVIEW_METAOBJECT_TYPE,
+  MAX_STOREFRONT_REVIEWS,
+  REVIEWS_GRAPHQL_PAGE_SIZE,
   type ReviewFormData,
   type ReviewPlacement,
   type ReviewRecord,
@@ -110,8 +112,37 @@ export async function listReviews(
   };
 }
 
+/** Admin + app proxy — percorre todas as páginas (até MAX_STOREFRONT_REVIEWS). */
+export async function listAllReviews(
+  admin: AdminApi,
+  max = MAX_STOREFRONT_REVIEWS,
+): Promise<ReviewRecord[]> {
+  const seen = new Set<string>();
+  const all: ReviewRecord[] = [];
+
+  async function fetchType(type: string) {
+    let after: string | undefined;
+    while (all.length < max) {
+      const pageSize = Math.min(REVIEWS_GRAPHQL_PAGE_SIZE, max - all.length);
+      const batch = await listReviewsByType(admin, type, { first: pageSize, after });
+      for (const review of batch.reviews) {
+        if (seen.has(review.handle)) continue;
+        seen.add(review.handle);
+        all.push(review);
+      }
+      if (!batch.pageInfo?.hasNextPage) break;
+      after = batch.pageInfo.endCursor;
+    }
+  }
+
+  await fetchType(REVIEW_METAOBJECT_TYPE);
+  await fetchType(LEGACY_REVIEW_METAOBJECT_TYPE);
+
+  return all;
+}
+
 export async function listPendingReviews(admin: AdminApi) {
-  const { reviews } = await listReviews(admin, { first: 250 });
+  const reviews = await listAllReviews(admin);
   return reviews.filter((r) => r.status === "pending");
 }
 

@@ -51,31 +51,59 @@
   gap: 6px 10px;
 }
 
+.vcom-reviews-app-block .product-reviews__section-badge {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+
 .vcom-reviews-app-block .product-reviews__trustpilot-logo {
   display: block;
   height: 22px;
   width: auto;
   max-width: none;
   flex: 0 0 auto;
-  margin-right: 2px;
+  margin: 0;
+  object-fit: contain;
+  align-self: center;
 }
 
 .vcom-reviews-app-block .product-reviews__section-score {
+  display: inline-flex;
+  align-items: center;
   font-size: 18px;
   font-weight: 700;
   line-height: 1;
+  margin: 0;
+  flex: 0 0 auto;
 }
 
 .vcom-reviews-app-block .product-reviews__section-stars {
-  display: flex;
+  display: inline-flex;
   gap: 4px;
   align-items: center;
+  line-height: 0;
+  margin: 0;
+  flex: 0 0 auto;
 }
 
 .vcom-reviews-app-block .product-reviews__section-stars svg {
+  display: block;
   width: 20px;
   height: 20px;
   flex: 0 0 auto;
+}
+
+@media (max-width: 991px) {
+  .vcom-reviews-app-block .product-reviews__section-badge {
+    gap: 6px;
+  }
+
+  .vcom-reviews-app-block .product-reviews__section-stars {
+    gap: 3px;
+  }
 }
 
 .vcom-reviews-app-block .product-reviews__section-count {

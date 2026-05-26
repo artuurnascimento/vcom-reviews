@@ -15,10 +15,10 @@ import {
   normalizeRatingRange,
 } from "./ai-review-options";
 
-/** Modelos com cota no plano gratuito (2.0-flash costuma ter limit: 0). */
+/** Modelos com cota no plano gratuito (2.0-flash costuma ter limit: 0). Lite primeiro = mais RPM no free tier. */
 const GEMINI_MODEL_FALLBACKS = [
-  "gemini-2.5-flash",
   "gemini-2.5-flash-lite",
+  "gemini-2.5-flash",
   "gemini-2.0-flash",
 ] as const;
 
@@ -37,6 +37,19 @@ function isGeminiQuotaError(message: string): boolean {
   return /quota exceeded|limit:\s*0|RESOURCE_EXHAUSTED|rate.?limit/i.test(message);
 }
 
+function isGeminiFreeTierQuotaError(message: string): boolean {
+  return /free_tier|free tier/i.test(message);
+}
+
+/** Extrai "Please retry in 12.78s" da mensagem da API. */
+function parseGeminiRetryAfterMs(message: string): number | null {
+  const match = message.match(/retry in ([\d.]+)s/i);
+  if (!match) return null;
+  const seconds = parseFloat(match[1]);
+  if (!Number.isFinite(seconds) || seconds <= 0) return null;
+  return Math.min(120_000, Math.ceil(seconds * 1000) + 500);
+}
+
 /** Pico de demanda, 503, 429 — vale retry e troca de modelo. */
 function isGeminiTransientError(message: string): boolean {
   return (
@@ -51,10 +64,22 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function isGeminiFreeTierMode(): boolean {
+  return process.env.GEMINI_FREE_TIER === "1" || process.env.GEMINI_FREE_TIER === "true";
+}
+
 function getGeminiBatchConcurrency(hasVision: boolean): number {
   const raw = parseInt(process.env.GEMINI_BATCH_CONCURRENCY || "", 10);
-  const configured = Number.isFinite(raw) && raw > 0 ? raw : hasVision ? 2 : 5;
-  return Math.min(8, Math.max(1, configured));
+  // Padrão 1: evita estourar ~5 RPM do free tier com lotes paralelos.
+  const configured = Number.isFinite(raw) && raw > 0 ? raw : 1;
+  const cap = hasVision ? 2 : 8;
+  return Math.min(cap, Math.max(1, configured));
+}
+
+function getGeminiBatchDelayMs(): number {
+  const raw = parseInt(process.env.GEMINI_BATCH_DELAY_MS || "", 10);
+  if (Number.isFinite(raw) && raw >= 0) return raw;
+  return isGeminiFreeTierMode() ? 13_000 : 0;
 }
 
 async function mapWithConcurrency<T, R>(
@@ -99,6 +124,16 @@ export function formatGeminiErrorMessage(message: string): string {
     return (
       `Cota da geração com IA esgotada para o modelo configurado (limite 0). ` +
       `O app tenta modelos alternativos automaticamente; se persistir, ajuste as variáveis no servidor.${retryHint}`
+    );
+  }
+
+  if (isGeminiFreeTierQuotaError(message)) {
+    return (
+      "Cota gratuita do Gemini esgotada (cerca de 5 pedidos por minuto no modelo flash). " +
+      "Ative faturamento em https://ai.google.dev/ e use uma chave com billing no Railway, " +
+      "ou defina GEMINI_MODEL=gemini-2.5-flash-lite, GEMINI_BATCH_CONCURRENCY=1 e GEMINI_FREE_TIER=1. " +
+      "Gere menos avaliações por vez (ex.: 10) e aguarde ~15s entre tentativas." +
+      retryHint
     );
   }
 
@@ -441,7 +476,9 @@ async function callGeminiWithRetries(
         throw lastError;
       }
 
-      const delayMs = GEMINI_RETRY_DELAYS_MS[attempt] ?? 10_000;
+      const apiDelayMs = parseGeminiRetryAfterMs(msg);
+      const delayMs =
+        apiDelayMs ?? GEMINI_RETRY_DELAYS_MS[attempt] ?? 10_000;
       console.warn(
         `[vcom-reviews] Gemini retry ${attempt + 1}/${GEMINI_RETRY_ATTEMPTS} (${model}) in ${delayMs}ms: ${msg}`,
       );
@@ -567,13 +604,16 @@ export async function generateReviewsWithGemini(
     });
   }
 
+  const batchDelayMs = getGeminiBatchDelayMs();
+  const useSerialBatches = concurrency <= 1 && batchDelayMs > 0;
+
   if (jobs.length > 1) {
     console.info(
-      `[vcom-reviews] Gemini parallel generate: ${total} reviews, ${jobs.length} batches, concurrency=${concurrency}`,
+      `[vcom-reviews] Gemini generate: ${total} reviews, ${jobs.length} batches, concurrency=${concurrency}, delayMs=${batchDelayMs}, serial=${useSerialBatches}`,
     );
   }
 
-  const batchResults = await mapWithConcurrency(jobs, concurrency, (job) =>
+  const runJob = (job: BatchJob) =>
     generateReviewsWithGeminiBatch(
       { ...input, count: job.count },
       {
@@ -582,8 +622,18 @@ export async function generateReviewsWithGemini(
         visionParts,
         imageUrls,
       },
-    ),
-  );
+    );
+
+  let batchResults: GeneratedAiReview[][];
+  if (useSerialBatches) {
+    batchResults = [];
+    for (let i = 0; i < jobs.length; i++) {
+      if (i > 0 && batchDelayMs > 0) await sleep(batchDelayMs);
+      batchResults.push(await runJob(jobs[i]));
+    }
+  } else {
+    batchResults = await mapWithConcurrency(jobs, concurrency, (job) => runJob(job));
+  }
 
   return batchResults.flat();
 }

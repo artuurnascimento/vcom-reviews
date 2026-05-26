@@ -1,7 +1,7 @@
 import { ratingToDistributionBucket } from "./ai-review-options";
 import type { ReviewRecord } from "./constants";
 import { REVIEW_METAOBJECT_TYPE } from "./constants";
-import { listPendingReviews, listReviews } from "./reviews.server";
+import { listAllReviews, listPendingReviews } from "./reviews.server";
 
 type AdminApi = Parameters<typeof listReviews>[0];
 
@@ -19,8 +19,8 @@ export type DashboardStats = {
 };
 
 export async function getDashboardStats(admin: AdminApi): Promise<DashboardStats> {
-  const [{ reviews }, infra, pending] = await Promise.all([
-    listReviews(admin, { first: 250 }),
+  const [reviews, infra, pending] = await Promise.all([
+    listAllReviews(admin),
     fetchInfrastructure(admin),
     listPendingReviews(admin),
   ]);

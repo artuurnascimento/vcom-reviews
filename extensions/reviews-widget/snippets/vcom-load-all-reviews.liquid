@@ -1,0 +1,23 @@
+{%- comment -%}
+  Carrega até 5000 metaobjects review na vitrine (limite padrão do Liquid é 50).
+  Define: vcom_all_reviews, vcom_use_proxy_reviews
+{%- endcomment -%}
+{%- assign vcom_reviews_page_size = 5000 -%}
+{%- liquid
+  assign vcom_all_reviews = nil
+  assign vcom_use_proxy_reviews = false
+  assign vcom_review_mo = nil
+
+  if shop.metaobjects.review
+    assign vcom_review_mo = shop.metaobjects.review
+  elsif shop.metaobjects['$app:review']
+    assign vcom_review_mo = shop.metaobjects['$app:review']
+  else
+    assign vcom_use_proxy_reviews = true
+  endif
+-%}
+{%- if vcom_review_mo -%}
+  {%- paginate vcom_review_mo.values by vcom_reviews_page_size -%}
+    {%- assign vcom_all_reviews = vcom_review_mo.values -%}
+  {%- endpaginate -%}
+{%- endif -%}

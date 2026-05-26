@@ -1,7 +1,7 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
-import { listReviews, getFileImageUrls } from "../lib/reviews.server";
+import { listAllReviews, getFileImageUrls } from "../lib/reviews.server";
 import type { ReviewPlacement } from "../lib/constants";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -15,7 +15,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       productId = `gid://shopify/Product/${productId.replace(/\D/g, "")}`;
     }
 
-    const { reviews } = await listReviews(admin, { first: 250 });
+    const reviews = await listAllReviews(admin);
     let approved = reviews.filter((r) => r.status === "approved");
 
     if (placement === "homepage") {
