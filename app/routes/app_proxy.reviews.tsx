@@ -53,11 +53,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     console.error("app_proxy reviews error", e);
     let msg = e instanceof Error ? e.message : String(e);
     try {
-      if (e instanceof Response) {
-        const body = await e.text();
-        msg = `HTTP ${e.status} ${e.statusText}${body ? ` - ${body.slice(0, 500)}` : ""}`;
-      } else if (typeof (e as any)?.status === "number") {
-        msg = `HTTP ${(e as any).status} ${(e as any).statusText || ""} - ${String(e)}`;
+      const maybeStatus = (e as any)?.status;
+      const maybeTextFn = (e as any)?.text;
+      if (typeof maybeStatus === "number" && typeof maybeTextFn === "function") {
+        const body = await maybeTextFn.call(e);
+        msg = `HTTP ${maybeStatus} ${(e as any).statusText || ""}${
+          body ? ` - ${String(body).slice(0, 500)}` : ""
+        }`;
+      } else if (typeof maybeStatus === "number") {
+        msg = `HTTP ${maybeStatus} ${(e as any).statusText || ""} - ${String(e)}`;
       }
     } catch {
       // ignore parse error
