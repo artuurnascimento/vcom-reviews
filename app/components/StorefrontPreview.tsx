@@ -81,7 +81,7 @@ export function StorefrontPreview({ settings, shopName = "Sua loja" }: Props) {
         <div
           style={{
             background: settings.background,
-            padding: `${settings.section_padding_top}px ${settings.section_padding_sides}px ${settings.section_padding_bottom}px`,
+            padding: `${settings.section_padding_top_mobile}px ${settings.section_padding_sides_mobile}px ${settings.section_padding_bottom_mobile}px`,
             maxHeight: 520,
             overflowY: "auto",
           }}
@@ -97,7 +97,7 @@ export function StorefrontPreview({ settings, shopName = "Sua loja" }: Props) {
                 <h2
                   style={{
                     margin: "0 0 10px",
-                    fontSize: settings.section_headline_font_size,
+                    fontSize: settings.section_headline_font_size_mobile,
                     fontWeight: 800,
                     letterSpacing: "0.06em",
                     textTransform: "uppercase",
@@ -116,11 +116,11 @@ export function StorefrontPreview({ settings, shopName = "Sua loja" }: Props) {
                   }}
                 >
                   {settings.header_show_trustpilot_logo ? (
-                    <TrustpilotLogoMark height={settings.header_trustpilot_logo_height} />
+                    <TrustpilotLogoMark height={settings.header_trustpilot_logo_height_mobile} />
                   ) : null}
                   <span
                     style={{
-                      fontSize: 18,
+                      fontSize: settings.header_rating_font_size_mobile,
                       fontWeight: 700,
                       color: settings.header_rating_color,
                       lineHeight: 1,
@@ -130,7 +130,7 @@ export function StorefrontPreview({ settings, shopName = "Sua loja" }: Props) {
                   </span>
                   <ReviewStars
                     rating={4.8}
-                    size={18}
+                    size={settings.header_stars_size_mobile}
                     fillColor={settings.header_stars_color}
                     emptyColor={settings.stars_empty_color}
                   />
@@ -263,25 +263,21 @@ function PreviewReviews({ settings }: { settings: StorefrontSettings }) {
     );
   }
 
-  const gap = settings.cards_gap;
-
-  const previewCols = Math.max(
-    1,
-    Math.min(4, settings.reviews_columns_desktop || 3),
-  );
+  const gap = settings.cards_gap_mobile;
+  const mobileMasonry = settings.reviews_mobile_layout === "masonry";
 
   const wrapStyle: CSSProperties = (() => {
     switch (layout) {
       case "trustpilot_grid":
         return {
           display: "grid",
-          gridTemplateColumns: `repeat(${previewCols}, 1fr)`,
+          gridTemplateColumns: mobileMasonry ? "repeat(2, 1fr)" : "1fr",
           gap,
         };
       case "trustpilot_mosaic":
         return {
           display: "grid",
-          gridTemplateColumns: `repeat(${Math.min(2, previewCols)}, 1fr)`,
+          gridTemplateColumns: "repeat(2, 1fr)",
           gap,
         };
       case "trustpilot_list":
@@ -290,7 +286,7 @@ function PreviewReviews({ settings }: { settings: StorefrontSettings }) {
       default:
         return {
           display: "grid",
-          gridTemplateColumns: `repeat(${previewCols}, 1fr)`,
+          gridTemplateColumns: mobileMasonry ? "repeat(2, 1fr)" : "1fr",
           gap,
         };
     }
@@ -304,7 +300,7 @@ function PreviewReviews({ settings }: { settings: StorefrontSettings }) {
           review={r}
           settings={settings}
           list={layout === "trustpilot_list"}
-          compact={layout === "trustpilot_mosaic"}
+          mobile
         />
       ))}
     </div>
@@ -338,12 +334,20 @@ function ReviewCard({
   settings,
   list = false,
   compact = false,
+  mobile = false,
 }: {
   review: Review;
   settings: StorefrontSettings;
   list?: boolean;
   compact?: boolean;
+  mobile?: boolean;
 }) {
+  const useMobile = mobile || compact;
+  const cardStarsSize = useMobile ? settings.card_stars_size_mobile : settings.card_stars_size;
+  const titleSize = useMobile ? settings.review_title_font_size_mobile : settings.review_title_font_size;
+  const bodySize = useMobile ? settings.review_body_font_size_mobile : settings.review_body_font_size;
+  const cardPad = useMobile ? settings.card_padding_mobile : settings.card_padding;
+  const cardRadius = useMobile ? settings.card_border_radius_mobile : settings.card_border_radius;
   if (list) {
     return (
       <div
@@ -409,24 +413,27 @@ function ReviewCard({
 
   const cardStyle: CSSProperties = {
     border: list ? "none" : `1px solid ${settings.card_border_color}`,
-    borderRadius: compact ? Math.min(settings.card_border_radius, 8) : settings.card_border_radius,
-    padding: compact ? Math.max(8, settings.card_padding - 8) : settings.card_padding,
+    borderRadius: compact ? Math.min(cardRadius, 8) : cardRadius,
+    padding: compact ? Math.max(8, cardPad - 8) : cardPad,
     background: settings.card_background,
     boxShadow: compact ? "0 1px 3px rgba(0,0,0,0.06)" : undefined,
   };
 
   return (
     <div style={cardStyle}>
-      <ReviewStars rating={review.rating} size={compact ? 14 : 18} fillColor={settings.stars_color} emptyColor={settings.stars_empty_color} />
+      <ReviewStars
+        rating={review.rating}
+        size={cardStarsSize}
+        fillColor={settings.stars_color}
+        emptyColor={settings.stars_empty_color}
+      />
       {settings.show_verified && review.verified ? (
         <VerifiedBadge settings={settings} />
       ) : null}
           <div
             style={{
               fontWeight: 800,
-              fontSize: compact
-                ? Math.max(12, settings.review_title_font_size - 3)
-                : settings.review_title_font_size,
+              fontSize: compact ? Math.max(12, titleSize - 3) : titleSize,
               margin: "8px 0 4px",
               color: settings.review_title_color,
             }}
@@ -435,9 +442,7 @@ function ReviewCard({
           </div>
           <div
             style={{
-              fontSize: compact
-                ? Math.max(11, settings.review_body_font_size - 2)
-                : settings.review_body_font_size,
+              fontSize: compact ? Math.max(11, bodySize - 2) : bodySize,
               color: settings.review_body_color,
               lineHeight: 1.55,
               fontWeight: 400,

@@ -36,8 +36,10 @@ export interface StorefrontSettings {
   review_body_color: string;
   review_title_font_size: number;
   review_body_font_size: number;
+  card_stars_size: number;
   review_title_font_size_mobile: number;
   review_body_font_size_mobile: number;
+  card_stars_size_mobile: number;
   review_meta_color: string;
   card_background: string;
   card_border_color: string;
@@ -62,7 +64,10 @@ export interface StorefrontSettings {
   verified_icon_color: string;
   show_images: boolean;
   reviews_text_max_chars: number;
+  reviews_text_max_chars_mobile: number;
   reviews_title_max_chars: number;
+  reviews_images_initial: number;
+  reviews_images_initial_mobile: number;
   reviews_per_page: number;
   /** Avaliações por página no mobile */
   reviews_per_page_mobile: number;
@@ -154,8 +159,10 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   review_body_color: "#6b6b6b",
   review_title_font_size: 17,
   review_body_font_size: 15,
+  card_stars_size: 24,
   review_title_font_size_mobile: 16,
   review_body_font_size_mobile: 14,
+  card_stars_size_mobile: 14,
   review_meta_color: "#888888",
   card_background: "#ffffff",
   card_border_color: "rgba(0, 0, 0, 0.08)",
@@ -179,8 +186,11 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   verified_label: "Verified Buyer",
   verified_icon_color: "#1d8a42",
   show_images: true,
-  reviews_text_max_chars: 150,
+  reviews_text_max_chars: 120,
+  reviews_text_max_chars_mobile: 85,
   reviews_title_max_chars: 80,
+  reviews_images_initial: 2,
+  reviews_images_initial_mobile: 2,
   reviews_per_page: 6,
   reviews_per_page_mobile: 10,
   reviews_mobile_layout: "masonry",
@@ -319,6 +329,7 @@ export function coerceStorefrontSettings(
     review_body_color: str(r.review_body_color, d.review_body_color),
     review_title_font_size: num(r.review_title_font_size, d.review_title_font_size),
     review_body_font_size: num(r.review_body_font_size, d.review_body_font_size),
+    card_stars_size: Math.min(36, Math.max(10, num(r.card_stars_size, d.card_stars_size))),
     review_title_font_size_mobile: num(
       r.review_title_font_size_mobile,
       d.review_title_font_size_mobile,
@@ -326,6 +337,10 @@ export function coerceStorefrontSettings(
     review_body_font_size_mobile: num(
       r.review_body_font_size_mobile,
       d.review_body_font_size_mobile,
+    ),
+    card_stars_size_mobile: Math.min(
+      36,
+      Math.max(10, num(r.card_stars_size_mobile, d.card_stars_size_mobile)),
     ),
     review_meta_color: str(r.review_meta_color, d.review_meta_color),
     card_background: str(r.card_background, d.card_background),
@@ -351,7 +366,19 @@ export function coerceStorefrontSettings(
     verified_icon_color: str(r.verified_icon_color, d.verified_icon_color),
     show_images: bool(r.show_images, d.show_images),
     reviews_text_max_chars: num(r.reviews_text_max_chars, d.reviews_text_max_chars),
+    reviews_text_max_chars_mobile: Math.min(
+      300,
+      Math.max(40, num(r.reviews_text_max_chars_mobile, d.reviews_text_max_chars_mobile)),
+    ),
     reviews_title_max_chars: num(r.reviews_title_max_chars, d.reviews_title_max_chars),
+    reviews_images_initial: Math.min(
+      4,
+      Math.max(1, num(r.reviews_images_initial, d.reviews_images_initial)),
+    ),
+    reviews_images_initial_mobile: Math.min(
+      4,
+      Math.max(1, num(r.reviews_images_initial_mobile, d.reviews_images_initial_mobile)),
+    ),
     reviews_per_page: num(r.reviews_per_page, d.reviews_per_page),
     reviews_per_page_mobile: Math.min(
       20,

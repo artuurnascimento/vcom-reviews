@@ -519,6 +519,16 @@ export default function AppearancePage() {
                             suffix="px"
                             onChange={(v) => set("review_body_font_size", v)}
                           />
+                          <RangeField
+                            label="Estrelas no card"
+                            name="card_stars_size"
+                            value={settings.card_stars_size}
+                            min={10}
+                            max={36}
+                            suffix="px"
+                            onChange={(v) => set("card_stars_size", v)}
+                            helpText="Estrelas de cada avaliação (não o cabeçalho)"
+                          />
                         </InlineGrid>
                       </BlockStack>
                     </Card>
@@ -617,6 +627,16 @@ export default function AppearancePage() {
                             Cards de avaliação (mobile)
                           </Text>
                           <RangeField
+                            label="Estrelas da avaliação (no card)"
+                            name="card_stars_size_mobile"
+                            value={settings.card_stars_size_mobile}
+                            min={10}
+                            max={36}
+                            suffix="px"
+                            onChange={(v) => set("card_stars_size_mobile", v)}
+                            helpText="Tamanho das 5 estrelas no topo de cada card — diferente das estrelas do cabeçalho acima"
+                          />
+                          <RangeField
                             label="Título do card"
                             name="review_title_font_size_mobile"
                             value={settings.review_title_font_size_mobile}
@@ -660,6 +680,34 @@ export default function AppearancePage() {
                             max={32}
                             suffix="px"
                             onChange={(v) => set("cards_gap_mobile", v)}
+                          />
+                          <TextField
+                            label="Imagens visíveis no card"
+                            name="reviews_images_initial_mobile"
+                            type="number"
+                            value={String(settings.reviews_images_initial_mobile)}
+                            onChange={(v) =>
+                              set(
+                                "reviews_images_initial_mobile",
+                                Math.min(4, Math.max(1, parseInt(v, 10) || 2)),
+                              )
+                            }
+                            autoComplete="off"
+                            helpText="Antes do botão +N (padrão 2)"
+                          />
+                          <TextField
+                            label="Chars antes do See more"
+                            name="reviews_text_max_chars_mobile"
+                            type="number"
+                            value={String(settings.reviews_text_max_chars_mobile)}
+                            onChange={(v) =>
+                              set(
+                                "reviews_text_max_chars_mobile",
+                                Math.min(300, Math.max(40, parseInt(v, 10) || 85)),
+                              )
+                            }
+                            autoComplete="off"
+                            helpText="Texto do review no mobile (padrão 85)"
                           />
                         </InlineGrid>
                       </BlockStack>
@@ -828,12 +876,25 @@ export default function AppearancePage() {
                         />
                         <InlineGrid columns={2} gap="400">
                           <TextField
-                            label="Máx. chars texto"
+                            label="Máx. chars texto (desktop)"
                             name="reviews_text_max_chars"
                             type="number"
                             value={String(settings.reviews_text_max_chars)}
                             onChange={(v) =>
-                              set("reviews_text_max_chars", parseInt(v, 10) || 150)
+                              set("reviews_text_max_chars", parseInt(v, 10) || 120)
+                            }
+                            autoComplete="off"
+                          />
+                          <TextField
+                            label="Imagens visíveis (desktop)"
+                            name="reviews_images_initial"
+                            type="number"
+                            value={String(settings.reviews_images_initial)}
+                            onChange={(v) =>
+                              set(
+                                "reviews_images_initial",
+                                Math.min(4, Math.max(1, parseInt(v, 10) || 2)),
+                              )
                             }
                             autoComplete="off"
                           />
