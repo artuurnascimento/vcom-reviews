@@ -321,35 +321,32 @@ export default function ReviewsIndex() {
           <Banner
             title={`${rejectedCount} avaliação(ões) rejeitada(s)`}
             tone="warning"
+            action={{
+              content:
+                isBatchRunning && batchProgress && batchMode === "rejected"
+                  ? `Aprovando ${batchProgress.done}/${batchProgress.total}…`
+                  : `Aprovar todas (${rejectedCount})`,
+              onAction: handleApproveAllRejected,
+              loading: isBatchRunning && batchMode === "rejected",
+              disabled: isBatchRunning,
+            }}
+            secondaryAction={{
+              content:
+                isBatchRunning && batchProgress && batchMode === "delete-rejected"
+                  ? `Excluindo ${batchProgress.done}/${batchProgress.total}…`
+                  : `Excluir todas (${rejectedCount})`,
+              onAction: handleDeleteAllRejected,
+              destructive: true,
+              loading: isBatchRunning && batchMode === "delete-rejected",
+              disabled: isBatchRunning,
+            }}
           >
-            <BlockStack gap="300">
-              <p>
-                Estas avaliações não aparecem na loja. Use <strong>Aprovar</strong> em cada
-                linha ou aprove todas de uma vez ({MODERATION_BATCH_SIZE} por lote).
-              </p>
-              <InlineStack gap="200" wrap>
-                <Button
-                  variant="primary"
-                  onClick={handleApproveAllRejected}
-                  loading={isBatchRunning && batchMode === "rejected"}
-                  disabled={isBatchRunning}
-                >
-                  {isBatchRunning && batchProgress && batchMode === "rejected"
-                    ? `Aprovando ${batchProgress.done}/${batchProgress.total}…`
-                    : `Aprovar todas rejeitadas (${rejectedCount})`}
-                </Button>
-                <Button
-                  tone="critical"
-                  onClick={handleDeleteAllRejected}
-                  loading={isBatchRunning && batchMode === "delete-rejected"}
-                  disabled={isBatchRunning}
-                >
-                  {isBatchRunning && batchProgress && batchMode === "delete-rejected"
-                    ? `Excluindo ${batchProgress.done}/${batchProgress.total}…`
-                    : `Excluir todas rejeitadas (${rejectedCount})`}
-                </Button>
-              </InlineStack>
-            </BlockStack>
+            <p>
+              Estas avaliações não aparecem na loja. Use os botões acima para{" "}
+              <strong>aprovar</strong> ou <strong>excluir permanentemente</strong> todas de
+              uma vez ({MODERATION_BATCH_SIZE} por lote), ou <strong>Apagar</strong> em cada
+              linha.
+            </p>
           </Banner>
         ) : null}
 
@@ -358,25 +355,33 @@ export default function ReviewsIndex() {
             title={`${stats.pendingCount} avaliação(ões) aguardando aprovação`}
             tone="warning"
             action={{
-              content: "Ver só pendentes",
-              url: paths.reviewsPending,
+              content:
+                isBatchRunning && batchProgress && batchMode === "pending"
+                  ? `Aprovando ${batchProgress.done}/${batchProgress.total}…`
+                  : `Aprovar todas (${stats.pendingCount})`,
+              onAction: handleApproveAll,
+              loading: isBatchRunning && batchMode === "pending",
+              disabled: isBatchRunning,
+            }}
+            secondaryAction={{
+              content:
+                isBatchRunning && batchProgress && batchMode === "delete-pending"
+                  ? `Excluindo ${batchProgress.done}/${batchProgress.total}…`
+                  : `Excluir todas (${stats.pendingCount})`,
+              onAction: handleDeleteAllPending,
+              destructive: true,
+              loading: isBatchRunning && batchMode === "delete-pending",
+              disabled: isBatchRunning,
             }}
           >
-            <BlockStack gap="300">
+            <BlockStack gap="200">
               <p>
-                Use <strong>Aprovar</strong> em cada linha ou aprove/rejeite todas de uma vez (
-                {MODERATION_BATCH_SIZE} por lote).
+                Use os botões acima ou modere linha a linha. Rejeitar mantém na lista; excluir
+                remove para sempre ({MODERATION_BATCH_SIZE} por lote).
               </p>
               <InlineStack gap="200" wrap>
-                <Button
-                  variant="primary"
-                  onClick={handleApproveAll}
-                  loading={isBatchRunning}
-                  disabled={isBatchRunning}
-                >
-                  {isBatchRunning && batchProgress
-                    ? `Aprovando ${batchProgress.done}/${batchProgress.total}…`
-                    : `Aprovar todas (${stats.pendingCount})`}
+                <Button url={paths.reviewsPending} disabled={isBatchRunning}>
+                  Ver só pendentes
                 </Button>
                 <Button
                   tone="critical"
@@ -384,17 +389,6 @@ export default function ReviewsIndex() {
                   disabled={isBatchRunning}
                 >
                   Rejeitar todas ({stats.pendingCount})
-                </Button>
-                <Button
-                  tone="critical"
-                  variant="plain"
-                  onClick={handleDeleteAllPending}
-                  loading={isBatchRunning && batchMode === "delete-pending"}
-                  disabled={isBatchRunning}
-                >
-                  {isBatchRunning && batchProgress && batchMode === "delete-pending"
-                    ? `Excluindo ${batchProgress.done}/${batchProgress.total}…`
-                    : `Excluir todas pendentes (${stats.pendingCount})`}
                 </Button>
               </InlineStack>
             </BlockStack>
