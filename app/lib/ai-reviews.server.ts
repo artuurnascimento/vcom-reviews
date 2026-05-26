@@ -6,6 +6,8 @@ import {
   clampRating,
   distributeRatings,
   getAiTonePromptBlock,
+  MAX_REVIEWS_PER_GEMINI_CALL,
+  MAX_REVIEWS_TOTAL,
   normalizeRatingRange,
 } from "./ai-review-options";
 
@@ -16,7 +18,6 @@ const GEMINI_MODEL_FALLBACKS = [
   "gemini-2.0-flash",
 ] as const;
 
-const MAX_REVIEWS_PER_REQUEST = 10;
 const MAX_IMAGES_FOR_VISION = 3;
 
 export function getGeminiModelCandidates(): string[] {
@@ -82,6 +83,7 @@ function buildPrompt(
   input: AiReviewGenerateInput,
   hasImages: boolean,
   targetRatings: number[],
+  batch?: { index: number; total: number },
 ): string {
   const productType = resolveProductType(input);
   const toneBlock = getAiTonePromptBlock(input.tone, input.locale, input.placement);
@@ -137,6 +139,11 @@ ${isHomepage ? "13" : "10"}. Mencione 1–2 detalhes visuais de forma natural, s
 ${isHomepage ? "14" : "11"}. Não diga "na foto" ou "na imagem".`
     : "";
 
+  const batchLine =
+    batch && batch.total > 1
+      ? `\n- Lote ${batch.index} de ${batch.total}: gere textos NOVOS; não repita títulos, aberturas ou frases de lotes anteriores.`
+      : "";
+
   return `Você gera rascunhos de avaliações de clientes para uma loja online revisar antes de publicar.
 
 Contexto:
@@ -146,7 +153,7 @@ ${shopLine}
 ${descriptionLine ? `- ${descriptionLine}` : ""}
 ${placementLine}
 - Idioma: ${input.locale}
-- Persona do autor: ${persona}
+- Persona do autor: ${persona}${batchLine}
 
 ${toneBlock}
 - Faixa de notas: ${min.toFixed(1)} a ${max.toFixed(1)} (escala 0,5–5,0)
@@ -327,10 +334,11 @@ async function callGeminiGenerateContent(
   return json;
 }
 
-export async function generateReviewsWithGemini(
+async function generateReviewsWithGeminiBatch(
   input: AiReviewGenerateInput,
+  batch?: { index: number; total: number },
 ): Promise<GeneratedAiReview[]> {
-  const count = Math.min(Math.max(1, input.count), MAX_REVIEWS_PER_REQUEST);
+  const count = Math.min(Math.max(1, input.count), MAX_REVIEWS_PER_GEMINI_CALL);
   const payload = { ...input, count };
   const targetRatings = distributeRatings(count, input.ratingMin, input.ratingMax);
   const imageUrls = (input.productImageUrls || []).filter(Boolean);
@@ -340,7 +348,7 @@ export async function generateReviewsWithGemini(
   const apiKey = getApiKey();
   const parts: Array<GeminiTextPart | GeminiInlinePart> = [
     ...visionParts,
-    { text: buildPrompt(payload, hasImages, targetRatings) },
+    { text: buildPrompt(payload, hasImages, targetRatings, batch) },
   ];
 
   const models = getGeminiModelCandidates();
@@ -382,4 +390,29 @@ export async function generateReviewsWithGemini(
 
   const last = quotaErrors[quotaErrors.length - 1] || "Cota esgotada.";
   throw new Error(formatGeminiErrorMessage(last));
+}
+
+export async function generateReviewsWithGemini(
+  input: AiReviewGenerateInput,
+): Promise<GeneratedAiReview[]> {
+  const total = Math.min(Math.max(1, input.count), MAX_REVIEWS_TOTAL);
+  const batchSize = MAX_REVIEWS_PER_GEMINI_CALL;
+  const totalBatches = Math.ceil(total / batchSize);
+  const all: GeneratedAiReview[] = [];
+
+  for (let offset = 0; offset < total; offset += batchSize) {
+    const batchCount = Math.min(batchSize, total - offset);
+    const batchIndex = Math.floor(offset / batchSize) + 1;
+    const batch = await generateReviewsWithGeminiBatch(
+      { ...input, count: batchCount },
+      totalBatches > 1 ? { index: batchIndex, total: totalBatches } : undefined,
+    );
+    all.push(...batch);
+
+    if (offset + batchCount < total) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+
+  return all;
 }

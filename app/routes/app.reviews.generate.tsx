@@ -35,6 +35,8 @@ import {
   AI_PRODUCT_TYPES,
   AI_TONES,
   DEFAULT_AI_TONE,
+  MAX_REVIEWS_PER_GEMINI_CALL,
+  MAX_REVIEWS_TOTAL,
   type GeneratedAiReview,
   formatRatingRange,
   clampRating,
@@ -334,7 +336,10 @@ export default function GenerateReviewsPage() {
     setPreview([]);
   }, []);
 
-  const parsedCount = Math.min(10, Math.max(1, parseInt(count, 10) || 3));
+  const parsedCount = Math.min(
+    MAX_REVIEWS_TOTAL,
+    Math.max(1, parseInt(count, 10) || 3),
+  );
 
   const summaryBadges = useMemo(
     () => [
@@ -510,9 +515,9 @@ export default function GenerateReviewsPage() {
         value={count}
         onChange={setCount}
         min={1}
-        max={10}
+        max={MAX_REVIEWS_TOTAL}
         autoComplete="off"
-        helpText="Máximo 10 por geração (limite da API gratuita)."
+        helpText={`Até ${MAX_REVIEWS_TOTAL} por vez (${MAX_REVIEWS_PER_GEMINI_CALL} por chamada à API). Quantidades maiores levam mais tempo.`}
       />
       <Checkbox
         label="Salvar como pendente (revisar antes de publicar)"
@@ -534,7 +539,11 @@ export default function GenerateReviewsPage() {
       subtitle="Gere avaliações para a homepage ou para a página de um produto"
       backAction={{ url: paths.reviews }}
       primaryAction={{
-        content: isGenerating ? "Gerando…" : "Gerar avaliações",
+        content: isGenerating
+          ? parsedCount > MAX_REVIEWS_PER_GEMINI_CALL
+            ? `Gerando ${parsedCount}…`
+            : "Gerando…"
+          : "Gerar avaliações",
         onAction: handleGenerate,
         disabled: !canGenerate,
         loading: isGenerating,

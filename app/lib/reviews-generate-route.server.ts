@@ -5,6 +5,7 @@ import { authenticate } from "../shopify.server";
 import {
   clampRating,
   DEFAULT_AI_TONE,
+  MAX_REVIEWS_TOTAL,
   normalizeRatingRange,
   type GeneratedAiReview,
 } from "./ai-review-options";
@@ -37,7 +38,10 @@ function parseGenerateInput(form: FormData) {
     city: String(form.get("city") || "").trim(),
     ratingMin: parseFloat(String(form.get("ratingMin") || "4.6")) || 4.6,
     ratingMax: parseFloat(String(form.get("ratingMax") || "5")) || 5,
-    count: Math.min(10, Math.max(1, parseInt(String(form.get("count") || "3"), 10) || 3)),
+    count: Math.min(
+      MAX_REVIEWS_TOTAL,
+      Math.max(1, parseInt(String(form.get("count") || "3"), 10) || 3),
+    ),
     placement: (String(form.get("placement") || "homepage") as ReviewPlacement),
     verifiedBuyer: form.get("verifiedBuyer") === "true",
     saveAsPending: form.get("saveAsPending") !== "false",
