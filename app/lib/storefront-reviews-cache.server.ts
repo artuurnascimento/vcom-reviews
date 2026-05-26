@@ -6,7 +6,7 @@ type AdminApi = {
 };
 
 import type { ReviewRecord } from "./constants";
-import { listAllReviews } from "./reviews.server";
+import { getFileImageUrls, listAllReviews } from "./reviews.server";
 import {
   sortStorefrontReviews,
   type ReviewsSortMode,
@@ -56,6 +56,32 @@ export function buildHomepageReviewsCache(
     sort,
     reviews: approved.map(toCachedReview),
     updated_at: new Date().toISOString(),
+  };
+}
+
+/** Inclui URLs de imagem prontas para a vitrine (evita proxy só para fotos). */
+export async function buildHomepageReviewsCacheWithImages(
+  admin: AdminApi,
+  reviews: ReviewRecord[],
+  sort: ReviewsSortMode,
+): Promise<HomepageReviewsCache> {
+  const base = buildHomepageReviewsCache(reviews, sort);
+  const fileIds = base.reviews.flatMap((r) => r.images);
+  if (fileIds.length === 0) return base;
+
+  let urlMap: Record<string, string> = {};
+  try {
+    urlMap = await getFileImageUrls(admin, fileIds);
+  } catch (error) {
+    console.warn("[vcom-reviews] homepage cache image urls", error);
+  }
+
+  return {
+    ...base,
+    reviews: base.reviews.map((r) => ({
+      ...r,
+      images: r.images.map((id) => urlMap[id]).filter(Boolean),
+    })),
   };
 }
 
@@ -139,7 +165,7 @@ export async function getHomepageProxyReviews(
   const settings = await getStorefrontSettings(admin);
   const sortToBuild = sort || settings.reviews_sort;
   const all = await listAllReviews(admin);
-  const built = buildHomepageReviewsCache(all, sortToBuild);
+  const built = await buildHomepageReviewsCacheWithImages(admin, all, sortToBuild);
   await saveHomepageReviewsCache(admin, built);
   return built.reviews;
 }

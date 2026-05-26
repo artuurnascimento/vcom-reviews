@@ -304,8 +304,12 @@ export async function updateReview(
   return id;
 }
 
-export async function deleteReview(admin: AdminApi, id: string) {
-  await admin.graphql(
+export async function deleteReview(
+  admin: AdminApi,
+  id: string,
+  options?: { sync?: boolean },
+) {
+  const response = await admin.graphql(
     `#graphql
     mutation DeleteReview($id: ID!) {
       metaobjectDelete(id: $id) {
@@ -315,7 +319,30 @@ export async function deleteReview(admin: AdminApi, id: string) {
     }`,
     { variables: { id } },
   );
-  scheduleStorefrontStatsSync(admin);
+  const json = await response.json();
+  const errors = json.data?.metaobjectDelete?.userErrors || [];
+  if (errors.length) {
+    throw new Error(errors.map((e: { message: string }) => e.message).join(". "));
+  }
+  if (options?.sync !== false) scheduleStorefrontStatsSync(admin);
+}
+
+export async function deleteReviewsByIds(
+  admin: AdminApi,
+  ids: string[],
+): Promise<{ processed: number; errors: string[] }> {
+  let processed = 0;
+  const errors: string[] = [];
+  for (const id of ids) {
+    try {
+      await deleteReview(admin, id, { sync: false });
+      processed++;
+    } catch (error) {
+      errors.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+  if (processed > 0) scheduleStorefrontStatsSync(admin);
+  return { processed, errors };
 }
 
 async function createMetaobject(admin: AdminApi, data: ReviewFormData) {

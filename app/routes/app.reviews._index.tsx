@@ -29,6 +29,7 @@ import {
   approveReview,
   approveReviewsByIds,
   deleteReview,
+  deleteReviewsByIds,
   listPendingReviews,
   listRejectedReviews,
   listAllReviews,
@@ -66,7 +67,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const intent = String(form.get("intent") || "");
   const id = String(form.get("id") || "");
 
-  if (intent === "approveBatch" || intent === "rejectBatch") {
+  if (intent === "approveBatch" || intent === "rejectBatch" || intent === "deleteBatch") {
     const ids = parseIdsJson(String(form.get("ids") || "[]"));
     if (ids.length === 0) {
       return json({ ok: false, error: "Nenhuma avaliação no lote." });
@@ -74,7 +75,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const { processed, errors } =
       intent === "approveBatch"
         ? await approveReviewsByIds(admin, ids)
-        : await rejectReviewsByIds(admin, ids);
+        : intent === "rejectBatch"
+          ? await rejectReviewsByIds(admin, ids)
+          : await deleteReviewsByIds(admin, ids);
     if (processed === 0) {
       return json({
         ok: false,
@@ -142,7 +145,9 @@ export default function ReviewsIndex() {
     null,
   );
   const [batchError, setBatchError] = useState<string | null>(null);
-  const [batchMode, setBatchMode] = useState<"pending" | "rejected" | null>(null);
+  const [batchMode, setBatchMode] = useState<
+    "pending" | "rejected" | "delete-pending" | "delete-rejected" | null
+  >(null);
   const isBatchRunning = batchProgress !== null;
 
   const post = useCallback(
@@ -153,14 +158,25 @@ export default function ReviewsIndex() {
   );
 
   const runBulkModeration = useCallback(
-    async (mode: "approve" | "reject", ids: string[], source: "pending" | "rejected") => {
+    async (
+      mode: "approve" | "reject" | "delete",
+      ids: string[],
+      source: "pending" | "rejected",
+    ) => {
       if (ids.length === 0) return;
 
       setBatchError(null);
-      setBatchMode(source);
+      setBatchMode(
+        mode === "delete" ? (`delete-${source}` as const) : source,
+      );
       setBatchProgress({ done: 0, total: ids.length });
 
-      const intent = mode === "approve" ? "approveBatch" : "rejectBatch";
+      const intent =
+        mode === "approve"
+          ? "approveBatch"
+          : mode === "reject"
+            ? "rejectBatch"
+            : "deleteBatch";
       let done = 0;
 
       try {
@@ -233,6 +249,37 @@ export default function ReviewsIndex() {
     void runBulkModeration("reject", pendingIds, "pending");
   }, [stats.pendingCount, pendingIds, runBulkModeration]);
 
+  const handleDeleteAllPending = useCallback(() => {
+    if (
+      !window.confirm(
+        `Excluir permanentemente todas as ${stats.pendingCount} avaliações pendentes? Esta ação não pode ser desfeita.`,
+      )
+    ) {
+      return;
+    }
+    void runBulkModeration("delete", pendingIds, "pending");
+  }, [stats.pendingCount, pendingIds, runBulkModeration]);
+
+  const handleDeleteAllRejected = useCallback(() => {
+    if (
+      !window.confirm(
+        `Excluir permanentemente todas as ${rejectedCount} avaliações rejeitadas? Esta ação não pode ser desfeita.`,
+      )
+    ) {
+      return;
+    }
+    void runBulkModeration("delete", rejectedIds, "rejected");
+  }, [rejectedCount, rejectedIds, runBulkModeration]);
+
+  const batchStatusLabel =
+    batchMode === "rejected"
+      ? "Aprovando rejeitadas"
+      : batchMode === "delete-pending"
+        ? "Excluindo pendentes"
+        : batchMode === "delete-rejected"
+          ? "Excluindo rejeitadas"
+          : "Processando";
+
   return (
     <Page
       title="Avaliações"
@@ -264,8 +311,8 @@ export default function ReviewsIndex() {
         {isBatchRunning && batchProgress ? (
           <Banner tone="info" title="Processando em lotes">
             <p>
-              {batchMode === "rejected" ? "Aprovando rejeitadas" : "Processando"}:{" "}
-              {batchProgress.done} de {batchProgress.total}… Não feche esta aba.
+              {batchStatusLabel}: {batchProgress.done} de {batchProgress.total}… Não feche
+              esta aba.
             </p>
           </Banner>
         ) : null}
@@ -290,6 +337,16 @@ export default function ReviewsIndex() {
                   {isBatchRunning && batchProgress && batchMode === "rejected"
                     ? `Aprovando ${batchProgress.done}/${batchProgress.total}…`
                     : `Aprovar todas rejeitadas (${rejectedCount})`}
+                </Button>
+                <Button
+                  tone="critical"
+                  onClick={handleDeleteAllRejected}
+                  loading={isBatchRunning && batchMode === "delete-rejected"}
+                  disabled={isBatchRunning}
+                >
+                  {isBatchRunning && batchProgress && batchMode === "delete-rejected"
+                    ? `Excluindo ${batchProgress.done}/${batchProgress.total}…`
+                    : `Excluir todas rejeitadas (${rejectedCount})`}
                 </Button>
               </InlineStack>
             </BlockStack>
@@ -327,6 +384,17 @@ export default function ReviewsIndex() {
                   disabled={isBatchRunning}
                 >
                   Rejeitar todas ({stats.pendingCount})
+                </Button>
+                <Button
+                  tone="critical"
+                  variant="plain"
+                  onClick={handleDeleteAllPending}
+                  loading={isBatchRunning && batchMode === "delete-pending"}
+                  disabled={isBatchRunning}
+                >
+                  {isBatchRunning && batchProgress && batchMode === "delete-pending"
+                    ? `Excluindo ${batchProgress.done}/${batchProgress.total}…`
+                    : `Excluir todas pendentes (${stats.pendingCount})`}
                 </Button>
               </InlineStack>
             </BlockStack>

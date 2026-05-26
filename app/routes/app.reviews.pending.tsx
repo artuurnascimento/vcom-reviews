@@ -28,6 +28,7 @@ import {
   approveReview,
   approveReviewsByIds,
   deleteReview,
+  deleteReviewsByIds,
   listPendingReviews,
   rejectReview,
   rejectReviewsByIds,
@@ -50,7 +51,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const intent = String(form.get("intent") || "");
   const id = String(form.get("id") || "");
 
-  if (intent === "approveBatch" || intent === "rejectBatch") {
+  if (intent === "approveBatch" || intent === "rejectBatch" || intent === "deleteBatch") {
     const ids = parseIdsJson(String(form.get("ids") || "[]"));
     if (ids.length === 0) {
       return json({ ok: false, error: "Nenhuma avaliação no lote." });
@@ -58,7 +59,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const { processed, errors } =
       intent === "approveBatch"
         ? await approveReviewsByIds(admin, ids)
-        : await rejectReviewsByIds(admin, ids);
+        : intent === "rejectBatch"
+          ? await rejectReviewsByIds(admin, ids)
+          : await deleteReviewsByIds(admin, ids);
     if (processed === 0) {
       return json({
         ok: false,
@@ -116,7 +119,9 @@ export default function PendingReviewsPage() {
     null,
   );
   const [batchError, setBatchError] = useState<string | null>(null);
-  const [batchAction, setBatchAction] = useState<"approve" | "reject" | null>(null);
+  const [batchAction, setBatchAction] = useState<"approve" | "reject" | "delete" | null>(
+    null,
+  );
 
   const isBatchRunning = batchProgress !== null;
   const pendingIds = pending.map((r) => r.id);
@@ -129,14 +134,19 @@ export default function PendingReviewsPage() {
   );
 
   const runBulkModeration = useCallback(
-    async (mode: "approve" | "reject", ids: string[]) => {
+    async (mode: "approve" | "reject" | "delete", ids: string[]) => {
       if (ids.length === 0) return;
 
       setBatchError(null);
       setBatchAction(mode);
       setBatchProgress({ done: 0, total: ids.length });
 
-      const intent = mode === "approve" ? "approveBatch" : "rejectBatch";
+      const intent =
+        mode === "approve"
+          ? "approveBatch"
+          : mode === "reject"
+            ? "rejectBatch"
+            : "deleteBatch";
       let done = 0;
 
       try {
@@ -203,6 +213,17 @@ export default function PendingReviewsPage() {
     void runBulkModeration("reject", pendingIds);
   }, [pending.length, pendingIds, runBulkModeration]);
 
+  const handleDeleteAll = useCallback(() => {
+    if (
+      !window.confirm(
+        `Excluir permanentemente todas as ${pending.length} avaliações pendentes? Esta ação não pode ser desfeita.`,
+      )
+    ) {
+      return;
+    }
+    void runBulkModeration("delete", pendingIds);
+  }, [pending.length, pendingIds, runBulkModeration]);
+
   return (
     <Page
       title="Aprovação pendente"
@@ -228,6 +249,13 @@ export default function PendingReviewsPage() {
                   ? `Rejeitando ${batchProgress.done}/${batchProgress.total}…`
                   : `Rejeitar todas (${pending.length})`,
                 onAction: handleRejectAll,
+                disabled: isBatchRunning,
+              },
+              {
+                content: isBatchRunning && batchAction === "delete" && batchProgress
+                  ? `Excluindo ${batchProgress.done}/${batchProgress.total}…`
+                  : `Excluir todas (${pending.length})`,
+                onAction: handleDeleteAll,
                 disabled: isBatchRunning,
               },
               { content: "Ver todas", url: paths.reviews },

@@ -11,8 +11,21 @@
       g.getAttribute("data-scroll-root") || "vcom-reviews-" + bid,
     );
     var useProxy = g.getAttribute("data-use-proxy") === "true";
+    var useEmbedded = g.getAttribute("data-use-embedded") === "true";
     var proxyUrl = g.getAttribute("data-proxy-url") || "";
     var totalCount = parseInt(g.getAttribute("data-review-count") || "0", 10) || 0;
+    var embeddedReviews = null;
+    if (useEmbedded) {
+      var embeddedEl = document.getElementById("vcom-embedded-reviews-" + s);
+      if (embeddedEl && embeddedEl.textContent) {
+        try {
+          var parsed = JSON.parse(embeddedEl.textContent.trim());
+          if (Array.isArray(parsed) && parsed.length > 0) embeddedReviews = parsed;
+        } catch (e) {
+          embeddedReviews = null;
+        }
+      }
+    }
     var prevBtns = [];
     var nextBtns = [];
     var statusEls = [];
@@ -246,6 +259,21 @@
       var sep = proxyUrl.indexOf("?") >= 0 ? "&" : "?";
       return proxyUrl + sep + "page=" + page + "&limit=" + pp;
     }
+    function getEmbeddedPageData(page) {
+      var pp = perPage();
+      var start = (page - 1) * pp;
+      return {
+        ok: true,
+        count: embeddedReviews.length,
+        reviews: embeddedReviews.slice(start, start + pp),
+        total_pages: Math.max(1, Math.ceil(embeddedReviews.length / pp)),
+        page: page,
+        limit: pp,
+      };
+    }
+    function usesRemoteProxy() {
+      return useProxy && proxyUrl && !embeddedReviews;
+    }
     function hideProxyLoading() {
       var load = g.querySelector("[data-proxy-loading]");
       if (load) load.style.display = "none";
@@ -289,10 +317,22 @@
         });
     }
     function fetchProxyPage(page, scroll, force) {
-      if (!proxyUrl) return;
       page = parseInt(page, 10) || 1;
       var pp = perPage();
       var key = cacheKey(page);
+
+      if (embeddedReviews && embeddedReviews.length > 0) {
+        if (!force && pageCache[key]) {
+          applyProxyData(pageCache[key], page, scroll);
+          return;
+        }
+        var embeddedData = getEmbeddedPageData(page);
+        pageCache[key] = embeddedData;
+        applyProxyData(embeddedData, page, scroll);
+        return;
+      }
+
+      if (!proxyUrl) return;
       if (!force && pageCache[key]) {
         applyProxyData(pageCache[key], page, scroll);
         prefetchProxyPage(page - 1);
@@ -307,7 +347,17 @@
       if (errEl) errEl.hidden = true;
       fetch(proxyFetchUrl(page, pp), { credentials: "same-origin" })
         .then(function (r) {
-          return r.json().then(function (data) {
+          return r.text().then(function (text) {
+            var data = null;
+            try {
+              data = JSON.parse(text);
+            } catch (e) {
+              data = {
+                ok: false,
+                error:
+                  "Resposta inválida do servidor. Abra o app VCOM Reviews no admin da Shopify.",
+              };
+            }
             return { ok: r.ok, status: r.status, data: data };
           });
         })
@@ -345,7 +395,7 @@
       page = parseInt(page, 10) || 1;
       if (page < 1) page = 1;
       if (totalPages > 0 && page > totalPages) page = totalPages;
-      if (useProxy && proxyUrl) {
+      if ((embeddedReviews && embeddedReviews.length > 0) || usesRemoteProxy()) {
         fetchProxyPage(page, scroll);
         return;
       }
@@ -392,7 +442,7 @@
       retryBtn.addEventListener("click", function () {
         fetchProxyPage(currentPage || 1, false, true);
       });
-    if (useProxy && proxyUrl && totalCount > 0) {
+    if ((embeddedReviews && embeddedReviews.length > 0) || (usesRemoteProxy() && totalCount > 0)) {
       fetchProxyPage(1, false);
     } else {
       applyLocal();
@@ -402,8 +452,9 @@
       resizeTimer = setTimeout(function () {
         currentPage = 1;
         pageCache = {};
-        if (useProxy && proxyUrl && totalCount > 0) fetchProxyPage(1, false, true);
-        else applyLocal();
+        if ((embeddedReviews && embeddedReviews.length > 0) || (usesRemoteProxy() && totalCount > 0)) {
+          fetchProxyPage(1, false, true);
+        } else applyLocal();
         if (totalPages > 1) {
           if (pMobile) pMobile.classList.toggle("is-visible", !isDesktop());
           if (pDesktop) pDesktop.classList.toggle("is-visible", isDesktop());

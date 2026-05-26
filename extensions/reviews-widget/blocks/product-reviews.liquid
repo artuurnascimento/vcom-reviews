@@ -253,6 +253,18 @@
 {%- if s_reviews_sort != 'photos_first' -%}
   {%- assign use_proxy_reviews = true -%}
 {%- endif -%}
+{%- assign homepage_cache = shop.metafields.vcom_reviews.homepage_reviews_cache.value -%}
+{%- assign use_embedded_reviews = false -%}
+{%- assign embedded_reviews_json = '' -%}
+{%- if homepage_cache != blank and reviews_context == 'homepage' -%}
+  {%- assign cache_sort = homepage_cache.sort | default: 'photos_first' -%}
+  {%- assign cache_reviews_list = homepage_cache.reviews -%}
+  {%- if cache_reviews_list != blank and cache_reviews_list.size > 0 and cache_sort == s_reviews_sort -%}
+    {%- assign use_embedded_reviews = true -%}
+    {%- assign use_proxy_reviews = false -%}
+    {%- assign embedded_reviews_json = cache_reviews_list | json -%}
+  {%- endif -%}
+{%- endif -%}
 {%- if s_layout == 'trustpilot_carousel' or s_layout == 'trustpilot_grid' or s_layout == 'trustpilot_mosaic' -%}
   {%- assign grid_capacity_desktop = s_cols_desktop | times: reviews_rows -%}
   {%- if grid_capacity_desktop > reviews_per_page -%}{%- assign reviews_per_page = grid_capacity_desktop -%}{%- endif -%}
@@ -482,14 +494,19 @@
           </aside>
           <div class="vcom-split__reviews">
         {%- endif -%}
-        <div class="product-reviews__wrap vcom-reviews-mobile--{{ reviews_mobile_layout }}" id="vcom-reviews-grid-{{ block.id }}" data-vcom-pagination data-block-id="{{ block.id }}" data-bid="{{ bid }}" data-star-color="{{ star_color }}" data-star-empty="{{ star_empty_color }}" data-show-verified="{% if s_show_verified %}true{% else %}false{% endif %}" data-verified-label="{{ s_verified_label | escape }}" data-verified-color="{{ verified_color }}" data-title-max="{{ title_max_chars }}" data-text-max="{{ text_max_chars }}" data-header-prefix="{{ s_header_based_on_prefix | escape }}" data-proxy-url="/apps/vcom-reviews/reviews?placement={{ submit_placement }}&sort={{ s_reviews_sort }}{% if submit_product_id != blank %}&product_id={{ submit_product_id | replace: 'gid://shopify/Product/', '' }}{% endif %}" data-reviews-sort="{{ s_reviews_sort }}" data-layout="{{ s_layout }}" data-cols-desktop="{{ s_cols_desktop }}" data-cols-mobile="1" data-mobile-layout="{{ reviews_mobile_layout }}" data-reviews-rows="{{ reviews_rows }}" data-per-page-mobile="{{ reviews_per_page_mobile }}" data-scroll-root="vcom-reviews-{{ bid }}" data-review-count="{{ review_count }}" data-use-proxy="{% if use_proxy_reviews %}true{% else %}false{% endif %}">
-          {%- if use_proxy_reviews -%}
+        <div class="product-reviews__wrap vcom-reviews-mobile--{{ reviews_mobile_layout }}" id="vcom-reviews-grid-{{ block.id }}" data-vcom-pagination data-block-id="{{ block.id }}" data-bid="{{ bid }}" data-star-color="{{ star_color }}" data-star-empty="{{ star_empty_color }}" data-show-verified="{% if s_show_verified %}true{% else %}false{% endif %}" data-verified-label="{{ s_verified_label | escape }}" data-verified-color="{{ verified_color }}" data-title-max="{{ title_max_chars }}" data-text-max="{{ text_max_chars }}" data-header-prefix="{{ s_header_based_on_prefix | escape }}" data-proxy-url="/apps/vcom-reviews/reviews?placement={{ submit_placement }}&sort={{ s_reviews_sort }}{% if submit_product_id != blank %}&product_id={{ submit_product_id | replace: 'gid://shopify/Product/', '' }}{% endif %}" data-reviews-sort="{{ s_reviews_sort }}" data-layout="{{ s_layout }}" data-cols-desktop="{{ s_cols_desktop }}" data-cols-mobile="1" data-mobile-layout="{{ reviews_mobile_layout }}" data-reviews-rows="{{ reviews_rows }}" data-per-page-mobile="{{ reviews_per_page_mobile }}" data-scroll-root="vcom-reviews-{{ bid }}" data-review-count="{{ review_count }}" data-use-proxy="{% if use_proxy_reviews %}true{% else %}false{% endif %}" data-use-embedded="{% if use_embedded_reviews %}true{% else %}false{% endif %}">
+          {%- if use_proxy_reviews or use_embedded_reviews -%}
+            {%- if use_proxy_reviews -%}
             <p class="vcom-reviews-proxy-loading" data-proxy-loading>Carregando avaliações…</p>
             <p class="vcom-reviews-proxy-error" data-proxy-error hidden>
               <span data-proxy-error-text>Não foi possível carregar as avaliações.</span>
               <button type="button" class="vcom-reviews-proxy-retry" data-proxy-retry>Tentar novamente</button>
             </p>
+            {%- endif -%}
             <div data-proxy-cards></div>
+            {%- if use_embedded_reviews and embedded_reviews_json != blank -%}
+            <script type="application/json" id="vcom-embedded-reviews-{{ block.id }}">{{ embedded_reviews_json }}</script>
+            {%- endif -%}
           {%- else -%}
           {%- assign approved_index = 0 -%}
           {%- assign seen_card_handles = '||' -%}
