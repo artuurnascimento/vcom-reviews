@@ -51,7 +51,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     });
   } catch (e) {
     console.error("app_proxy reviews error", e);
-    const msg = e instanceof Error ? e.message : String(e);
-    return json({ ok: false, reviews: [], count: 0, avg: 0, error: msg }, { status: 500 });
+    let msg = e instanceof Error ? e.message : String(e);
+    try {
+      if (e instanceof Response) {
+        const body = await e.text();
+        msg = `HTTP ${e.status} ${e.statusText}${body ? ` - ${body.slice(0, 500)}` : ""}`;
+      } else if (typeof (e as any)?.status === "number") {
+        msg = `HTTP ${(e as any).status} ${(e as any).statusText || ""} - ${String(e)}`;
+      }
+    } catch {
+      // ignore parse error
+    }
+    return json(
+      { ok: false, reviews: [], count: 0, avg: 0, error: msg },
+      { status: 500 },
+    );
   }
 };
