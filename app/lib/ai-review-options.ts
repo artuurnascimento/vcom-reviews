@@ -28,6 +28,10 @@ export const AI_AGE_RANGES = [
 ] as const;
 
 export const AI_TONES = [
+  {
+    label: "E-commerce (loja online) — recomendado",
+    value: "ecommerce",
+  },
   { label: "Natural / casual", value: "natural" },
   { label: "Entusiasmado", value: "entusiasmado" },
   { label: "Formal", value: "formal" },
@@ -35,6 +39,61 @@ export const AI_TONES = [
   { label: "Curto e direto", value: "curto" },
   { label: "Emotivo", value: "emotivo" },
 ] as const;
+
+export const DEFAULT_AI_TONE = "ecommerce";
+
+/** Instruções de estilo enviadas ao modelo — o tom "ecommerce" replica reviews de marketplace. */
+export function getAiTonePromptBlock(
+  tone: string,
+  locale: string,
+  placement: "homepage" | "product",
+): string {
+  const label = labelForOption(AI_TONES, tone);
+
+  if (tone === "ecommerce") {
+    const productFocus =
+      placement === "product"
+        ? `
+FOCO (página de produto): avalie o ITEM comprado — qualidade, acabamento, tamanho/cor, conforto, se veio igual ao anúncio, custo-benefício, uso no dia a dia.
+Mencione 1 detalhe concreto do produto (ex.: tecido, caimento, bateria, cheiro, embalagem interna).`
+        : `
+FOCO (homepage da loja): experiência geral de COMPRA na loja — entrega, embalagem, atendimento, confiança, recompra. Pode citar um produto comprado de forma natural, sem virar ficha técnica.`;
+
+    return `Tom: ${label} — imite avaliações reais de marketplaces (Amazon, Mercado Livre, Shopee, Magalu, Trustpilot em lojas DTC).
+
+${productFocus}
+
+ESTILO OBRIGATÓRIO (e-commerce autêntico):
+- Soe como cliente real pós-compra, NÃO como marketing da marca nem copy de anúncio.
+- Título: curto e funcional (2–6 palavras), estilo marketplace — ex.: "Chegou rápido", "Veste bem", "Boa qualidade", "Superou expectativas", "Recomendo".
+- Corpo: 2–4 frases; frases curtas e diretas; uma ideia por frase.
+- Estrutura típica (varie a ordem): (1) impressão geral → (2) detalhe específico do produto/entrega → (3) recomendação ou ressalva leve conforme a nota.
+- Vocabulário de e-commerce no idioma ${locale}: entrega, embalagem, tamanho, cor, material, acabamento, custo-benefício, igual à foto, compraria de novo, indico, atendimento.
+- Notas altas (4,5–5): positivo com 0–1 ressalva opcional e leve ("só demorou um pouco", "gostaria de mais cores").
+- Notas médias (3,5–4): elogie o que funcionou e cite 1 ponto a melhorar, sem drama.
+- PROIBIDO: "mudou minha vida", "nota 10", "perfeito demais" em todas, hashtags, emojis em excesso, CAPS LOCK, listas com bullet, tom de influencer ou poema.
+- PROIBIDO: mencionar IA, teste, simulação, "como cliente fictício".
+- Varie comprimento: algumas reviews só 2 frases, outras 4; autores com estilos diferentes (objetivo, caloroso, direto).`;
+  }
+
+  const toneHints: Record<string, string> = {
+    natural:
+      "Tom casual de conversa; como mensagem a um amigo; sem formalidade excessiva.",
+    entusiasmado:
+      "Tom animado e positivo; pode usar 1 exclamação no máximo; ainda crível como review de loja.",
+    formal:
+      "Tom educado e neutro; frases completas; sem gírias; estilo review corporativo.",
+    tecnico:
+      "Tom detalhado; cite atributos mensuráveis (material, dimensões, desempenho); sem exageros emocionais.",
+    curto:
+      "Máximo 2 frases no corpo; título de 2–4 palavras; estilo avaliação rápida de app.",
+    emotivo:
+      "Tom pessoal e caloroso; pode mencionar presente, ocasião ou expectativa; ainda plausível em e-commerce.",
+  };
+
+  const hint = toneHints[tone] || `Tom: ${label}; avaliações naturais de cliente.`;
+  return `Tom: ${label}\n${hint}`;
+}
 
 export const AI_LOCALES = [
   { label: "Português (Brasil)", value: "pt-BR" },

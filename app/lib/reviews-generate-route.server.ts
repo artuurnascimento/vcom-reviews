@@ -4,6 +4,7 @@ import { redirectWithEmbeddedSearch } from "./embedded-app-path.server";
 import { authenticate } from "../shopify.server";
 import {
   clampRating,
+  DEFAULT_AI_TONE,
   normalizeRatingRange,
   type GeneratedAiReview,
 } from "./ai-review-options";
@@ -29,7 +30,7 @@ function parseGenerateInput(form: FormData) {
     productId: String(form.get("productId") || "").trim(),
     gender: String(form.get("gender") || "random"),
     ageRange: String(form.get("ageRange") || "random"),
-    tone: String(form.get("tone") || "natural"),
+    tone: String(form.get("tone") || DEFAULT_AI_TONE),
     locale: String(form.get("locale") || "pt-BR"),
     country: String(form.get("country") || "random"),
     city: String(form.get("city") || "").trim(),

@@ -5,9 +5,8 @@ import type {
 import {
   clampRating,
   distributeRatings,
-  labelForOption,
+  getAiTonePromptBlock,
   normalizeRatingRange,
-  AI_TONES,
 } from "./ai-review-options";
 
 /** Modelos com cota no plano gratuito (2.0-flash costuma ter limit: 0). */
@@ -85,7 +84,7 @@ function buildPrompt(
   targetRatings: number[],
 ): string {
   const productType = resolveProductType(input);
-  const toneLabel = labelForOption(AI_TONES, input.tone);
+  const toneBlock = getAiTonePromptBlock(input.tone, input.locale, input.placement);
   const { min, max } = normalizeRatingRange(input.ratingMin, input.ratingMax);
   const isHomepage = input.placement === "homepage";
   const productLine = input.productTitle
@@ -147,8 +146,9 @@ ${shopLine}
 ${descriptionLine ? `- ${descriptionLine}` : ""}
 ${placementLine}
 - Idioma: ${input.locale}
-- Tom: ${toneLabel}
 - Persona do autor: ${persona}
+
+${toneBlock}
 - Faixa de notas: ${min.toFixed(1)} a ${max.toFixed(1)} (escala 0,5–5,0)
 - Quantidade: ${input.count} avaliações DISTINTAS entre si
 
@@ -159,8 +159,8 @@ Regras:
 1. Cada avaliação deve parecer escrita por pessoa diferente (vocabulário, tamanho, estilo).
 2. O texto deve ser coerente com a nota atribuída (notas altas = mais positivo; notas mais baixas = críticas leves mas ainda dentro da faixa).
 3. Autor: primeiro nome + inicial do sobrenome (ex.: "Mariana S.", "João P.").
-4. Título: curto (3–8 palavras) ou vazio se o tom for muito casual.
-5. Corpo: 2–5 frases naturais; evite clichês repetidos ("super recomendo", "mudou minha vida", "nota 10").
+4. Título: siga o estilo do tom escolhido acima.
+5. Corpo: siga o estilo do tom; evite clichês repetidos entre avaliações.
 6. Campo "time": relativo em idioma ${input.locale} (ex.: "há 2 dias", "há 1 semana", "há 3 semanas").
 7. NÃO mencione IA, simulação, loja fictícia ou hashtags.
 8. NÃO repita frases entre as avaliações.${homepageRules}${visualRules}

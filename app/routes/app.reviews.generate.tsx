@@ -33,6 +33,7 @@ import {
   AI_LOCALES,
   AI_PRODUCT_TYPES,
   AI_TONES,
+  DEFAULT_AI_TONE,
   type GeneratedAiReview,
   formatRatingRange,
   clampRating,
@@ -114,7 +115,7 @@ export default function GenerateReviewsPage() {
   const [productId, setProductId] = useState("");
   const [gender, setGender] = useState("random");
   const [ageRange, setAgeRange] = useState("random");
-  const [tone, setTone] = useState("natural");
+  const [tone, setTone] = useState(DEFAULT_AI_TONE);
   const [locale, setLocale] = useState("pt-BR");
   const [country, setCountry] = useState("Brasil");
   const [city, setCity] = useState("");
@@ -393,7 +394,17 @@ export default function GenerateReviewsPage() {
           value={productType}
           onChange={setProductType}
         />
-        <Select label="Tom" options={[...AI_TONES]} value={tone} onChange={setTone} />
+        <Select
+          label="Tom"
+          options={[...AI_TONES]}
+          value={tone}
+          onChange={setTone}
+          helpText={
+            tone === "ecommerce"
+              ? "Estilo marketplace: entrega, produto, recomendação — como reviews de Amazon, ML ou Trustpilot."
+              : undefined
+          }
+        />
         <Select label="Gênero" options={[...AI_GENDERS]} value={gender} onChange={setGender} />
         <Select
           label="Faixa etária"
