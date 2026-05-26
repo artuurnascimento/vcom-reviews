@@ -22,6 +22,7 @@ import {
   InlineGrid,
   InlineStack,
   Page,
+  Pagination,
   Select,
   Tabs,
   Text,
@@ -78,6 +79,8 @@ const TABS = [
   { id: "style", content: "Estilo" },
   { id: "publish", content: "Quantidade" },
 ];
+
+const PREVIEW_PAGE_SIZE = 10;
 
 function getRouteErrorMessage(error: unknown): string {
   if (isRouteErrorResponse(error)) {
@@ -172,6 +175,7 @@ export default function GenerateReviewsPage() {
   } | null>(null);
   const [clientGenerateError, setClientGenerateError] = useState<string | null>(null);
   const [lastGenerateMeta, setLastGenerateMeta] = useState<GenerateSuccess | null>(null);
+  const [previewPage, setPreviewPage] = useState(1);
   const bulkGenerateAbort = useRef<AbortController | null>(null);
 
   const generateResult = isGenerateSuccess(generateFetcher.data)
@@ -185,8 +189,23 @@ export default function GenerateReviewsPage() {
       setPreview(generateFetcher.data.reviews);
       setLastGenerateMeta(generateFetcher.data);
       setClientGenerateError(null);
+      setPreviewPage(1);
     }
   }, [generateFetcher.data]);
+
+  useEffect(() => {
+    setPreviewPage(1);
+  }, [preview.length]);
+
+  const previewPageCount = Math.max(1, Math.ceil(preview.length / PREVIEW_PAGE_SIZE));
+  const safePreviewPage = Math.min(previewPage, previewPageCount);
+
+  const paginatedPreview = useMemo(() => {
+    const start = (safePreviewPage - 1) * PREVIEW_PAGE_SIZE;
+    return preview
+      .slice(start, start + PREVIEW_PAGE_SIZE)
+      .map((review, offset) => ({ review, index: start + offset }));
+  }, [preview, safePreviewPage]);
 
   const catalogProducts = useMemo(() => initialProducts ?? [], [initialProducts]);
 
@@ -840,7 +859,9 @@ export default function GenerateReviewsPage() {
                     </Text>
                     <Text as="p" variant="bodySm" tone="subdued">
                       {preview.length
-                        ? `${preview.length} rascunho(s) — edite antes de salvar`
+                        ? preview.length > PREVIEW_PAGE_SIZE
+                          ? `${preview.length} rascunhos — página ${safePreviewPage} de ${previewPageCount} (${PREVIEW_PAGE_SIZE} por página)`
+                          : `${preview.length} rascunho(s) — edite antes de salvar`
                         : "Os rascunhos aparecem aqui após gerar"}
                     </Text>
                   </BlockStack>
@@ -893,7 +914,7 @@ export default function GenerateReviewsPage() {
                   </Box>
                 ) : (
                   <BlockStack gap="300">
-                    {preview.map((review, index) => (
+                    {paginatedPreview.map(({ review, index }) => (
                       <AiReviewPreviewCard
                         key={`preview-${index}`}
                         review={review}
@@ -903,6 +924,25 @@ export default function GenerateReviewsPage() {
                         onChange={(field, value) => updatePreview(index, field, value)}
                       />
                     ))}
+                    {preview.length > PREVIEW_PAGE_SIZE ? (
+                      <Box paddingBlockStart="200">
+                        <InlineStack align="center">
+                          <Pagination
+                            hasPrevious={safePreviewPage > 1}
+                            onPrevious={() =>
+                              setPreviewPage((page) => Math.max(1, page - 1))
+                            }
+                            hasNext={safePreviewPage < previewPageCount}
+                            onNext={() =>
+                              setPreviewPage((page) =>
+                                Math.min(previewPageCount, page + 1),
+                              )
+                            }
+                            label={`${(safePreviewPage - 1) * PREVIEW_PAGE_SIZE + 1}–${Math.min(safePreviewPage * PREVIEW_PAGE_SIZE, preview.length)} de ${preview.length}`}
+                          />
+                        </InlineStack>
+                      </Box>
+                    ) : null}
                   </BlockStack>
                 )}
 
