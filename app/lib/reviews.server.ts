@@ -363,11 +363,10 @@ export async function getReviewPlacement(
 
 export {
   buildProductSearchQuery,
-  filterProductsByTerm,
   listStoreProducts,
   searchProducts,
-  type StoreProductSearchRow,
 } from "./product-search.server";
+export { filterProductsByTerm, type StoreProductSearchRow } from "./product-search.shared";
 
 export async function getProductDetails(admin: AdminApi, id: string) {
   const response = await admin.graphql(

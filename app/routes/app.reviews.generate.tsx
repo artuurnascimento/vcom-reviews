@@ -8,7 +8,8 @@ import {
   useEmbeddedFetcher,
   useEmbeddedSubmit,
 } from "../hooks/useEmbeddedAppPath";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { filterProductsByTerm } from "../lib/product-search.shared";
 import {
   Badge,
   Banner,
@@ -110,14 +111,16 @@ export default function GenerateReviewsPage() {
   const productFetcher = useEmbeddedFetcher<ProductLoadResult>();
   const searchFetcher = useEmbeddedFetcher<SearchProductsResult>();
   const saveSubmit = useEmbeddedSubmit();
+  const generateAction = paths.reviewsGenerate;
 
   const [selectedTab, setSelectedTab] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<ProductSearchResult[]>(
-    () => initialProducts ?? [],
-  );
+  const [remoteSearchResults, setRemoteSearchResults] = useState<
+    ProductSearchResult[] | null
+  >(null);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [selectedProductTitle, setSelectedProductTitle] = useState("");
+  const lastRemoteQuery = useRef("");
 
   const [productType, setProductType] = useState("moda");
   const [customProductType, setCustomProductType] = useState("");
@@ -152,31 +155,53 @@ export default function GenerateReviewsPage() {
     }
   }, [generateResult]);
 
+  const catalogProducts = useMemo(() => initialProducts ?? [], [initialProducts]);
+
+  const searchResults = useMemo(() => {
+    const term = searchQuery.trim();
+    if (!term) return catalogProducts;
+    const local = filterProductsByTerm(catalogProducts, term);
+    if (local.length > 0) return local;
+    return remoteSearchResults ?? [];
+  }, [searchQuery, catalogProducts, remoteSearchResults]);
+
   useEffect(() => {
     if (!searchQuery.trim()) {
-      setSearchResults(initialProducts ?? []);
+      setRemoteSearchResults(null);
+      lastRemoteQuery.current = "";
       setSearchError(productsLoadError ?? null);
       return;
     }
 
+    const local = filterProductsByTerm(catalogProducts, searchQuery);
+    if (local.length > 0) {
+      setRemoteSearchResults(null);
+      setSearchError(null);
+      return;
+    }
+
+    if (searchQuery.trim().length < 2) return;
+    if (lastRemoteQuery.current === searchQuery.trim()) return;
+
     const timer = setTimeout(() => {
+      lastRemoteQuery.current = searchQuery.trim();
       const fd = new FormData();
       fd.set("intent", "searchProducts");
       fd.set("query", searchQuery);
-      searchFetcher.submit(fd, { method: "post", action: paths.reviewsGenerate });
-    }, 280);
+      searchFetcher.submit(fd, { method: "post", action: generateAction });
+    }, 400);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, initialProducts, productsLoadError, paths.reviewsGenerate]);
+  }, [searchQuery, catalogProducts, productsLoadError, generateAction]);
 
   useEffect(() => {
     const data = searchFetcher.data as SearchProductsResult | undefined;
     if (!data) return;
     if (data.ok) {
-      setSearchResults(data.results);
+      setRemoteSearchResults(data.results);
       setSearchError(null);
     } else {
-      setSearchResults([]);
+      setRemoteSearchResults([]);
       setSearchError(data.error);
     }
   }, [searchFetcher.data]);
@@ -189,15 +214,17 @@ export default function GenerateReviewsPage() {
     const fd = new FormData();
     fd.set("intent", "loadProduct");
     fd.set("productId", productId);
-    productFetcher.submit(fd, { method: "post" });
+    productFetcher.submit(fd, { method: "post", action: generateAction });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [productId]);
+  }, [productId, generateAction]);
 
   useEffect(() => {
     const data = productFetcher.data as ProductLoadResult | undefined;
     if (data?.ok && data.product) {
       setProductPreview(data.product);
-      setSelectedProductTitle(data.product.title);
+      if (data.product.title !== selectedProductTitle) {
+        setSelectedProductTitle(data.product.title);
+      }
       if (data.product.productType) {
         const shopifyType = data.product.productType.toLowerCase();
         const match = AI_PRODUCT_TYPES.find(
@@ -210,17 +237,23 @@ export default function GenerateReviewsPage() {
     } else if (data?.ok && !data.product) {
       setProductPreview(null);
     }
-  }, [productFetcher.data]);
+  }, [productFetcher.data, selectedProductTitle]);
 
   const handleSelectProduct = useCallback((product: ProductSearchResult) => {
     setProductId(product.id);
     setSelectedProductTitle(product.title);
+    setSearchQuery("");
+    setRemoteSearchResults(null);
+    lastRemoteQuery.current = "";
     setPreview([]);
   }, []);
 
   const handleClearProduct = useCallback(() => {
     setProductId("");
     setSelectedProductTitle("");
+    setSearchQuery("");
+    setRemoteSearchResults(null);
+    lastRemoteQuery.current = "";
     setProductPreview(null);
     setPreview([]);
   }, []);
@@ -361,10 +394,12 @@ export default function GenerateReviewsPage() {
         </Banner>
       ) : null}
       <ProductSearchPicker
+        query={searchQuery}
         selectedId={productId}
-        selectedTitle={selectedProductTitle}
+        selectedLabel={selectedProductTitle}
         results={searchResults}
         loading={isSearching}
+        onQueryChange={setSearchQuery}
         listTitle={
           isSearching
             ? "Buscando…"
@@ -374,7 +409,6 @@ export default function GenerateReviewsPage() {
                 ? "Nenhum produto para essa busca"
                 : "Produtos da loja"
         }
-        onQueryChange={setSearchQuery}
         onSelect={handleSelectProduct}
         onClear={handleClearProduct}
       />

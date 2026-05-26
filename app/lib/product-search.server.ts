@@ -5,15 +5,13 @@ type AdminApi = {
   ) => Promise<Response>;
 };
 
-export type StoreProductSearchRow = {
-  id: string;
-  title: string;
-  handle: string;
-  productType: string;
-  status: string;
-  imageUrl: string;
-  imageAlt: string;
-};
+import {
+  filterProductsByTerm,
+  type StoreProductSearchRow,
+} from "./product-search.shared";
+
+export type { StoreProductSearchRow };
+export { filterProductsByTerm };
 
 type ProductNode = {
   id: string;
@@ -143,20 +141,6 @@ export async function listStoreProducts(
   { first = 25 }: { first?: number } = {},
 ): Promise<StoreProductSearchRow[]> {
   return fetchProducts(admin, first);
-}
-
-export function filterProductsByTerm(
-  products: StoreProductSearchRow[],
-  raw: string,
-): StoreProductSearchRow[] {
-  const term = raw.trim().toLowerCase();
-  if (!term) return products;
-
-  const words = term.split(/\s+/).filter(Boolean);
-  return products.filter((p) => {
-    const hay = `${p.title} ${p.handle} ${p.productType} ${p.status}`.toLowerCase();
-    return words.every((w) => hay.includes(w));
-  });
 }
 
 export function buildProductSearchQuery(raw: string): string | undefined {

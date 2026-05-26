@@ -8,7 +8,7 @@ import {
   Thumbnail,
 } from "@shopify/polaris";
 import { ImageIcon, SearchIcon } from "@shopify/polaris-icons";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 
 export type ProductSearchResult = {
   id: string;
@@ -21,8 +21,9 @@ export type ProductSearchResult = {
 };
 
 type Props = {
+  query: string;
   selectedId: string;
-  selectedTitle?: string;
+  selectedLabel?: string;
   results: ProductSearchResult[];
   loading?: boolean;
   listTitle?: string;
@@ -32,8 +33,9 @@ type Props = {
 };
 
 export function ProductSearchPicker({
+  query,
   selectedId,
-  selectedTitle,
+  selectedLabel,
   results,
   loading = false,
   listTitle,
@@ -41,14 +43,6 @@ export function ProductSearchPicker({
   onSelect,
   onClear,
 }: Props) {
-  const [inputValue, setInputValue] = useState(selectedTitle || "");
-
-  useEffect(() => {
-    if (selectedTitle) {
-      setInputValue(selectedTitle);
-    }
-  }, [selectedTitle]);
-
   const options = useMemo(
     () =>
       results.map((product) => ({
@@ -74,26 +68,30 @@ export function ProductSearchPicker({
     [results],
   );
 
+  const handlePick = useCallback(
+    (product: ProductSearchResult) => {
+      onQueryChange("");
+      onSelect(product);
+    },
+    [onQueryChange, onSelect],
+  );
+
   const updateSelection = useCallback(
     (selected: string[]) => {
       const id = selected[0];
       if (!id) {
         onClear?.();
-        setInputValue("");
+        onQueryChange("");
         return;
       }
       const product = results.find((p) => p.id === id);
-      if (product) {
-        setInputValue(product.title);
-        onSelect(product);
-      }
+      if (product) handlePick(product);
     },
-    [results, onClear, onSelect],
+    [results, onClear, onQueryChange, handlePick],
   );
 
   const handleInputChange = useCallback(
     (value: string) => {
-      setInputValue(value);
       onQueryChange(value);
       if (!value.trim()) {
         onClear?.();
@@ -102,27 +100,18 @@ export function ProductSearchPicker({
     [onClear, onQueryChange],
   );
 
-  const handlePick = useCallback(
-    (product: ProductSearchResult) => {
-      setInputValue(product.title);
-      onSelect(product);
-    },
-    [onSelect],
-  );
-
   const textField = (
     <Autocomplete.TextField
       onChange={handleInputChange}
       label="Buscar produto"
-      value={inputValue}
+      value={query}
       prefix={<Icon source={SearchIcon} tone="base" />}
       placeholder="Digite nome, SKU ou tipo do produto…"
       autoComplete="off"
       clearButton
       onClearButtonClick={() => {
-        setInputValue("");
-        onClear?.();
         onQueryChange("");
+        onClear?.();
       }}
       helpText="Busca em tempo real no catálogo da loja"
     />
@@ -138,6 +127,20 @@ export function ProductSearchPicker({
 
   return (
     <BlockStack gap="300">
+      {selectedId && selectedLabel ? (
+        <Box
+          padding="300"
+          borderRadius="200"
+          background="bg-surface-secondary"
+          borderWidth="025"
+          borderColor="border"
+        >
+          <Text as="p" variant="bodySm">
+            Selecionado: <strong>{selectedLabel}</strong>
+          </Text>
+        </Box>
+      ) : null}
+
       <Autocomplete
         options={options}
         selected={selectedId ? [selectedId] : []}
