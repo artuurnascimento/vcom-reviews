@@ -139,31 +139,22 @@
 {%- assign s_footer_text_color = cfg.footer_text_color | default: '#000000' -%}
 {%- assign s_layout = cfg.layout | default: 'trustpilot_carousel' -%}
 
-{%- comment -%} Usa o tipo com MAIS entradas (review vs $app:review). elsif ignorava o legado. {%- endcomment -%}
-{%- assign mo_count_review = 0 -%}
-{%- assign mo_count_app = 0 -%}
+{%- comment -%} Carrega review + $app:review (geradas pelo app) — não usar elsif. {%- endcomment -%}
+{%- assign all_reviews_primary = nil -%}
+{%- assign all_reviews_legacy = nil -%}
+{%- assign use_proxy_reviews = false -%}
 {%- if shop.metaobjects.review -%}
-  {%- assign mo_count_review = shop.metaobjects.review.values_count | default: 0 -%}
+  {%- paginate shop.metaobjects.review.values by 250 -%}
+    {%- assign all_reviews_primary = shop.metaobjects.review.values -%}
+  {%- endpaginate -%}
 {%- endif -%}
 {%- if shop.metaobjects["$app:review"] -%}
-  {%- assign mo_count_app = shop.metaobjects["$app:review"].values_count | default: 0 -%}
-{%- endif -%}
-{%- assign all_reviews = nil -%}
-{%- assign use_proxy_reviews = false -%}
-{%- assign vcom_review_mo = nil -%}
-{%- if mo_count_app > mo_count_review and shop.metaobjects["$app:review"] -%}
-  {%- assign vcom_review_mo = shop.metaobjects["$app:review"] -%}
-{%- elsif shop.metaobjects.review -%}
-  {%- assign vcom_review_mo = shop.metaobjects.review -%}
-{%- elsif shop.metaobjects["$app:review"] -%}
-  {%- assign vcom_review_mo = shop.metaobjects["$app:review"] -%}
-{%- else -%}
-  {%- assign use_proxy_reviews = true -%}
-{%- endif -%}
-{%- if vcom_review_mo -%}
-  {%- paginate vcom_review_mo.values by 250 -%}
-    {%- assign all_reviews = vcom_review_mo.values -%}
+  {%- paginate shop.metaobjects["$app:review"].values by 250 -%}
+    {%- assign all_reviews_legacy = shop.metaobjects["$app:review"].values -%}
   {%- endpaginate -%}
+{%- endif -%}
+{%- if all_reviews_primary == blank and all_reviews_legacy == blank -%}
+  {%- assign use_proxy_reviews = true -%}
 {%- endif -%}
 
 {%- assign reviews_context = 'homepage' -%}
@@ -194,8 +185,15 @@
 {%- assign dist_3 = 0 -%}
 {%- assign dist_4 = 0 -%}
 {%- assign dist_5 = 0 -%}
-{%- if all_reviews != blank -%}
-  {%- for r in all_reviews -%}
+{%- assign seen_handles = '||' -%}
+{%- for mo_list in (1..2) -%}
+  {%- assign mo_reviews = all_reviews_primary -%}
+  {%- if mo_list == 2 -%}{%- assign mo_reviews = all_reviews_legacy -%}{%- endif -%}
+  {%- if mo_reviews == blank -%}{%- continue -%}{%- endif -%}
+  {%- for r in mo_reviews -%}
+    {%- assign r_handle = r.handle | default: '' -%}
+    {%- assign handle_key = r_handle | prepend: '||' | append: '||' -%}
+    {%- if r_handle == blank or seen_handles contains handle_key -%}{%- continue -%}{%- endif -%}
     {%- assign r_st = 'approved' -%}
     {%- if r.status != blank -%}{%- assign r_st = r.status.value | default: r.status -%}{%- endif -%}
     {%- if r_st == 'pending' or r_st == 'rejected' -%}{%- continue -%}{%- endif -%}
@@ -209,6 +207,7 @@
       {%- if r.product_id != blank -%}{%- assign r_pid = r.product_id.value | default: r.product_id -%}{%- endif -%}
       {%- unless product != blank and r_pid == product.id -%}{%- continue -%}{%- endunless -%}
     {%- endif -%}
+    {%- assign seen_handles = seen_handles | append: r_handle | append: '||' -%}
     {%- assign review_count = review_count | plus: 1 -%}
     {%- assign r_val_raw = r.rating.value | default: r.rating | replace: ',', '.' -%}
     {%- assign rating_sum = rating_sum | plus: r_val_raw | plus: 0.0 -%}
@@ -220,18 +219,18 @@
     {%- else -%}{%- assign dist_5 = dist_5 | plus: 1 -%}
     {%- endif -%}
   {%- endfor -%}
-  {%- if review_count > 0 -%}
-    {%- assign rating_avg = rating_sum | times: 1.0 | divided_by: review_count -%}
-    {%- assign has_reviews = true -%}
-  {%- else -%}
-    {%- assign has_reviews = false -%}
-  {%- endif -%}
+{%- endfor -%}
+{%- if review_count > 0 -%}
+  {%- assign rating_avg = rating_sum | times: 1.0 | divided_by: review_count -%}
+  {%- assign has_reviews = true -%}
+{%- else -%}
+  {%- assign has_reviews = false -%}
 {%- endif -%}
 {%- assign vcom_stats = shop.metafields.vcom_reviews.storefront_stats.value -%}
 {%- if vcom_stats != blank -%}
   {%- assign stats_home_count = vcom_stats.homepage_count | default: 0 -%}
   {%- assign stats_home_avg = vcom_stats.homepage_avg | default: 0 -%}
-  {%- if stats_home_count > review_count -%}
+  {%- if stats_home_count > 0 -%}
     {%- assign review_count = stats_home_count -%}
     {%- assign rating_avg = stats_home_avg | plus: 0.0 -%}
     {%- assign has_reviews = true -%}
@@ -706,10 +705,9 @@
               grid.setAttribute('data-review-count',String(count));
             }
             fetch(url,{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(data){
-              if(!data||!data.ok||!data.reviews||!data.reviews.length)return;
+              if(!data||!data.ok)return;
               updateAggregateStats(data);
-              var existing=grid.querySelectorAll('.product-reviews__card').length;
-              if(existing>0&&data.count<=existing&&data.reviews.length<=existing)return;
+              if(!data.reviews||!data.reviews.length)return;
               var empty=document.querySelector('#vcom-reviews-'+bid+' .vcom-reviews-proxy-empty');
               if(empty)empty.style.display='none';
               var html='';

@@ -62,6 +62,9 @@ export async function ensureReviewInfrastructure(admin: AdminApi) {
             access: {
               storefront: "PUBLIC_READ",
             },
+            capabilities: {
+              publishable: { enabled: true },
+            },
             fieldDefinitions: REVIEW_FIELD_DEFINITIONS.map((f) => ({
               key: f.key,
               name: f.name,

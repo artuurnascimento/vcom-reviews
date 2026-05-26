@@ -318,6 +318,9 @@ async function createMetaobject(admin: AdminApi, data: ReviewFormData) {
       variables: {
         metaobject: {
           type: REVIEW_METAOBJECT_TYPE,
+          capabilities: {
+            publishable: { status: "ACTIVE" },
+          },
           fields,
         },
       },
