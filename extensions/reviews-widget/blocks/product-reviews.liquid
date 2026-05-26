@@ -676,9 +676,10 @@
             class="product-reviews__pagination product-reviews__pagination--mobile vcom-reviews-nav--mobile"
             id="vcom-reviews-pagination-{{ block.id }}"
             aria-label="Paginação das avaliações"
+            style="--vcom-pag-active: {{ s_pag_active }}; --vcom-pag-inactive: {{ s_pag_inactive }};"
             hidden
           >
-            <div class="product-reviews__pagination-dots" data-mobile-dots></div>
+            <div class="product-reviews__pagination-pager" data-mobile-pager></div>
           </nav>
           <script>
             !function(){
@@ -692,7 +693,7 @@
               var proxyUrl=g.getAttribute('data-proxy-url')||'';
               var totalCount=parseInt(g.getAttribute('data-review-count')||'0',10)||0;
               var prevBtns=[],nextBtns=[],statusEls=[];
-              var mobileDotsWrap=pMobile.querySelector('[data-mobile-dots]');
+              var mobilePagerWrap=pMobile.querySelector('[data-mobile-pager]');
               function collectNav(){
                 prevBtns=[];nextBtns=[];statusEls=[];
                 if(pDesktop){
@@ -721,19 +722,60 @@
                 var y=el.getBoundingClientRect().top+window.pageYOffset-12;
                 window.scrollTo({top:y,behavior:'smooth'});
               }
-              function renderMobileDots(pages,active){
-                if(!mobileDotsWrap)return;
-                mobileDotsWrap.innerHTML='';
-                for(var page=1;page<=pages;page++){
-                  var dot=document.createElement('button');
-                  dot.type='button';
-                  dot.className='product-reviews__pagination-dot';
-                  dot.setAttribute('data-page',String(page));
-                  dot.setAttribute('aria-label','Página '+page);
-                  if(page===active)dot.classList.add('is-active');
-                  dot.addEventListener('click',function(){go(this.getAttribute('data-page'),true)});
-                  mobileDotsWrap.appendChild(dot);
+              function getMobilePageItems(total,current){
+                if(total<=7){
+                  var all=[];
+                  for(var p=1;p<=total;p++)all.push({type:'page',page:p});
+                  return all;
                 }
+                var items=[{type:'page',page:1}];
+                if(current>3)items.push({type:'ellipsis'});
+                var start=Math.max(2,current-1);
+                var end=Math.min(total-1,current+1);
+                for(var i=start;i<=end;i++)items.push({type:'page',page:i});
+                if(current<total-2)items.push({type:'ellipsis'});
+                if(total>1)items.push({type:'page',page:total});
+                return items;
+              }
+              function renderMobilePager(pages,active){
+                if(!mobilePagerWrap)return;
+                mobilePagerWrap.innerHTML='';
+                var prev=document.createElement('button');
+                prev.type='button';
+                prev.className='product-reviews__pag-ctrl';
+                prev.setAttribute('aria-label','Página anterior');
+                prev.textContent='«';
+                prev.disabled=active<=1;
+                prev.addEventListener('click',function(){go(active-1,true)});
+                mobilePagerWrap.appendChild(prev);
+                getMobilePageItems(pages,active).forEach(function(item){
+                  if(item.type==='ellipsis'){
+                    var gap=document.createElement('span');
+                    gap.className='product-reviews__pag-ellipsis';
+                    gap.textContent='...';
+                    gap.setAttribute('aria-hidden','true');
+                    mobilePagerWrap.appendChild(gap);
+                    return;
+                  }
+                  var pageBtn=document.createElement('button');
+                  pageBtn.type='button';
+                  pageBtn.className='product-reviews__pag-page';
+                  if(item.page===active)pageBtn.classList.add('is-active');
+                  pageBtn.textContent=String(item.page);
+                  pageBtn.setAttribute('data-page',String(item.page));
+                  pageBtn.setAttribute('aria-label','Página '+item.page);
+                  if(item.page===active)pageBtn.setAttribute('aria-current','page');
+                  pageBtn.addEventListener('click',function(){go(item.page,true)});
+                  mobilePagerWrap.appendChild(pageBtn);
+                });
+                var next=document.createElement('button');
+                next.type='button';
+                next.className='product-reviews__pag-ctrl';
+                next.setAttribute('aria-label','Próxima página');
+                next.textContent='»';
+                next.disabled=active>=pages;
+                next.addEventListener('click',function(){go(active+1,true)});
+                mobilePagerWrap.appendChild(next);
               }
               function updatePaginationUI(pages,active){
                 totalPages=pages;
@@ -747,8 +789,8 @@
                   pDesktop.hidden=!show;
                   pDesktop.classList.toggle('is-visible',show&&isDesktop());
                 }
-                if(!show){if(mobileDotsWrap)mobileDotsWrap.innerHTML='';return}
-                renderMobileDots(pages,active);
+                if(!show){if(mobilePagerWrap)mobilePagerWrap.innerHTML='';return}
+                renderMobilePager(pages,active);
                 statusEls.forEach(function(el){
                   var cur=el.querySelector('[data-current]');
                   var tot=el.querySelector('[data-total]');

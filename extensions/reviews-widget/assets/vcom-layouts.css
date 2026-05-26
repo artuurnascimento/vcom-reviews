@@ -71,8 +71,7 @@
   transition: background 0.2s, border-color 0.2s, opacity 0.2s;
 }
 
-.vcom-reviews-app-block .product-reviews__nav-btn:hover:not(:disabled),
-.vcom-reviews-app-block .product-reviews__pagination-dot:hover:not(.is-active) {
+.vcom-reviews-app-block .product-reviews__nav-btn:hover:not(:disabled) {
   background: rgba(0, 0, 0, 0.04);
   border-color: rgba(0, 0, 0, 0.2);
 }
@@ -97,31 +96,58 @@
   flex-wrap: wrap;
 }
 
-.vcom-reviews-app-block .product-reviews__pagination-dots {
+.vcom-reviews-app-block .product-reviews__pagination-pager {
   display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
-.vcom-reviews-app-block .product-reviews__pagination-dot {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.18);
-  background: #fff;
-  color: #555;
-  font-size: 13px;
+.vcom-reviews-app-block .product-reviews__pag-ctrl,
+.vcom-reviews-app-block .product-reviews__pag-page {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 6px;
+  background: var(--vcom-pag-inactive, #eceff3);
+  color: #111;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  transition: background 0.2s, color 0.2s, opacity 0.2s;
 }
 
-.vcom-reviews-app-block .product-reviews__pagination-dot.is-active {
-  background: #1d8a42;
-  border-color: #1d8a42;
-  color: #fff;
+.vcom-reviews-app-block .product-reviews__pag-page.is-active {
+  background: var(--vcom-pag-active, #c5d4e8);
+  color: #111;
+}
+
+.vcom-reviews-app-block .product-reviews__pag-ctrl:hover:not(:disabled),
+.vcom-reviews-app-block .product-reviews__pag-page:hover:not(.is-active) {
+  background: #e2e6ec;
+}
+
+.vcom-reviews-app-block .product-reviews__pag-ctrl:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.vcom-reviews-app-block .product-reviews__pag-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 36px;
+  color: #111;
+  font-size: 14px;
+  font-weight: 600;
+  user-select: none;
 }
 
 @media (min-width: 992px) {
