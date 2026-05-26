@@ -33,11 +33,32 @@ function isGeminiQuotaError(message: string): boolean {
   return /quota exceeded|limit:\s*0|RESOURCE_EXHAUSTED|rate.?limit/i.test(message);
 }
 
+/** Pico de demanda, 503, 429 — vale retry e troca de modelo. */
+function isGeminiTransientError(message: string): boolean {
+  return (
+    isGeminiQuotaError(message) ||
+    /high demand|experiencing high|try again later|overloaded|too many requests|temporarily unavailable|service unavailable|503|429|UNAVAILABLE/i.test(
+      message,
+    )
+  );
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export function formatGeminiErrorMessage(message: string): string {
   const retryMatch = message.match(/retry in ([\d.]+)s/i);
   const retryHint = retryMatch
     ? ` Aguarde ~${Math.ceil(parseFloat(retryMatch[1]))} segundos e tente de novo.`
     : "";
+
+  if (/high demand|experiencing high|try again later/i.test(message)) {
+    return (
+      "A IA está com pico de demanda no momento. O app já tentou novamente automaticamente. " +
+      `Aguarde 1–2 minutos e tente de novo, ou use menos avaliações por vez.${retryHint}`
+    );
+  }
 
   if (/limit:\s*0/i.test(message)) {
     return (
@@ -334,6 +355,38 @@ async function callGeminiGenerateContent(
   return json;
 }
 
+const GEMINI_RETRY_ATTEMPTS = 3;
+const GEMINI_RETRY_DELAYS_MS = [2_000, 5_000, 10_000] as const;
+
+async function callGeminiWithRetries(
+  model: string,
+  apiKey: string,
+  parts: Array<GeminiTextPart | GeminiInlinePart>,
+): Promise<GeminiResponseJson> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < GEMINI_RETRY_ATTEMPTS; attempt++) {
+    try {
+      return await callGeminiGenerateContent(model, apiKey, parts);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      lastError = error instanceof Error ? error : new Error(msg);
+
+      if (!isGeminiTransientError(msg) || attempt === GEMINI_RETRY_ATTEMPTS - 1) {
+        throw lastError;
+      }
+
+      const delayMs = GEMINI_RETRY_DELAYS_MS[attempt] ?? 10_000;
+      console.warn(
+        `[vcom-reviews] Gemini retry ${attempt + 1}/${GEMINI_RETRY_ATTEMPTS} (${model}) in ${delayMs}ms: ${msg}`,
+      );
+      await sleep(delayMs);
+    }
+  }
+
+  throw lastError ?? new Error("Falha ao chamar a IA.");
+}
+
 async function generateReviewsWithGeminiBatch(
   input: AiReviewGenerateInput,
   batch?: { index: number; total: number },
@@ -352,11 +405,11 @@ async function generateReviewsWithGeminiBatch(
   ];
 
   const models = getGeminiModelCandidates();
-  const quotaErrors: string[] = [];
+  const modelErrors: string[] = [];
 
   for (const model of models) {
     try {
-      const json = await callGeminiGenerateContent(model, apiKey, parts);
+      const json = await callGeminiWithRetries(model, apiKey, parts);
       const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!text) {
         throw new Error("Resposta vazia da IA. Tente reduzir a quantidade ou alterar o tom.");
@@ -379,16 +432,16 @@ async function generateReviewsWithGeminiBatch(
       return assignProductImages(reviews, imageUrls);
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      if (isGeminiQuotaError(msg)) {
-        quotaErrors.push(`${model}: ${msg}`);
-        console.warn(`[vcom-reviews] Gemini quota on ${model}, trying next model…`);
+      if (isGeminiTransientError(msg)) {
+        modelErrors.push(`${model}: ${msg}`);
+        console.warn(`[vcom-reviews] Gemini transient on ${model}, trying next model…`);
         continue;
       }
       throw new Error(formatGeminiErrorMessage(msg));
     }
   }
 
-  const last = quotaErrors[quotaErrors.length - 1] || "Cota esgotada.";
+  const last = modelErrors[modelErrors.length - 1] || "Serviço de IA indisponível.";
   throw new Error(formatGeminiErrorMessage(last));
 }
 
@@ -410,7 +463,7 @@ export async function generateReviewsWithGemini(
     all.push(...batch);
 
     if (offset + batchCount < total) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await sleep(totalBatches > 5 ? 1_500 : 1_000);
     }
   }
 
