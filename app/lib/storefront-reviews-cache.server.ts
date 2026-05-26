@@ -80,7 +80,13 @@ export async function buildHomepageReviewsCacheWithImages(
     ...base,
     reviews: base.reviews.map((r) => ({
       ...r,
-      images: r.images.map((id) => urlMap[id]).filter(Boolean),
+      images: r.images
+        .map((id) => {
+          if (!id) return "";
+          if (/^https?:\/\//i.test(id)) return id;
+          return urlMap[id] || "";
+        })
+        .filter(Boolean),
     })),
   };
 }

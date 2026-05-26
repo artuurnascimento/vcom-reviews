@@ -62,6 +62,96 @@
     var titleMax = parseInt(g.getAttribute("data-title-max"), 10) || 80;
     var textMax = parseInt(g.getAttribute("data-text-max"), 10) || 200;
     var headerPrefix = g.getAttribute("data-header-prefix") || "";
+    var showImages = g.getAttribute("data-show-images") === "true";
+
+    function imagesInitialCount() {
+      if (!root) return 2;
+      return isDesktop()
+        ? parseInt(root.getAttribute("data-images-initial-desktop"), 10) || 2
+        : parseInt(root.getAttribute("data-images-initial-mobile"), 10) || 2;
+    }
+
+    function applyImageLimits() {
+      if (!root || !showImages) return;
+      var initial = imagesInitialCount();
+      root.querySelectorAll("[data-review-images]").forEach(function (gallery) {
+        var links = Array.prototype.slice.call(
+          gallery.querySelectorAll(".product-reviews__image-link"),
+        );
+        var seeMore = gallery.querySelector(".product-reviews__image-see-more");
+        var hidden = Math.max(0, links.length - initial);
+        links.forEach(function (link, idx) {
+          if (idx < initial) {
+            link.classList.remove("product-reviews__image-link--hidden");
+            link.style.display = "";
+          } else {
+            link.classList.add("product-reviews__image-link--hidden");
+            if (!gallery.classList.contains("is-expanded")) link.style.display = "none";
+          }
+        });
+        if (seeMore) {
+          seeMore.style.display =
+            gallery.classList.contains("is-expanded") || hidden <= 0 ? "none" : "";
+          var countSpan = seeMore.querySelectorAll("span")[1];
+          if (countSpan) countSpan.textContent = "+" + hidden;
+        }
+      });
+    }
+
+    function bindCardMediaOnce() {
+      if (!root || root.dataset.vcomMediaBound === "1") return;
+      root.dataset.vcomMediaBound = "1";
+      var modal = document.getElementById("vcom-reviews-image-modal-" + s);
+      var modalImg = document.getElementById("vcom-reviews-modal-img-" + s);
+      if (!modal || !modalImg) return;
+
+      function openModal(src) {
+        modalImg.src = src;
+        modal.classList.add("is-open");
+        document.body.style.overflow = "hidden";
+      }
+      function closeModal() {
+        modal.classList.remove("is-open");
+        modalImg.src = "";
+        document.body.style.overflow = "";
+      }
+
+      root.addEventListener("click", function (e) {
+        var link = e.target.closest(".product-reviews__image-link[data-image-src]");
+        if (link) {
+          e.preventDefault();
+          var src = link.getAttribute("data-image-src");
+          if (src) openModal(src);
+          return;
+        }
+        var seeMore = e.target.closest(".product-reviews__image-see-more");
+        if (seeMore) {
+          var wrap = seeMore.closest(".product-reviews__images");
+          if (wrap) {
+            wrap.classList.add("is-expanded");
+            applyImageLimits();
+          }
+          return;
+        }
+        var seeLess = e.target.closest(".product-reviews__image-see-less");
+        if (seeLess) {
+          var wrapLess = seeLess.closest(".product-reviews__images");
+          if (wrapLess) {
+            wrapLess.classList.remove("is-expanded");
+            applyImageLimits();
+          }
+        }
+      });
+
+      var closeBtn = modal.querySelector(".product-reviews__image-modal-close");
+      if (closeBtn) closeBtn.addEventListener("click", closeModal);
+      modal.addEventListener("click", function (e) {
+        if (e.target === modal) closeModal();
+      });
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && modal.classList.contains("is-open")) closeModal();
+      });
+    }
 
     function verifiedBadgeHtml() {
       return (
@@ -211,6 +301,53 @@
       d.textContent = v || "";
       return d.innerHTML;
     }
+    function escAttr(v) {
+      return String(v || "")
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;");
+    }
+    function buildImagesHtml(rv) {
+      var urls = (rv.images || []).filter(function (u) {
+        return typeof u === "string" && /^https?:\/\//i.test(u);
+      });
+      if (!showImages || urls.length === 0) return "";
+      var max = 6;
+      urls = urls.slice(0, max);
+      var initial = imagesInitialCount();
+      var hidden = Math.max(0, urls.length - initial);
+      var collapsible = hidden > 0 ? " product-reviews__images--collapsible" : "";
+      var html = '<div class="product-reviews__images' + collapsible + '" data-review-images>';
+      urls.forEach(function (url, idx) {
+        var hiddenClass = idx >= initial ? " product-reviews__image-link--hidden" : "";
+        var hiddenStyle = idx >= initial ? ' style="display:none"' : "";
+        html +=
+          '<button type="button" class="product-reviews__image-link' +
+          hiddenClass +
+          '" data-image-src="' +
+          escAttr(url) +
+          '" aria-label="Ver imagem"' +
+          hiddenStyle +
+          ">";
+        html +=
+          '<img src="' +
+          escAttr(url) +
+          '" alt="" loading="lazy" width="80" height="80" class="product-reviews__image">';
+        html += "</button>";
+      });
+      if (hidden > 0) {
+        html +=
+          '<button type="button" class="product-reviews__image-see-more" data-hidden-count="' +
+          hidden +
+          '"><span>Ver mais</span><span>+' +
+          hidden +
+          "</span></button>";
+        html +=
+          '<button type="button" class="product-reviews__image-see-less" style="display:none">Ver menos</button>';
+      }
+      html += "</div>";
+      return html;
+    }
     function buildCard(rv) {
       var stars = parseFloat(rv.rating) || 5;
       var starsHtml = "";
@@ -237,6 +374,7 @@
           esc(title.length > titleMax ? title.slice(0, titleMax) + "..." : title) +
           "</h3>";
       if (body) html += '<p class="product-reviews__text">' + esc(bodyShow) + "</p>";
+      html += buildImagesHtml(rv);
       html += '<div class="product-reviews__meta">';
       if (author) html += '<span class="product-reviews__meta-author">' + esc(author) + "</span>";
       if (author && rv.time) html += '<span class="product-reviews__meta-sep"> - </span>';
@@ -297,6 +435,8 @@
         html += buildCard(rv);
       });
       cardSlot.innerHTML = html;
+      bindCardMediaOnce();
+      applyImageLimits();
       var pp = perPage();
       var pages = data.total_pages || Math.ceil((data.count || totalCount) / pp) || 1;
       updatePaginationUI(pages, page);
@@ -442,6 +582,7 @@
       retryBtn.addEventListener("click", function () {
         fetchProxyPage(currentPage || 1, false, true);
       });
+    bindCardMediaOnce();
     if ((embeddedReviews && embeddedReviews.length > 0) || (usesRemoteProxy() && totalCount > 0)) {
       fetchProxyPage(1, false);
     } else {
@@ -455,6 +596,7 @@
         if ((embeddedReviews && embeddedReviews.length > 0) || (usesRemoteProxy() && totalCount > 0)) {
           fetchProxyPage(1, false, true);
         } else applyLocal();
+        applyImageLimits();
         if (totalPages > 1) {
           if (pMobile) pMobile.classList.toggle("is-visible", !isDesktop());
           if (pDesktop) pDesktop.classList.toggle("is-visible", isDesktop());
