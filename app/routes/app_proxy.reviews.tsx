@@ -32,12 +32,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const ratingSum = approved.reduce((sum, r) => sum + r.rating, 0);
     const count = approved.length;
     const avg = count > 0 ? ratingSum / count : 0;
+    const PROXY_MAX_CARDS = 250;
 
     return json({
       ok: true,
       count,
       avg: Math.round(avg * 10) / 10,
-      reviews: approved.map((r) => ({
+      reviews: approved.slice(0, PROXY_MAX_CARDS).map((r) => ({
         rating: r.rating,
         verified_buyer: r.verified_buyer,
         title: r.title,

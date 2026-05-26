@@ -35,8 +35,18 @@
 {%- assign tp_score_label = cfg.footer_trustpilot_score_label | default: 'TrustScore' -%}
 {%- assign tp_reviews_word = cfg.footer_trustpilot_reviews_word | default: 'reviews' -%}
 
-{%- render 'vcom-load-all-reviews' -%}
-{%- assign all_reviews = vcom_all_reviews -%}
+{%- assign all_reviews = nil -%}
+{%- assign vcom_review_mo = nil -%}
+{%- if shop.metaobjects.review -%}
+  {%- assign vcom_review_mo = shop.metaobjects.review -%}
+{%- elsif shop.metaobjects["$app:review"] -%}
+  {%- assign vcom_review_mo = shop.metaobjects["$app:review"] -%}
+{%- endif -%}
+{%- if vcom_review_mo -%}
+  {%- paginate vcom_review_mo.values by 5000 -%}
+    {%- assign all_reviews = vcom_review_mo.values -%}
+  {%- endpaginate -%}
+{%- endif -%}
 
 {%- assign review_count = 0 -%}
 {%- assign rating_sum = 0 -%}
