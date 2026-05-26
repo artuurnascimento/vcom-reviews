@@ -371,7 +371,23 @@
           {%- if has_reviews -%}{%- assign display_rating = rating_avg | round: 1 -%}{%- endif -%}
           {%- assign header_stars = display_rating | plus: 0.0 -%}
           <header class="product-reviews__section-head" style="margin-bottom:{{ s_trusted_mb }}px;">
-            <h2 class="product-reviews__section-title">{{ s_section_headline }}</h2>
+            <div class="product-reviews__section-head-top">
+              <h2 class="product-reviews__section-title">{{ s_section_headline }}</h2>
+              <nav
+                class="product-reviews__nav-arrows vcom-reviews-nav--desktop"
+                id="vcom-reviews-arrows-{{ block.id }}"
+                aria-label="Navegar avaliações"
+                hidden
+              >
+                <button type="button" class="product-reviews__nav-btn product-reviews__nav-prev" aria-label="Página anterior" disabled>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <span class="product-reviews__nav-status"><span data-current>1</span> / <span data-total>1</span></span>
+                <button type="button" class="product-reviews__nav-btn product-reviews__nav-next" aria-label="Próxima página" disabled>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+              </nav>
+            </div>
             <div class="product-reviews__section-summary">
               <div class="product-reviews__section-badge" aria-label="Trustpilot {{ display_rating }}">
                 {%- if s_header_show_trustpilot -%}
@@ -642,55 +658,78 @@
         </script>
 
         {%- if has_reviews -%}
-          <div class="product-reviews__pagination" id="vcom-reviews-pagination-{{ block.id }}" style="display:{% if total_pages > 1 or use_proxy_reviews %}flex{% else %}none{% endif %};justify-content:center;gap:8px;margin-top:20px;flex-wrap:wrap;">
-            {%- assign max_pagination_dots = 40 -%}
-            {%- for p in (1..max_pagination_dots) -%}
-              <button type="button" class="product-reviews__pagination-dot" data-page="{{ p }}" aria-label="Página {{ p }}" style="width:10px;height:10px;border-radius:50%;border:none;cursor:pointer;padding:0;transition:background .2s,transform .2s;{% if p > total_pages %}display:none;{% endif %}background:{% if p == 1 %}{{ s_pag_active}}{% else %}{{ s_pag_inactive}}{% endif %};transform:{% if p == 1 %}scale(1.2){% else %}scale(1){% endif %};"></button>
-            {%- endfor -%}
-          </div>
+          <nav
+            class="product-reviews__pagination product-reviews__pagination--mobile vcom-reviews-nav--mobile"
+            id="vcom-reviews-pagination-{{ block.id }}"
+            aria-label="Paginação das avaliações"
+            hidden
+          >
+            <button type="button" class="product-reviews__pag-btn product-reviews__pag-prev" aria-label="Página anterior" disabled>Anterior</button>
+            <span class="product-reviews__pag-status"><span data-current>1</span> / <span data-total>1</span></span>
+            <button type="button" class="product-reviews__pag-btn product-reviews__pag-next" aria-label="Próxima página" disabled>Próxima</button>
+          </nav>
           <script>
             !function(){
               var s='{{ block.id }}',bid='{{ bid }}';
               var g=document.getElementById('vcom-reviews-grid-'+s);
-              var p=document.getElementById('vcom-reviews-pagination-'+s);
+              var pMobile=document.getElementById('vcom-reviews-pagination-'+s);
+              var pDesktop=document.getElementById('vcom-reviews-arrows-'+s);
               var root=document.getElementById(g&&g.getAttribute('data-scroll-root')||'vcom-reviews-{{ bid }}');
-              if(!g||!p)return;
+              if(!g||!pMobile)return;
               var useProxy=g.getAttribute('data-use-proxy')==='true';
               var proxyUrl=g.getAttribute('data-proxy-url')||'';
               var totalCount=parseInt(g.getAttribute('data-review-count')||'0',10)||0;
-              var dots=Array.prototype.slice.call(p.querySelectorAll('.product-reviews__pagination-dot'));
-              var a='{{ s_pag_active}}',i='{{ s_pag_inactive}}';
+              var prevBtns=[],nextBtns=[],statusEls=[];
+              function collectNav(){
+                prevBtns=[];nextBtns=[];statusEls=[];
+                [pMobile,pDesktop].forEach(function(nav){
+                  if(!nav)return;
+                  var prev=nav.querySelector('.product-reviews__nav-prev,.product-reviews__pag-prev');
+                  var next=nav.querySelector('.product-reviews__nav-next,.product-reviews__pag-next');
+                  var status=nav.querySelector('.product-reviews__nav-status,.product-reviews__pag-status');
+                  if(prev)prevBtns.push(prev);
+                  if(next)nextBtns.push(next);
+                  if(status)statusEls.push(status);
+                });
+              }
+              collectNav();
               var colsD=parseInt(g.getAttribute('data-cols-desktop'),10)||3;
               var rows=parseInt(g.getAttribute('data-reviews-rows'),10)||2;
               var perPageMobile=parseInt(g.getAttribute('data-per-page-mobile'),10)||10;
-              var resizeTimer,currentPage=1,loading=false;
+              var resizeTimer,currentPage=1,totalPages=1,loading=false;
               var starColor='{{ star_color }}',starEmpty='{{ star_empty_color }}';
               var showVerified={{ s_show_verified}},verifiedLabel={{ s_verified_label | json }};
               var titleMax={{ title_max_chars }},textMax={{ text_max_chars }};
               function isDesktop(){return window.matchMedia('(min-width:992px)').matches}
               function perPage(){return isDesktop()?colsD*rows:perPageMobile}
               function getCards(){return Array.prototype.slice.call(g.querySelectorAll('.product-reviews__card'))}
-              function scrollToReviews(){var el=root||g;if(!el)return;var y=el.getBoundingClientRect().top+window.pageYOffset-12;window.scrollTo({top:y,behavior:'smooth'})}
-              function paintDot(dot,page,active){dot.style.display='';dot.dataset.page=String(page);dot.setAttribute('aria-label','Página '+page);dot.style.background=active?a:i;dot.style.transform=active?'scale(1.2)':'scale(1)'}
-              function ensureDots(pages){
-                while(dots.length<pages){
-                  var dot=document.createElement('button');
-                  dot.type='button';
-                  dot.className='product-reviews__pagination-dot';
-                  dot.style.cssText='width:10px;height:10px;border-radius:50%;border:none;cursor:pointer;padding:0;transition:background .2s,transform .2s;background:'+i;
-                  dot.addEventListener('click',function(){if(this.style.display==='none')return;go(this.dataset.page,true)});
-                  p.appendChild(dot);
-                  dots.push(dot);
-                }
+              function scrollToFirstReview(){
+                var el=g||root;
+                if(!el)return;
+                var y=el.getBoundingClientRect().top+window.pageYOffset-12;
+                window.scrollTo({top:y,behavior:'smooth'});
               }
               function updatePaginationUI(pages,active){
-                if(pages<=1){p.style.display='none';return}
-                p.style.display='flex';
-                ensureDots(pages);
-                dots.forEach(function(dot,idx){
-                  if(idx>=pages){dot.style.display='none';return}
-                  paintDot(dot,idx+1,idx+1===active);
+                totalPages=pages;
+                currentPage=active;
+                var show=pages>1;
+                if(pMobile){
+                  pMobile.hidden=!show;
+                  pMobile.classList.toggle('is-visible',show&&!isDesktop());
+                }
+                if(pDesktop){
+                  pDesktop.hidden=!show;
+                  pDesktop.classList.toggle('is-visible',show&&isDesktop());
+                }
+                if(!show)return;
+                statusEls.forEach(function(el){
+                  var cur=el.querySelector('[data-current]');
+                  var tot=el.querySelector('[data-total]');
+                  if(cur)cur.textContent=String(active);
+                  if(tot)tot.textContent=String(pages);
                 });
+                prevBtns.forEach(function(btn){btn.disabled=active<=1});
+                nextBtns.forEach(function(btn){btn.disabled=active>=pages});
               }
               function starSvg(stars,idx){
                 var n=idx+1,min=n-1;
@@ -746,34 +785,42 @@
                     var html='';
                     (data.reviews||[]).forEach(function(rv){html+=buildCard(rv);});
                     g.innerHTML=html;
-                    currentPage=page;
                     var pages=data.total_pages||Math.ceil((data.count||totalCount)/pp);
-                    updatePaginationUI(pages,currentPage);
-                    if(scroll&&!isDesktop())scrollToReviews();
+                    updatePaginationUI(pages,page);
+                    if(scroll)scrollToFirstReview();
                   })
                   .catch(function(){loading=false;g.classList.remove('is-loading');});
               }
               function goLocal(page,scroll){
-                currentPage=parseInt(page,10)||1;
-                getCards().forEach(function(card){card.style.display=card.dataset.page==String(currentPage)?'':'none';});
-                dots.forEach(function(dot){if(dot.style.display==='none')return;paintDot(dot,parseInt(dot.dataset.page,10),dot.dataset.page==String(currentPage));});
-                if(scroll&&!isDesktop())scrollToReviews();
+                page=parseInt(page,10)||1;
+                getCards().forEach(function(card){card.style.display=card.dataset.page==String(page)?'':'none';});
+                updatePaginationUI(totalPages,page);
+                if(scroll)scrollToFirstReview();
               }
               function go(page,scroll){
                 page=parseInt(page,10)||1;
+                if(page<1)page=1;
+                if(totalPages>0&&page>totalPages)page=totalPages;
                 if(useProxy&&proxyUrl){fetchProxyPage(page,scroll);return}
                 goLocal(page,scroll);
               }
               function applyLocal(){
                 var pp=perPage(),cards=getCards();
-                if(!pp||cards.length<=pp){p.style.display='none';cards.forEach(function(card){card.style.display=''});return}
-                p.style.display='flex';
+                if(!pp||cards.length<=pp){
+                  if(pMobile){pMobile.hidden=true;pMobile.classList.remove('is-visible')}
+                  if(pDesktop){pDesktop.hidden=true;pDesktop.classList.remove('is-visible')}
+                  cards.forEach(function(card){card.style.display=''});
+                  return;
+                }
                 var pages=Math.ceil(cards.length/pp);
                 cards.forEach(function(card,idx){card.dataset.page=String(Math.floor(idx/pp)+1)});
                 updatePaginationUI(pages,Math.min(currentPage,pages));
                 goLocal(Math.min(currentPage,pages),false);
               }
-              dots.forEach(function(dot){dot.addEventListener('click',function(){if(this.style.display==='none')return;go(this.dataset.page,true);});});
+              function onPrev(){go(currentPage-1,!isDesktop())}
+              function onNext(){go(currentPage+1,!isDesktop())}
+              prevBtns.forEach(function(btn){btn.addEventListener('click',onPrev)});
+              nextBtns.forEach(function(btn){btn.addEventListener('click',onNext)});
               if(useProxy&&proxyUrl&&totalCount>0){
                 fetchProxyPage(1,false);
               }else{
@@ -785,6 +832,10 @@
                   currentPage=1;
                   if(useProxy&&proxyUrl&&totalCount>0)fetchProxyPage(1,false);
                   else applyLocal();
+                  if(totalPages>1){
+                    if(pMobile)pMobile.classList.toggle('is-visible',!isDesktop());
+                    if(pDesktop)pDesktop.classList.toggle('is-visible',isDesktop());
+                  }
                 },150);
               });
             }();

@@ -34,6 +34,102 @@
   text-align: left;
 }
 
+.vcom-reviews-app-block .product-reviews__section-head-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.vcom-reviews-app-block .product-reviews__section-head-top .product-reviews__section-title {
+  margin-bottom: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.vcom-reviews-app-block .product-reviews__nav-arrows,
+.vcom-reviews-app-block .product-reviews__pagination--mobile {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.vcom-reviews-app-block .product-reviews__nav-btn,
+.vcom-reviews-app-block .product-reviews__pag-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 50%;
+  background: #fff;
+  color: #111;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, opacity 0.2s;
+}
+
+.vcom-reviews-app-block .product-reviews__pag-btn {
+  width: auto;
+  min-width: 88px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.vcom-reviews-app-block .product-reviews__nav-btn:hover:not(:disabled),
+.vcom-reviews-app-block .product-reviews__pag-btn:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.vcom-reviews-app-block .product-reviews__nav-btn:disabled,
+.vcom-reviews-app-block .product-reviews__pag-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.vcom-reviews-app-block .product-reviews__nav-status,
+.vcom-reviews-app-block .product-reviews__pag-status {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b6b6b;
+  white-space: nowrap;
+  min-width: 3.5em;
+  text-align: center;
+}
+
+.vcom-reviews-app-block .product-reviews__pagination--mobile {
+  justify-content: center;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+@media (min-width: 992px) {
+  .vcom-reviews-app-block .vcom-reviews-nav--desktop.is-visible {
+    display: inline-flex;
+  }
+
+  .vcom-reviews-app-block .vcom-reviews-nav--mobile {
+    display: none !important;
+  }
+}
+
+@media (max-width: 991px) {
+  .vcom-reviews-app-block .vcom-reviews-nav--desktop {
+    display: none !important;
+  }
+
+  .vcom-reviews-app-block .vcom-reviews-nav--mobile.is-visible {
+    display: flex;
+  }
+}
+
 .vcom-reviews-app-block .product-reviews__section-title {
   margin: 0 0 10px;
   font-size: clamp(18px, 2.5vw, 24px);
