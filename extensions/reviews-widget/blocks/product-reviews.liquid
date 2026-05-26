@@ -510,9 +510,6 @@
               {%- if review.product_id != blank -%}{%- assign r_pid = review.product_id.value | default: review.product_id -%}{%- endif -%}
               {%- unless product != blank and r_pid == product.id -%}{%- continue -%}{%- endunless -%}
             {%- endif -%}
-            {%- assign seen_card_handles = seen_card_handles | append: r_handle | append: '||' -%}
-            {%- assign page_num = approved_index | divided_by: reviews_per_page | plus: 1 -%}
-            {%- assign approved_index = approved_index | plus: 1 -%}
             {%- assign stars_raw = '5' -%}
             {%- if review.rating != blank -%}
               {%- assign stars_raw = review.rating.value | default: review.rating | replace: ',', '.' -%}
@@ -536,6 +533,9 @@
               {%- if photo_pass == 1 and has_review_photo == false -%}{%- continue -%}{%- endif -%}
               {%- if photo_pass == 2 and has_review_photo -%}{%- continue -%}{%- endif -%}
             {%- endif -%}
+            {%- assign seen_card_handles = seen_card_handles | append: r_handle | append: '||' -%}
+            {%- assign page_num = approved_index | divided_by: reviews_per_page | plus: 1 -%}
+            {%- assign approved_index = approved_index | plus: 1 -%}
             <article class="product-reviews__card product-reviews__card--page-{{ page_num }}" data-page="{{ page_num }}"{% if total_pages > 1 and page_num > 1 %} style="display:none"{% endif %}>
               {%- assign r_avatar = r_author | slice: 0, 1 | upcase -%}
               {%- if r_avatar == blank -%}{%- assign r_avatar = '?' -%}{%- endif -%}
