@@ -1,0 +1,10 @@
+# Railway/Nixpacks: instalar devDependencies para o build (Vite, Remix).
+# Evita "npm warn config production Use `--omit=dev` instead" e falha de build.
+[phases.install]
+cmds = ["npm ci --include=dev"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "npm run start"

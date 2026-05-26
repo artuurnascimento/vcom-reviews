@@ -100,7 +100,9 @@ Depois atualize no Partners (ou `shopify.app.vcom-reviwers.toml` + `shopify app 
 - Redirects = `{SHOPIFY_APP_URL}/auth/callback` e `.../auth/shopify/callback`
 - Webhook = `{SHOPIFY_APP_URL}/webhooks/app/uninstalled`
 
-Build: `npm ci && npm run build` · Start: `npm run start`
+Build: `npm ci --include=dev && npm run build` · Start: `npm run start`
+
+No Railway, `nixpacks.toml` já usa `npm ci --include=dev` (evita o aviso `Use --omit=dev instead` quando `NODE_ENV=production`).
 
 ## Notas
 
