@@ -51,6 +51,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     });
   } catch (e) {
     console.error("app_proxy reviews error", e);
-    return json({ ok: false, reviews: [], count: 0, avg: 0 }, { status: 500 });
+    const msg = e instanceof Error ? e.message : String(e);
+    return json({ ok: false, reviews: [], count: 0, avg: 0, error: msg }, { status: 500 });
   }
 };
