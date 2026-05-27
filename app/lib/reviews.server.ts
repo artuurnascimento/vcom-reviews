@@ -16,6 +16,7 @@ import {
 } from "./constants";
 import { ensureReviewDefinitionReady } from "./metaobject-setup.server";
 import { invalidateReviewDedupeCache } from "./review-dedupe.server";
+import { emitReviewEvent } from "./review-events.server";
 import { syncStorefrontReviewStats } from "./storefront-stats.server";
 
 function scheduleStorefrontStatsSync(admin: AdminApi) {
@@ -218,6 +219,22 @@ export async function approveReview(admin: AdminApi, id: string) {
 
   await updateMetaobjectStatus(admin, id, "approved", review);
   scheduleStorefrontStatsSync(admin);
+  void emitReviewEvent({
+    event: "review.approved",
+    emittedAt: new Date().toISOString(),
+    review: {
+      id,
+      status: "approved",
+      placement: review.placement,
+      productId: review.productId,
+      rating: review.rating,
+      author: review.author,
+      title: review.title,
+      body: review.body,
+      verifiedBuyer: review.verified_buyer,
+      imagesCount: review.images.length,
+    },
+  });
   return id;
 }
 
@@ -226,6 +243,22 @@ export async function rejectReview(admin: AdminApi, id: string) {
   if (!review) throw new Error("Avaliação não encontrada.");
   await updateMetaobjectStatus(admin, id, "rejected", review);
   scheduleStorefrontStatsSync(admin);
+  void emitReviewEvent({
+    event: "review.rejected",
+    emittedAt: new Date().toISOString(),
+    review: {
+      id,
+      status: "rejected",
+      placement: review.placement,
+      productId: review.productId,
+      rating: review.rating,
+      author: review.author,
+      title: review.title,
+      body: review.body,
+      verifiedBuyer: review.verified_buyer,
+      imagesCount: review.images.length,
+    },
+  });
   return id;
 }
 
@@ -302,6 +335,22 @@ export async function updateReview(
   const fields = buildMetaobjectFields({ ...data, status });
   await metaobjectUpdate(admin, id, fields);
   scheduleStorefrontStatsSync(admin);
+  void emitReviewEvent({
+    event: "review.updated",
+    emittedAt: new Date().toISOString(),
+    review: {
+      id,
+      status,
+      placement: data.placement,
+      productId: data.productId,
+      rating: data.rating,
+      author: data.author,
+      title: data.title,
+      body: data.body,
+      verifiedBuyer: data.verified_buyer,
+      imagesCount: data.imageFileIds?.length || 0,
+    },
+  });
   return id;
 }
 
@@ -310,6 +359,7 @@ export async function deleteReview(
   id: string,
   options?: { sync?: boolean },
 ) {
+  const existing = await getReview(admin, id);
   const response = await admin.graphql(
     `#graphql
     mutation DeleteReview($id: ID!) {
@@ -328,6 +378,24 @@ export async function deleteReview(
   if (options?.sync !== false) {
     invalidateReviewDedupeCache();
     scheduleStorefrontStatsSync(admin);
+  }
+  if (existing) {
+    void emitReviewEvent({
+      event: "review.deleted",
+      emittedAt: new Date().toISOString(),
+      review: {
+        id: existing.id,
+        status: existing.status,
+        placement: existing.placement,
+        productId: existing.productId,
+        rating: existing.rating,
+        author: existing.author,
+        title: existing.title,
+        body: existing.body,
+        verifiedBuyer: existing.verified_buyer,
+        imagesCount: existing.images.length,
+      },
+    });
   }
 }
 
@@ -381,6 +449,22 @@ async function createMetaobject(admin: AdminApi, data: ReviewFormData) {
   }
   const id = json.data?.metaobjectCreate?.metaobject?.id as string;
   scheduleStorefrontStatsSync(admin);
+  void emitReviewEvent({
+    event: "review.created",
+    emittedAt: new Date().toISOString(),
+    review: {
+      id,
+      status: data.status ?? "approved",
+      placement: data.placement,
+      productId: data.productId,
+      rating: data.rating,
+      author: data.author,
+      title: data.title,
+      body: data.body,
+      verifiedBuyer: data.verified_buyer,
+      imagesCount: data.imageFileIds?.length || 0,
+    },
+  });
   return id;
 }
 
