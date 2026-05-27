@@ -21,6 +21,10 @@ Expected payload fields:
 - `monitoring.p95_ms`
 - `monitoring.errors_5xx`
 - `monitoring.proxy_auth_failures_total`
+- `alerts.healthy`
+- `alerts.flags.errors_5xx_high`
+- `alerts.flags.p95_latency_high`
+- `alerts.flags.proxy_auth_failures_high`
 
 ## 3) Minimum alerts (recommended)
 
@@ -38,6 +42,12 @@ Create alerts in your monitoring stack (Railway + Sentry):
 4. **Health degraded**
    - Condition: `/health` returns `503`
    - Severity: Critical
+
+Optional threshold env vars (defaults shown):
+
+- `HEALTH_ALERT_5XX_THRESHOLD=10`
+- `HEALTH_ALERT_P95_MS=2500`
+- `HEALTH_ALERT_PROXY_AUTH_THRESHOLD=20`
 
 ## 4) Sentry rules
 

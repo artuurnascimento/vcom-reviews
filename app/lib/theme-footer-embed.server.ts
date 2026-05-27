@@ -183,7 +183,7 @@ async function writeSettingsData(
     return {
       ok: false,
       errors: messages,
-      accessDenied: messages.some((m) => /access denied|write_themes|exemption/i.test(m)),
+      accessDenied: messages.some((m: string) => /access denied|write_themes|exemption/i.test(m)),
     };
   }
   return { ok: true, errors: [], accessDenied: false };
@@ -224,7 +224,14 @@ export async function ensureFooterTrustpilotAppEmbed(
 ): Promise<ThemeFooterEmbedResult> {
   const activateUrl = buildFooterEmbedActivateUrl(shopDomain);
   if (!enabled) {
-    return { ok: true, activated: false, alreadyActive: true, accessDenied: false, activateUrl };
+    return {
+      ok: true,
+      activated: false,
+      alreadyActive: true,
+      accessDenied: false,
+      errors: [],
+      activateUrl,
+    };
   }
 
   const themeId = await getMainThemeId(admin);

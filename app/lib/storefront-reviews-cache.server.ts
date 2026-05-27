@@ -13,6 +13,7 @@ import {
 } from "./review-sort.shared";
 import { STOREFRONT_METAFIELD_NAMESPACE } from "./storefront-settings.server";
 import { getStorefrontSettings } from "./storefront-settings.server";
+import { logWarn } from "./observability.server";
 
 export const STOREFRONT_HOMEPAGE_CACHE_KEY = "homepage_reviews_cache";
 
@@ -73,7 +74,9 @@ export async function buildHomepageReviewsCacheWithImages(
   try {
     urlMap = await getFileImageUrls(admin, fileIds);
   } catch (error) {
-    console.warn("[vcom-reviews] homepage cache image urls", error);
+    logWarn("homepage cache image urls failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 
   return {
@@ -154,7 +157,7 @@ export async function saveHomepageReviewsCache(
   const saveJson = await save.json();
   const errors = saveJson.data?.metafieldsSet?.userErrors || [];
   if (errors.length) {
-    console.warn("[vcom-reviews] homepage cache save", errors);
+    logWarn("homepage cache save failed", { errors });
   }
 }
 

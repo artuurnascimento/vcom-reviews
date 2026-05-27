@@ -69,9 +69,46 @@ export async function redisDeleteByPrefix(prefix: string): Promise<void> {
   const c = await ensureConnected();
   if (!c) return;
   try {
-    const keys = await c.keys(`${prefix}*`);
-    if (keys.length > 0) {
-      await c.del(keys);
+    const pattern = `${prefix}*`;
+    let cursor = "0";
+    do {
+      const result = await c.scan(cursor, { MATCH: pattern, COUNT: 100 });
+      cursor = result.cursor;
+      if (result.keys.length > 0) {
+        await c.del(result.keys);
+      }
+    } while (cursor !== "0");
+  } catch (error) {
+    logWarn("redis prefix delete failed", {
+      prefix,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+export async function redisDeleteByPrefixWithLimit(
+  prefix: string,
+  deleteLimit = 2000,
+): Promise<void> {
+  const c = await ensureConnected();
+  if (!c) return;
+  try {
+    const pattern = `${prefix}*`;
+    let cursor = "0";
+    let deleted = 0;
+    do {
+      const result = await c.scan(cursor, { MATCH: pattern, COUNT: 100 });
+      cursor = result.cursor;
+      if (result.keys.length > 0) {
+        await c.del(result.keys);
+        deleted += result.keys.length;
+      }
+      if (deleted >= deleteLimit) break;
+    } while (cursor !== "0");
+    if (deleted >= deleteLimit) {
+      logWarn("redis prefix delete hit safety limit", {
+        prefix,
+        deleteLimit,
+      });
     }
   } catch (error) {
     logWarn("redis prefix delete failed", {

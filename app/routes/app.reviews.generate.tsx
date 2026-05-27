@@ -523,12 +523,20 @@ export default function GenerateReviewsPage() {
   const isSearching = searchFetcher.state !== "idle";
 
   const generateError =
-    generateResult && !generateResult.ok ? generateResult.error : null;
+    generateResult && !generateResult.ok && "error" in generateResult
+      ? generateResult.error
+      : null;
   const saveError =
     actionData && "ok" in actionData && !actionData.ok && !("reviews" in actionData)
       ? actionData.error
       : null;
   const error = clientSaveError || clientGenerateError || generateError || saveError;
+  const errorMessage =
+    typeof error === "string"
+      ? error
+      : error
+        ? JSON.stringify(error)
+        : null;
 
   const generateMeta = lastGenerateMeta ?? (generateResult?.ok ? generateResult : null);
 
@@ -854,9 +862,9 @@ export default function GenerateReviewsPage() {
           </Banner>
         ) : null}
 
-        {error ? (
+        {errorMessage ? (
           <Banner tone="critical" title="Erro">
-            <p>{error}</p>
+            <p>{errorMessage}</p>
           </Banner>
         ) : null}
 

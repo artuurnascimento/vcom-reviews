@@ -16,6 +16,7 @@ import {
   STOREFRONT_METAFIELD_NAMESPACE,
 } from "./storefront-settings.server";
 import { listAllReviews } from "./reviews.server";
+import { logError, logWarn } from "./observability.server";
 
 export const STOREFRONT_STATS_METAFIELD_KEY = "storefront_stats";
 
@@ -52,7 +53,9 @@ export async function syncStorefrontReviewStats(admin: AdminApi): Promise<void> 
     try {
       await publishAllReviewMetaobjects(admin);
     } catch (publishError) {
-      console.warn("[vcom-reviews] publish before stats sync", publishError);
+      logWarn("publish before stats sync failed", {
+        error: publishError instanceof Error ? publishError.message : String(publishError),
+      });
     }
     const reviews = await listAllReviews(admin);
     const stats = computeStorefrontReviewStats(reviews);
@@ -98,16 +101,16 @@ export async function syncStorefrontReviewStats(admin: AdminApi): Promise<void> 
     const saveJson = await save.json();
     const errors = saveJson.data?.metafieldsSet?.userErrors || [];
     if (errors.length) {
-      console.warn("[vcom-reviews] storefront stats save", errors);
+      logWarn("storefront stats save failed", { errors });
     }
-    const shopDomain = (
-      await admin.graphql(`#graphql query ShopDomainForCache { shop { myshopifyDomain } }`)
-    )
-      .then((r) => r.json())
-      .then((j) => j.data?.shop?.myshopifyDomain as string | undefined)
-      .catch(() => undefined);
-    await invalidateProxyReviewCache(await shopDomain);
+    const shopDomainResponse = await admin
+      .graphql(`#graphql query ShopDomainForCache { shop { myshopifyDomain } }`)
+      .catch(() => null);
+    const shopDomain = shopDomainResponse
+      ? ((await shopDomainResponse.json())?.data?.shop?.myshopifyDomain as string | undefined)
+      : undefined;
+    await invalidateProxyReviewCache(shopDomain);
   } catch (error) {
-    console.error("[vcom-reviews] syncStorefrontReviewStats", error);
+    logError("syncStorefrontReviewStats failed", error);
   }
 }

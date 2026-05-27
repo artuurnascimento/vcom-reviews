@@ -7,6 +7,8 @@ This integration emits review lifecycle events to an external webhook endpoint.
 - `REVIEW_EVENTS_WEBHOOK_URL` (required to enable)
 - `REVIEW_EVENTS_WEBHOOK_SECRET` (optional but recommended)
 - `REVIEW_EVENTS_WEBHOOK_TIMEOUT_MS` (optional, default `5000`)
+- `REVIEW_EVENTS_WEBHOOK_ATTEMPTS` (optional, default `3`)
+- `REVIEW_EVENTS_WEBHOOK_RETRY_BASE_MS` (optional, default `300`)
 
 ## Events emitted
 
@@ -21,6 +23,8 @@ This integration emits review lifecycle events to an external webhook endpoint.
 - `content-type: application/json`
 - `x-vcom-review-event: <event-name>`
 - `x-vcom-emitted-at: <ISO timestamp>`
+- `x-vcom-event-id: <stable event id>`
+- `idempotency-key: <stable event id>`
 - `x-vcom-signature: <hex sha256 hmac>` (only when secret is configured)
 
 ## Signature validation
@@ -30,6 +34,13 @@ Compute:
 - `hex(hmac_sha256(REVIEW_EVENTS_WEBHOOK_SECRET, raw_body))`
 
 Compare with `x-vcom-signature`.
+
+## Retry and fallback
+
+- Non-2xx or network failures are retried with exponential backoff + jitter.
+- After all attempts fail, the event is moved to a Redis DLQ key:
+  - `review_events_dlq:<event-id>`
+  - TTL: 7 days
 
 ## Payload example
 

@@ -56,3 +56,25 @@ export function getMonitoringSnapshot() {
   };
 }
 
+export function evaluateMonitoringAlerts(snapshot = getMonitoringSnapshot()) {
+  const errors5xxThreshold = parseInt(process.env.HEALTH_ALERT_5XX_THRESHOLD || "10", 10) || 10;
+  const p95ThresholdMs = parseInt(process.env.HEALTH_ALERT_P95_MS || "2500", 10) || 2500;
+  const proxyAuthThreshold = parseInt(process.env.HEALTH_ALERT_PROXY_AUTH_THRESHOLD || "20", 10) || 20;
+
+  const flags = {
+    errors_5xx_high: snapshot.errors_5xx >= errors5xxThreshold,
+    p95_latency_high: snapshot.p95_ms > p95ThresholdMs,
+    proxy_auth_failures_high: snapshot.proxy_auth_failures_total >= proxyAuthThreshold,
+  };
+
+  return {
+    thresholds: {
+      errors_5xx: errors5xxThreshold,
+      p95_ms: p95ThresholdMs,
+      proxy_auth_failures_total: proxyAuthThreshold,
+    },
+    flags,
+    healthy: !Object.values(flags).some(Boolean),
+  };
+}
+

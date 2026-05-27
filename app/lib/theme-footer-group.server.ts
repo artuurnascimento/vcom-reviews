@@ -113,7 +113,7 @@ async function writeFooterGroup(
     return {
       ok: false,
       errors: messages,
-      accessDenied: messages.some((m) => /access denied|write_themes|exemption/i.test(m)),
+      accessDenied: messages.some((m: string) => /access denied|write_themes|exemption/i.test(m)),
     };
   }
   return { ok: true, errors: [], accessDenied: false };

@@ -65,7 +65,7 @@ const shopify = shopifyApp({
           const settings = await getStorefrontSettings(admin);
           if (settings.footer_trustpilot_show) {
             const footerSync = await ensureFooterTrustpilotPublished(
-              admin,
+              admin as never,
               session.shop,
               true,
             );

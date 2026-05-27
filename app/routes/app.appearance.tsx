@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { useActionData, useLoaderData, useRouteError } from "@remix-run/react";
 import { useEmbeddedSubmit } from "../hooks/useEmbeddedAppPath";

@@ -347,7 +347,6 @@ export default function ReviewsIndex() {
                   ? `Aprovando ${batchProgress.done}/${batchProgress.total}…`
                   : `Aprovar todas (${rejectedCount})`,
               onAction: handleApproveAllRejected,
-              loading: isBatchRunning && batchMode === "rejected",
               disabled: isBatchRunning,
             }}
             secondaryAction={{
@@ -356,9 +355,6 @@ export default function ReviewsIndex() {
                   ? `Excluindo ${batchProgress.done}/${batchProgress.total}…`
                   : `Excluir todas (${rejectedCount})`,
               onAction: handleDeleteAllRejected,
-              destructive: true,
-              loading: isBatchRunning && batchMode === "delete-rejected",
-              disabled: isBatchRunning,
             }}
           >
             <p>
@@ -380,7 +376,6 @@ export default function ReviewsIndex() {
                   ? `Aprovando ${batchProgress.done}/${batchProgress.total}…`
                   : `Aprovar todas (${stats.pendingCount})`,
               onAction: handleApproveAll,
-              loading: isBatchRunning && batchMode === "pending",
               disabled: isBatchRunning,
             }}
             secondaryAction={{
@@ -389,9 +384,6 @@ export default function ReviewsIndex() {
                   ? `Excluindo ${batchProgress.done}/${batchProgress.total}…`
                   : `Excluir todas (${stats.pendingCount})`,
               onAction: handleDeleteAllPending,
-              destructive: true,
-              loading: isBatchRunning && batchMode === "delete-pending",
-              disabled: isBatchRunning,
             }}
           >
             <BlockStack gap="200">
@@ -408,7 +400,7 @@ export default function ReviewsIndex() {
                   onClick={handleRejectAll}
                   disabled={isBatchRunning}
                 >
-                  Rejeitar todas ({stats.pendingCount})
+                  {`Rejeitar todas (${stats.pendingCount})`}
                 </Button>
               </InlineStack>
             </BlockStack>

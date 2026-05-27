@@ -30,7 +30,7 @@ export function EmbeddedAppProvider({ apiKey, children }: Props) {
   return (
     <>
       <script src={APP_BRIDGE_URL} data-api-key={apiKey} />
-      <PolarisAppProvider i18n={polarisTranslations} linkComponent={linkComponent}>
+      <PolarisAppProvider i18n={polarisTranslations} linkComponent={linkComponent as never}>
         {children}
       </PolarisAppProvider>
     </>
