@@ -41,6 +41,17 @@ function isGeminiFreeTierQuotaError(message: string): boolean {
   return /free_tier|free tier/i.test(message);
 }
 
+/**
+ * Quota hard-limit (ex.: free_tier_requests) normalmente nao melhora com retry curto.
+ * Nesses casos, fazemos fail-fast para trocar de modelo imediatamente.
+ */
+function isGeminiHardQuotaError(message: string): boolean {
+  return (
+    isGeminiQuotaError(message) &&
+    /generate_content_free_tier_requests|free[_\s-]?tier/i.test(message)
+  );
+}
+
 /** Extrai "Please retry in 12.78s" da mensagem da API. */
 function parseGeminiRetryAfterMs(message: string): number | null {
   const match = message.match(/retry in ([\d.]+)s/i);
@@ -471,6 +482,13 @@ async function callGeminiWithRetries(
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       lastError = error instanceof Error ? error : new Error(msg);
+
+      if (isGeminiHardQuotaError(msg)) {
+        console.warn(
+          `[vcom-reviews] Gemini hard quota on ${model}, skipping retries and trying fallback model…`,
+        );
+        throw lastError;
+      }
 
       if (!isGeminiTransientError(msg) || attempt === GEMINI_RETRY_ATTEMPTS - 1) {
         throw lastError;
