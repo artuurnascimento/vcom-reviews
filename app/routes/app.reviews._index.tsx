@@ -15,6 +15,7 @@ import {
   Card,
   IndexTable,
   Text,
+  TextField,
   Badge,
   Button,
   EmptyState,
@@ -144,11 +145,30 @@ export default function ReviewsIndex() {
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(
     null,
   );
+  const [searchQuery, setSearchQuery] = useState("");
   const [batchError, setBatchError] = useState<string | null>(null);
   const [batchMode, setBatchMode] = useState<
     "pending" | "rejected" | "delete-pending" | "delete-rejected" | null
   >(null);
   const isBatchRunning = batchProgress !== null;
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const filteredReviews =
+    normalizedSearch.length === 0
+      ? reviews
+      : reviews.filter((review) => {
+          const haystack = [
+            review.author,
+            review.title,
+            review.body,
+            review.time,
+            review.status,
+            review.placement,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+          return haystack.includes(normalizedSearch);
+        });
 
   const post = useCallback(
     (data: Record<string, string>) => {
@@ -397,6 +417,23 @@ export default function ReviewsIndex() {
 
         <Layout>
           <Layout.Section>
+            <BlockStack gap="300">
+              <TextField
+                label="Pesquisar avaliações"
+                value={searchQuery}
+                onChange={setSearchQuery}
+                autoComplete="off"
+                placeholder="Ex.: entrega rápida, Sophie, produit, Commande reçue..."
+                clearButton
+                onClearButtonClick={() => setSearchQuery("")}
+              />
+
+              {searchQuery.trim() ? (
+                <Text as="p" variant="bodySm" tone="subdued">
+                  {filteredReviews.length} resultado(s) para "{searchQuery.trim()}".
+                </Text>
+              ) : null}
+
             {reviews.length === 0 ? (
               <EmptyState
                 heading="Nenhuma avaliação"
@@ -409,11 +446,22 @@ export default function ReviewsIndex() {
                   tema. Escolha homepage ou produto ao salvar.
                 </p>
               </EmptyState>
+            ) : filteredReviews.length === 0 ? (
+              <Card>
+                <BlockStack gap="200">
+                  <Text as="h3" variant="headingSm">
+                    Nenhum resultado encontrado
+                  </Text>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    Tente outro termo, como parte do autor, título ou frase do comentário.
+                  </Text>
+                </BlockStack>
+              </Card>
             ) : (
               <Box overflowX="scroll">
                 <Card padding="0">
                   <IndexTable
-                    itemCount={reviews.length}
+                    itemCount={filteredReviews.length}
                     headings={[
                       { title: "Autor / nota" },
                       { title: "Avaliação" },
@@ -422,7 +470,7 @@ export default function ReviewsIndex() {
                     ]}
                     selectable={false}
                   >
-                    {reviews.map((r, i) => (
+                    {filteredReviews.map((r, i) => (
                       <IndexTable.Row id={r.id} key={r.id} position={i}>
                         <IndexTable.Cell>
                           <BlockStack gap="100">
@@ -497,6 +545,7 @@ export default function ReviewsIndex() {
                 </Card>
               </Box>
             )}
+            </BlockStack>
           </Layout.Section>
         </Layout>
       </BlockStack>
