@@ -13,8 +13,37 @@ export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
-  const setup = await runAutomaticInfrastructureSetup(admin, session.shop);
-  await ensureDefaultStorefrontSettings(admin);
+  let setup = {
+    ok: true,
+    errors: [] as string[],
+    themeErrors: [] as string[],
+    themeOk: true,
+    theme: { accessDenied: false },
+  };
+
+  try {
+    setup = await runAutomaticInfrastructureSetup(admin, session.shop);
+  } catch (error) {
+    console.error("[vcom-reviews] app loader setup", error);
+    setup = {
+      ok: false,
+      errors: [
+        error instanceof Error
+          ? error.message
+          : "Falha temporária ao validar a configuração automática.",
+      ],
+      themeErrors: [],
+      themeOk: false,
+      theme: { accessDenied: false },
+    };
+  }
+
+  try {
+    await ensureDefaultStorefrontSettings(admin);
+  } catch (error) {
+    console.error("[vcom-reviews] app loader storefront settings", error);
+  }
+
   return {
     apiKey: process.env.SHOPIFY_API_KEY || "",
     setupOk: setup.ok,
