@@ -4,13 +4,21 @@ import {
   AppDistribution,
   shopifyApp,
 } from "@shopify/shopify-app-remix/server";
+import { PostgreSQLSessionStorage } from "@shopify/shopify-app-session-storage-postgresql";
 import { SQLiteSessionStorage } from "@shopify/shopify-app-session-storage-sqlite";
+import { initObservability, logError, logWarn } from "./lib/observability.server";
 import { runAutomaticInfrastructureSetup } from "./lib/metaobject-setup.server";
 import {
   ensureDefaultStorefrontSettings,
   getStorefrontSettings,
 } from "./lib/storefront-settings.server";
 import { ensureFooterTrustpilotPublished } from "./lib/theme-footer-sync.server";
+
+initObservability();
+
+const configuredSessionStorage = process.env.DATABASE_URL
+  ? new PostgreSQLSessionStorage(process.env.DATABASE_URL)
+  : new SQLiteSessionStorage("./database.sqlite");
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY || "",
@@ -19,7 +27,7 @@ const shopify = shopifyApp({
   scopes: (process.env.SCOPES || "").split(",").filter(Boolean),
   appUrl: process.env.SHOPIFY_APP_URL || "",
   authPathPrefix: "/auth",
-  sessionStorage: new SQLiteSessionStorage("./database.sqlite"),
+  sessionStorage: configuredSessionStorage,
   distribution: AppDistribution.AppStore,
   future: {
     unstable_newEmbeddedAuthStrategy: true,
@@ -29,11 +37,7 @@ const shopify = shopifyApp({
       try {
         const result = await runAutomaticInfrastructureSetup(admin, session.shop);
         if (!result.ok) {
-          console.error(
-            "[vcom-reviews] afterAuth setup failed",
-            session.shop,
-            result.errors,
-          );
+          logWarn("afterAuth setup failed", { shop: session.shop, errors: result.errors });
         } else {
           await ensureDefaultStorefrontSettings(admin);
           const settings = await getStorefrontSettings(admin);
@@ -44,16 +48,15 @@ const shopify = shopifyApp({
               true,
             );
             if (!footerSync.ok) {
-              console.warn(
-                "[vcom-reviews] afterAuth footer publish",
-                session.shop,
-                footerSync.errors,
-              );
+              logWarn("afterAuth footer publish", {
+                shop: session.shop,
+                errors: footerSync.errors,
+              });
             }
           }
         }
       } catch (error) {
-        console.error("[vcom-reviews] afterAuth setup error", session.shop, error);
+        logError("afterAuth setup error", error, { shop: session.shop });
       }
     },
   },

@@ -2,6 +2,7 @@ import type { ReviewPlacement } from "./constants";
 import type { ReviewRecord } from "./constants";
 import { listAllReviews } from "./reviews.server";
 import { sortStorefrontReviews, type ReviewsSortMode } from "./review-sort.shared";
+import { redisDeleteByPrefix, redisGet, redisSetEx } from "./redis-cache.server";
 import {
   getHomepageProxyReviews,
   type CachedProxyReview,
@@ -15,6 +16,7 @@ type CacheEntry = {
 };
 
 const CACHE_TTL_MS = 2 * 60 * 1000;
+const CACHE_TTL_SECONDS = Math.ceil(CACHE_TTL_MS / 1000);
 const memoryCache = new Map<string, CacheEntry>();
 
 function cacheKey(shop: string, placement: ReviewPlacement, productId: string, sort: ReviewsSortMode) {
@@ -29,6 +31,16 @@ export async function getProxyApprovedReviews(
   sortMode: ReviewsSortMode,
 ): Promise<CachedProxyReview[] | ReviewRecord[]> {
   const key = cacheKey(shop, placement, productId, sortMode);
+
+  const redisValue = await redisGet(`proxy:${key}`);
+  if (redisValue) {
+    try {
+      return JSON.parse(redisValue) as CachedProxyReview[] | ReviewRecord[];
+    } catch {
+      // ignore malformed cache payload
+    }
+  }
+
   const hit = memoryCache.get(key);
   if (hit && hit.expiresAt > Date.now()) {
     return hit.reviews;
@@ -48,15 +60,18 @@ export async function getProxyApprovedReviews(
   }
 
   memoryCache.set(key, { reviews, expiresAt: Date.now() + CACHE_TTL_MS });
+  await redisSetEx(`proxy:${key}`, CACHE_TTL_SECONDS, JSON.stringify(reviews));
   return reviews;
 }
 
-export function invalidateProxyReviewCache(shop?: string) {
+export async function invalidateProxyReviewCache(shop?: string) {
   if (!shop) {
     memoryCache.clear();
+    await redisDeleteByPrefix("proxy:");
     return;
   }
   for (const key of memoryCache.keys()) {
     if (key.startsWith(`${shop}:`)) memoryCache.delete(key);
   }
+  await redisDeleteByPrefix(`proxy:${shop}:`);
 }

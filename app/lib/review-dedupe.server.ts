@@ -1,5 +1,6 @@
 import type { ReviewPlacement } from "./constants";
 import type { ReviewRecord } from "./constants";
+import { redisDeleteByPrefix, redisGet, redisSetEx } from "./redis-cache.server";
 import { listAllReviews } from "./reviews.server";
 
 type AdminApi = Parameters<typeof listAllReviews>[0];
@@ -55,6 +56,7 @@ type CacheEntry = {
 };
 
 const CACHE_TTL_MS = 2 * 60 * 1000;
+const CACHE_TTL_SECONDS = Math.ceil(CACHE_TTL_MS / 1000);
 const cache = new Map<string, CacheEntry>();
 
 function cacheKey(shop: string, placement: ReviewPlacement, productId: string) {
@@ -68,6 +70,15 @@ export async function getReviewDedupeKeys(
   productId?: string,
 ): Promise<Set<string>> {
   const key = cacheKey(shop, placement, productId || "");
+  const redisValue = await redisGet(`dedupe:${key}`);
+  if (redisValue) {
+    try {
+      return new Set(JSON.parse(redisValue) as string[]);
+    } catch {
+      // ignore malformed cache payload
+    }
+  }
+
   const hit = cache.get(key);
   if (hit && hit.expiresAt > Date.now()) {
     return new Set(hit.keys);
@@ -76,6 +87,7 @@ export async function getReviewDedupeKeys(
   const all = await listAllReviews(admin);
   const keys = buildReviewDedupeSet(all, placement, productId);
   cache.set(key, { keys: new Set(keys), expiresAt: Date.now() + CACHE_TTL_MS });
+  await redisSetEx(`dedupe:${key}`, CACHE_TTL_SECONDS, JSON.stringify([...keys]));
   return keys;
 }
 
@@ -90,20 +102,25 @@ export function rememberReviewDedupeKey(
   const dedupeKey = reviewDedupeKey(input);
   if (hit) {
     hit.keys.add(dedupeKey);
+    void redisSetEx(`dedupe:${key}`, CACHE_TTL_SECONDS, JSON.stringify([...hit.keys]));
     return;
   }
-  cache.set(key, {
+  const fresh = {
     keys: new Set([dedupeKey]),
     expiresAt: Date.now() + CACHE_TTL_MS,
-  });
+  };
+  cache.set(key, fresh);
+  void redisSetEx(`dedupe:${key}`, CACHE_TTL_SECONDS, JSON.stringify([...fresh.keys]));
 }
 
 export function invalidateReviewDedupeCache(shop?: string) {
   if (!shop) {
     cache.clear();
+    void redisDeleteByPrefix("dedupe:");
     return;
   }
   for (const key of cache.keys()) {
     if (key.startsWith(`${shop}:`)) cache.delete(key);
   }
+  void redisDeleteByPrefix(`dedupe:${shop}:`);
 }

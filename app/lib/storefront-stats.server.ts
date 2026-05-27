@@ -106,7 +106,7 @@ export async function syncStorefrontReviewStats(admin: AdminApi): Promise<void> 
       .then((r) => r.json())
       .then((j) => j.data?.shop?.myshopifyDomain as string | undefined)
       .catch(() => undefined);
-    invalidateProxyReviewCache(await shopDomain);
+    await invalidateProxyReviewCache(await shopDomain);
   } catch (error) {
     console.error("[vcom-reviews] syncStorefrontReviewStats", error);
   }

@@ -4,8 +4,11 @@ import { createReadableStreamFromReadable } from "@remix-run/node";
 import { RemixServer } from "@remix-run/react";
 import { isbot } from "isbot";
 import { renderToPipeableStream } from "react-dom/server";
+import { initObservability, logError } from "./lib/observability.server";
 
 const ABORT_DELAY = 5000;
+
+initObservability();
 
 export default function handleRequest(
   request: Request,
@@ -33,11 +36,14 @@ export default function handleRequest(
           pipe(body);
         },
         onShellError(error: unknown) {
+          logError("ssr shell error", error, { url: request.url });
           reject(error);
         },
         onError(error: unknown) {
           responseStatusCode = 500;
-          if (shellRendered) console.error(error);
+          if (shellRendered) {
+            logError("ssr render error", error, { url: request.url });
+          }
         },
       },
     );
