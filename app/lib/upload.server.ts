@@ -18,7 +18,7 @@ export async function createShopifyFilesFromUrls(
     `#graphql
     mutation FileCreateFromUrls($files: [FileCreateInput!]!) {
       fileCreate(files: $files) {
-        files { id originalFileSize }
+        files { id }
         userErrors { message }
       }
     }`,
