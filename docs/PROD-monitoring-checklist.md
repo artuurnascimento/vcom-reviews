@@ -47,6 +47,26 @@ Create alerts in your monitoring stack (Railway + Sentry):
   - SSR render errors
 - Alert when issue rate > 5 events / 10 min
 
+## 4.1) Sentry smoke test endpoint (optional but recommended)
+
+Set env vars:
+
+- `ENABLE_SENTRY_TEST_ENDPOINT=1`
+- `SENTRY_TEST_TOKEN=<token-forte>`
+
+Run:
+
+- `GET /health/sentry-test?token=<token-forte>`
+
+Expected:
+
+- HTTP `200` with `{ ok: true, sentry.captured: true }`
+- Event appears in Sentry as `SENTRY_TEST: controlled production smoke test`
+
+After validation, you can disable by setting:
+
+- `ENABLE_SENTRY_TEST_ENDPOINT=0`
+
 ## 5) Manual smoke test after deploy
 
 1. Open app admin page

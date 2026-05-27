@@ -54,3 +54,8 @@ export function logError(message: string, error: unknown, context?: LogContext) 
   }
 }
 
+export function captureSentryException(error: Error, context?: LogContext) {
+  if (!sentryInitialized) return null;
+  return Sentry.captureException(error, { extra: context });
+}
+
