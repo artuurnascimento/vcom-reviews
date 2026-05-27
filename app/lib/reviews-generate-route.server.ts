@@ -33,8 +33,11 @@ import {
   type SearchProductsResult,
 } from "./reviews-generate.shared";
 
-const SAVE_THROTTLE_RETRY_ATTEMPTS = 6;
-const SAVE_THROTTLE_RETRY_DELAYS_MS = [800, 1500, 2500, 4000, 6500, 9000] as const;
+const SAVE_THROTTLE_RETRY_ATTEMPTS = 10;
+const SAVE_THROTTLE_RETRY_DELAYS_MS = [
+  800, 1500, 2500, 4000, 6500, 9000, 12000, 15000, 20000, 30000,
+] as const;
+const SAVE_THROTTLE_PACE_MS = 120;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -302,6 +305,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         dedupeKeys.add(fingerprint);
         rememberReviewDedupeKey(session.shop, payload.placement, productIdForSave, dedupeInput);
         saved++;
+      if (SAVE_THROTTLE_PACE_MS > 0) {
+        await sleep(SAVE_THROTTLE_PACE_MS);
+      }
       }
 
       if (saved === 0 && skipped === reviews.length) {
