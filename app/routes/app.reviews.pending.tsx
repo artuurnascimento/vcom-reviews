@@ -15,6 +15,7 @@ import {
   Card,
   IndexTable,
   Text,
+  TextField,
   Badge,
   Button,
   EmptyState,
@@ -118,6 +119,7 @@ export default function PendingReviewsPage() {
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(
     null,
   );
+  const [searchQuery, setSearchQuery] = useState("");
   const [batchError, setBatchError] = useState<string | null>(null);
   const [batchAction, setBatchAction] = useState<"approve" | "reject" | "delete" | null>(
     null,
@@ -125,6 +127,24 @@ export default function PendingReviewsPage() {
 
   const isBatchRunning = batchProgress !== null;
   const pendingIds = pending.map((r) => r.id);
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const filteredPending =
+    normalizedSearch.length === 0
+      ? pending
+      : pending.filter((review) => {
+          const haystack = [
+            review.author,
+            review.title,
+            review.body,
+            review.time,
+            review.status,
+            review.placement,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+          return haystack.includes(normalizedSearch);
+        });
 
   const post = useCallback(
     (data: Record<string, string>) => {
@@ -287,6 +307,22 @@ export default function PendingReviewsPage() {
               </Banner>
             ) : null}
 
+            <TextField
+              label="Pesquisar pendentes"
+              value={searchQuery}
+              onChange={setSearchQuery}
+              autoComplete="off"
+              placeholder="Ex.: entrega, nome do cliente, frase do comentário..."
+              clearButton
+              onClearButtonClick={() => setSearchQuery("")}
+            />
+
+            {searchQuery.trim() ? (
+              <Text as="p" variant="bodySm" tone="subdued">
+                {filteredPending.length} resultado(s) para "{searchQuery.trim()}".
+              </Text>
+            ) : null}
+
             {pending.length === 0 ? (
               <EmptyState
                 heading="Nenhuma avaliação pendente"
@@ -295,11 +331,22 @@ export default function PendingReviewsPage() {
               >
                 <p>Quando houver avaliações aguardando, elas aparecerão aqui.</p>
               </EmptyState>
+            ) : filteredPending.length === 0 ? (
+              <Card>
+                <BlockStack gap="200">
+                  <Text as="h3" variant="headingSm">
+                    Nenhum resultado encontrado
+                  </Text>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    Tente outro termo, como parte do autor, título ou frase da avaliação.
+                  </Text>
+                </BlockStack>
+              </Card>
             ) : (
               <Box overflowX="scroll">
                 <Card padding="0">
                   <IndexTable
-                    itemCount={pending.length}
+                    itemCount={filteredPending.length}
                     headings={[
                       { title: "Cliente / nota" },
                       { title: "Avaliação" },
@@ -308,7 +355,7 @@ export default function PendingReviewsPage() {
                     ]}
                     selectable={false}
                   >
-                    {pending.map((r, i) => (
+                    {filteredPending.map((r, i) => (
                       <IndexTable.Row id={r.id} key={r.id} position={i}>
                         <IndexTable.Cell>
                           <BlockStack gap="100">
