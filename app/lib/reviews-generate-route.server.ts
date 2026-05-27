@@ -16,6 +16,11 @@ import {
 } from "./ai-reviews.server";
 import type { ReviewPlacement } from "./constants";
 import { listStoreProducts } from "./product-search.server";
+import {
+  getReviewDedupeKeys,
+  rememberReviewDedupeKey,
+  reviewDedupeKey,
+} from "./review-dedupe.server";
 import { createReview, getProductDetails, searchProducts } from "./reviews.server";
 import { createShopifyFilesFromUrls } from "./upload.server";
 import type { AiCityMode } from "./ai-country-cities";
@@ -170,7 +175,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
-    const { admin } = await authenticate.admin(request);
+    const { admin, session } = await authenticate.admin(request);
     const form = await request.formData();
     const intent = String(form.get("intent") || "generate");
 
@@ -250,7 +255,32 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         }
       }
 
+      const productIdForSave =
+        payload.placement === "product" ? payload.productId : undefined;
+      const dedupeKeys = await getReviewDedupeKeys(
+        admin,
+        session.shop,
+        payload.placement,
+        productIdForSave,
+      );
+
+      let saved = 0;
+      let skipped = 0;
+
       for (const review of reviews) {
+        const dedupeInput = {
+          placement: payload.placement,
+          productId: productIdForSave,
+          author: review.author,
+          title: review.title,
+          body: review.body,
+        };
+        const fingerprint = reviewDedupeKey(dedupeInput);
+        if (dedupeKeys.has(fingerprint)) {
+          skipped++;
+          continue;
+        }
+
         const imageFileIds =
           payload.attachProductImages && review.imageUrl
             ? [urlToFileId[review.imageUrl]].filter(Boolean)
@@ -264,16 +294,29 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           author: review.author,
           time: review.time,
           placement: payload.placement,
-          productId: payload.placement === "product" ? payload.productId : undefined,
+          productId: productIdForSave,
           imageFileIds,
           status,
         });
+
+        dedupeKeys.add(fingerprint);
+        rememberReviewDedupeKey(session.shop, payload.placement, productIdForSave, dedupeInput);
+        saved++;
+      }
+
+      if (saved === 0 && skipped === reviews.length) {
+        return json({
+          ok: false,
+          error:
+            "Todas as avaliações deste lote já existem na loja (duplicadas). Nada novo para salvar.",
+        } satisfies GenerateResult);
       }
 
       if (intent === "saveBatch") {
         return json({
           ok: true,
-          saved: reviews.length,
+          saved,
+          skipped,
           urlToFileId,
         } satisfies SaveBatchResult);
       }

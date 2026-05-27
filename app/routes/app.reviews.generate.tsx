@@ -179,6 +179,7 @@ export default function GenerateReviewsPage() {
   const [saveProgress, setSaveProgress] = useState<{ done: number; total: number } | null>(
     null,
   );
+  const [saveSkippedTotal, setSaveSkippedTotal] = useState(0);
   const [lastGenerateMeta, setLastGenerateMeta] = useState<GenerateSuccess | null>(null);
   const [previewPage, setPreviewPage] = useState(1);
   const bulkGenerateAbort = useRef<AbortController | null>(null);
@@ -445,9 +446,12 @@ export default function GenerateReviewsPage() {
     if (preview.length === 0) return;
 
     setClientSaveError(null);
+    setSaveSkippedTotal(0);
     setSaveProgress({ done: 0, total: preview.length });
 
     let knownFileIds: Record<string, string> = {};
+    let savedTotal = 0;
+    let skippedTotal = 0;
 
     try {
       for (let offset = 0; offset < preview.length; offset += SAVE_HTTP_CHUNK_SIZE) {
@@ -459,15 +463,18 @@ export default function GenerateReviewsPage() {
 
         if (!result.ok) {
           const partial =
-            offset > 0
-              ? ` (${offset} de ${preview.length} já foram salvas — confira em Avaliações.)`
+            savedTotal > 0 || skippedTotal > 0
+              ? ` (${savedTotal} salvas, ${skippedTotal} duplicadas ignoradas — confira em Avaliações.)`
               : "";
           throw new Error(`${result.error}${partial}`);
         }
 
         knownFileIds = result.urlToFileId;
+        savedTotal += result.saved;
+        skippedTotal += result.skipped;
+        setSaveSkippedTotal(skippedTotal);
         setSaveProgress({
-          done: Math.min(offset + chunk.length, preview.length),
+          done: Math.min(savedTotal + skippedTotal, preview.length),
           total: preview.length,
         });
       }
@@ -823,8 +830,11 @@ export default function GenerateReviewsPage() {
         {isSaving && saveProgress ? (
           <Banner tone="info" title="Salvando avaliações">
             <p>
-              {saveProgress.done} de {saveProgress.total} salvas… Não feche esta aba até
-              redirecionar para a lista de avaliações.
+              Processando {saveProgress.done} de {saveProgress.total}…
+              {saveSkippedTotal > 0
+                ? ` (${saveSkippedTotal} duplicadas ignoradas)`
+                : ""}{" "}
+              Não feche esta aba até redirecionar para a lista de avaliações.
             </p>
           </Banner>
         ) : null}

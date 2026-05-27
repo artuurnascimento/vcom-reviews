@@ -52,6 +52,7 @@ export const SAVE_HTTP_CHUNK_SIZE = 10;
 export type SaveBatchSuccess = {
   ok: true;
   saved: number;
+  skipped: number;
   urlToFileId: Record<string, string>;
 };
 
@@ -125,7 +126,8 @@ export function isSaveBatchSuccess(data: unknown): data is SaveBatchSuccess {
     typeof data === "object" &&
     data !== null &&
     (data as SaveBatchSuccess).ok === true &&
-    typeof (data as SaveBatchSuccess).saved === "number"
+    typeof (data as SaveBatchSuccess).saved === "number" &&
+    typeof (data as SaveBatchSuccess).skipped === "number"
   );
 }
 

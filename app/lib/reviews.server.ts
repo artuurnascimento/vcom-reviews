@@ -15,6 +15,7 @@ import {
   type ReviewStatus,
 } from "./constants";
 import { ensureReviewDefinitionReady } from "./metaobject-setup.server";
+import { invalidateReviewDedupeCache } from "./review-dedupe.server";
 import { syncStorefrontReviewStats } from "./storefront-stats.server";
 
 function scheduleStorefrontStatsSync(admin: AdminApi) {
@@ -324,7 +325,10 @@ export async function deleteReview(
   if (errors.length) {
     throw new Error(errors.map((e: { message: string }) => e.message).join(". "));
   }
-  if (options?.sync !== false) scheduleStorefrontStatsSync(admin);
+  if (options?.sync !== false) {
+    invalidateReviewDedupeCache();
+    scheduleStorefrontStatsSync(admin);
+  }
 }
 
 export async function deleteReviewsByIds(
@@ -341,7 +345,10 @@ export async function deleteReviewsByIds(
       errors.push(error instanceof Error ? error.message : String(error));
     }
   }
-  if (processed > 0) scheduleStorefrontStatsSync(admin);
+  if (processed > 0) {
+    invalidateReviewDedupeCache();
+    scheduleStorefrontStatsSync(admin);
+  }
   return { processed, errors };
 }
 
