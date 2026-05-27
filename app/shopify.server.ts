@@ -16,9 +16,31 @@ import { ensureFooterTrustpilotPublished } from "./lib/theme-footer-sync.server"
 
 initObservability();
 
-const configuredSessionStorage = process.env.DATABASE_URL
-  ? new PostgreSQLSessionStorage(process.env.DATABASE_URL)
-  : new SQLiteSessionStorage("./database.sqlite");
+function resolveSessionStorage() {
+  const databaseUrl = process.env.DATABASE_URL?.trim();
+  if (!databaseUrl) {
+    return new SQLiteSessionStorage("./database.sqlite");
+  }
+
+  try {
+    // Valida formato para evitar crash de bootstrap em produção.
+    const parsed = new URL(databaseUrl);
+    const isPg =
+      parsed.protocol === "postgres:" || parsed.protocol === "postgresql:";
+    if (!isPg) {
+      logWarn("invalid DATABASE_URL protocol for postgres session storage", {
+        protocol: parsed.protocol,
+      });
+      return new SQLiteSessionStorage("./database.sqlite");
+    }
+    return new PostgreSQLSessionStorage(databaseUrl);
+  } catch (error) {
+    logError("invalid DATABASE_URL, falling back to sqlite session storage", error);
+    return new SQLiteSessionStorage("./database.sqlite");
+  }
+}
+
+const configuredSessionStorage = resolveSessionStorage();
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY || "",
