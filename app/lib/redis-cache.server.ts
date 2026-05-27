@@ -94,3 +94,14 @@ export async function redisDelete(key: string): Promise<void> {
   }
 }
 
+export async function redisPing(): Promise<boolean> {
+  const c = await ensureConnected();
+  if (!c) return false;
+  try {
+    const pong = await c.ping();
+    return pong === "PONG";
+  } catch {
+    return false;
+  }
+}
+

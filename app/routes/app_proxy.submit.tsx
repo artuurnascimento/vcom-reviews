@@ -4,10 +4,19 @@ import { authenticate } from "../shopify.server";
 import { createCustomerPendingReview } from "../lib/reviews.server";
 import { resolveImageIdsFromForm } from "../lib/upload.server";
 import type { ReviewPlacement } from "../lib/constants";
+import { incrementCounter, recordRequestMetric } from "../lib/monitoring.server";
+import { logError } from "../lib/observability.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
+  const started = Date.now();
+  const finish = (status: number) => {
+    recordRequestMetric("app_proxy.submit", Date.now() - started, status);
+  };
+
   if (request.method !== "POST") {
-    return json({ ok: false, error: "Method not allowed" }, { status: 405 });
+    const res = json({ ok: false, error: "Method not allowed" }, { status: 405 });
+    finish(405);
+    return res;
   }
 
   try {
@@ -23,20 +32,26 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     let productId = String(form.get("product_id") || "").trim() || undefined;
 
     if (!rating || rating < 0.5) {
-      return json({ ok: false, error: "Selecione uma nota." }, { status: 400 });
+      const res = json({ ok: false, error: "Selecione uma nota." }, { status: 400 });
+      finish(400);
+      return res;
     }
     if (!body || !author) {
-      return json(
+      const res = json(
         { ok: false, error: "Nome e texto da avaliação são obrigatórios." },
         { status: 400 },
       );
+      finish(400);
+      return res;
     }
 
     if (placement === "product" && !productId) {
-      return json(
+      const res = json(
         { ok: false, error: "Produto inválido para esta avaliação." },
         { status: 400 },
       );
+      finish(400);
+      return res;
     }
 
     if (productId && !productId.startsWith("gid://")) {
@@ -55,14 +70,17 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       imageFileIds,
     });
 
-    return json({
+    const res = json({
       ok: true,
       message:
         "Obrigado! Sua avaliação foi enviada e será publicada após aprovação da loja.",
     });
+    finish(200);
+    return res;
   } catch (e) {
-    console.error("app_proxy submit error", e);
-    return json(
+    incrementCounter("proxy_submit_failures");
+    logError("app_proxy submit error", e);
+    const res = json(
       {
         ok: false,
         error:
@@ -70,6 +88,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       },
       { status: 500 },
     );
+    finish(500);
+    return res;
   }
 };
 

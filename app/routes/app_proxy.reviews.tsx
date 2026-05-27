@@ -5,16 +5,25 @@ import { getFileImageUrls } from "../lib/reviews.server";
 import { getProxyApprovedReviews } from "../lib/review-proxy-cache.server";
 import { normalizeReviewsSortMode } from "../lib/review-sort.shared";
 import type { ReviewPlacement } from "../lib/constants";
+import { incrementCounter, recordRequestMetric } from "../lib/monitoring.server";
+import { logError, logWarn } from "../lib/observability.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const started = Date.now();
+  const finish = (status: number) => {
+    recordRequestMetric("app_proxy.reviews", Date.now() - started, status);
+  };
   try {
     let admin: Awaited<ReturnType<typeof authenticate.public.appProxy>>["admin"];
     let session: Awaited<ReturnType<typeof authenticate.public.appProxy>>["session"];
     try {
       ({ admin, session } = await authenticate.public.appProxy(request));
     } catch (authError) {
-      console.error("[vcom-reviews] app_proxy auth", authError);
-      return json(
+      incrementCounter("proxy_auth_failures");
+      logWarn("app_proxy auth failed", {
+        error: authError instanceof Error ? authError.message : String(authError),
+      });
+      const res = json(
         {
           ok: false,
           reviews: [],
@@ -25,9 +34,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         },
         { status: 503 },
       );
+      finish(503);
+      return res;
     }
     if (!admin || !session) {
-      return json(
+      incrementCounter("proxy_auth_failures");
+      const res = json(
         {
           ok: false,
           reviews: [],
@@ -37,6 +49,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         },
         { status: 503 },
       );
+      finish(503);
+      return res;
     }
 
     const url = new URL(request.url);
@@ -76,7 +90,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       console.warn("[vcom-reviews] app_proxy image urls", imageError);
     }
 
-    return json({
+    const res = json({
       ok: true,
       count,
       avg: Math.round(avg * 10) / 10,
@@ -93,8 +107,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         images: r.images.map((id) => imageUrls[id]).filter(Boolean),
       })),
     });
+    finish(200);
+    return res;
   } catch (e) {
-    console.error("app_proxy reviews error", e);
+    logError("app_proxy reviews error", e);
     let msg = e instanceof Error ? e.message : String(e);
     try {
       const maybeStatus = (e as { status?: number; text?: () => Promise<string> })?.status;
@@ -110,9 +126,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     } catch {
       // ignore parse error
     }
-    return json(
+    const res = json(
       { ok: false, reviews: [], count: 0, avg: 0, error: msg },
       { status: 500 },
     );
+    finish(500);
+    return res;
   }
 };
