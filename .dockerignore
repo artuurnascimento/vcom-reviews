@@ -1,0 +1,14 @@
+.git
+.github
+node_modules
+npm-debug.log
+build
+.cache
+.cursor
+.env
+.env.*
+*.local
+coverage
+dist
+tmp
+agent-transcripts
