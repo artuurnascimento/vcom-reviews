@@ -47,7 +47,7 @@ describe("app_proxy.submit action", () => {
   }
 
   it("returns 429 when rate limited", async () => {
-    const { action } = await import("./app_proxy.submit");
+    const { action } = await import("../routes/app_proxy.submit");
 
     for (let i = 0; i < 12; i += 1) {
       const res = await action({ request: buildRequest(), params: {}, context: {} });
@@ -58,7 +58,7 @@ describe("app_proxy.submit action", () => {
   });
 
   it("sanitizes internal errors", async () => {
-    const { action } = await import("./app_proxy.submit");
+    const { action } = await import("../routes/app_proxy.submit");
     createCustomerPendingReviewMock.mockRejectedValueOnce(new Error("internal details"));
 
     const res = await action({ request: buildRequest(), params: {}, context: {} });

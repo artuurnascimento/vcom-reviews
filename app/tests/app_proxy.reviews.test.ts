@@ -32,7 +32,7 @@ describe("app_proxy.reviews loader", () => {
   });
 
   it("returns sanitized error on backend failures", async () => {
-    const { loader } = await import("./app_proxy.reviews");
+    const { loader } = await import("../routes/app_proxy.reviews");
     getProxyApprovedReviewsMock.mockRejectedValueOnce(new Error("backend exploded"));
 
     const res = await loader({
