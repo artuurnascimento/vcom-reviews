@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>VCOM Import Bridge</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 12px;
+        width: 320px;
+        color: #111827;
+      }
+      h1 {
+        font-size: 14px;
+        margin: 0 0 8px;
+      }
+      p {
+        font-size: 12px;
+        line-height: 1.4;
+        margin: 8px 0;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      button {
+        border: 1px solid #d1d5db;
+        background: #111827;
+        color: #fff;
+        border-radius: 6px;
+        padding: 8px 10px;
+        font-size: 12px;
+        cursor: pointer;
+        flex: 1;
+      }
+      button.secondary {
+        background: #fff;
+        color: #111827;
+      }
+      #status {
+        margin-top: 10px;
+        font-size: 12px;
+        min-height: 18px;
+      }
+      .muted {
+        color: #6b7280;
+      }
+      code {
+        font-size: 11px;
+        background: #f3f4f6;
+        border-radius: 4px;
+        padding: 2px 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>VCOM Reviews Import Bridge</h1>
+    <p class="muted">
+      1) Na página de reviews do AliExpress, clique em <strong>Coletar</strong>.
+      <br />
+      2) Abra a página <code>/app/import</code> do VCOM Reviews.
+      <br />
+      3) Clique em <strong>Enviar</strong> nesta aba.
+    </p>
+
+    <div class="row">
+      <button id="collectBtn">Coletar do AliExpress</button>
+      <button id="sendBtn" class="secondary">Enviar para aba atual</button>
+    </div>
+
+    <div class="row">
+      <button id="clearBtn" class="secondary">Limpar lote</button>
+    </div>
+
+    <p id="status" class="muted"></p>
+    <script src="popup.js"></script>
+  </body>
+</html>

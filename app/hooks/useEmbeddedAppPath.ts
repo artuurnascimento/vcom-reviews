@@ -75,6 +75,7 @@ export function useAppPaths() {
 
   return {
     app: embedPath("/app"),
+    import: embedPath("/app/import"),
     appearance: embedPath("/app/appearance"),
     setup: embedPath("/app/setup"),
     reviews: embedPath("/app/reviews"),

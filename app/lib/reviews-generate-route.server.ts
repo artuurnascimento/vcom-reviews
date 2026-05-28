@@ -22,6 +22,7 @@ import {
   reviewDedupeKey,
 } from "./review-dedupe.server";
 import { createReview, getProductDetails, searchProducts } from "./reviews.server";
+import { createReviewWithRetry } from "./review-create-retry.server";
 import { createShopifyFilesFromUrls } from "./upload.server";
 import type { AiCityMode } from "./ai-country-cities";
 import {
@@ -33,62 +34,10 @@ import {
   type SearchProductsResult,
 } from "./reviews-generate.shared";
 
-const SAVE_THROTTLE_RETRY_ATTEMPTS = 10;
-const SAVE_THROTTLE_RETRY_DELAYS_MS = [
-  800, 1500, 2500, 4000, 6500, 9000, 12000, 15000, 20000, 30000,
-] as const;
 const SAVE_THROTTLE_PACE_MS = 120;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function parseThrottleRetryAfterMs(message: string): number | null {
-  const retryInMatch = message.match(/retry in ([\d.]+)s/i);
-  if (retryInMatch) {
-    const sec = parseFloat(retryInMatch[1]);
-    if (Number.isFinite(sec) && sec > 0) return Math.ceil(sec * 1000);
-  }
-  const retryAfterMatch = message.match(/retry-?after[:\s]+([\d.]+)/i);
-  if (retryAfterMatch) {
-    const sec = parseFloat(retryAfterMatch[1]);
-    if (Number.isFinite(sec) && sec > 0) return Math.ceil(sec * 1000);
-  }
-  return null;
-}
-
-function isShopifyThrottleError(message: string): boolean {
-  return /throttled|too many requests|rate limit|429/i.test(message);
-}
-
-async function createReviewWithRetry(
-  admin: Awaited<ReturnType<typeof authenticate.admin>>["admin"],
-  input: Parameters<typeof createReview>[1],
-) {
-  let lastError: unknown;
-  for (let attempt = 0; attempt < SAVE_THROTTLE_RETRY_ATTEMPTS; attempt++) {
-    try {
-      await createReview(admin, input);
-      return;
-    } catch (error) {
-      lastError = error;
-      const msg = error instanceof Error ? error.message : String(error);
-      const isThrottle = isShopifyThrottleError(msg);
-      if (!isThrottle || attempt === SAVE_THROTTLE_RETRY_ATTEMPTS - 1) {
-        throw error;
-      }
-      const hintedDelay = parseThrottleRetryAfterMs(msg);
-      const fallbackDelay =
-        SAVE_THROTTLE_RETRY_DELAYS_MS[attempt] ??
-        SAVE_THROTTLE_RETRY_DELAYS_MS[SAVE_THROTTLE_RETRY_DELAYS_MS.length - 1];
-      const waitMs = Math.max(hintedDelay ?? 0, fallbackDelay);
-      console.warn(
-        `[vcom-reviews] saveBatch throttled retry ${attempt + 1}/${SAVE_THROTTLE_RETRY_ATTEMPTS} in ${waitMs}ms`,
-      );
-      await sleep(waitMs);
-    }
-  }
-  throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
 function parseCityMode(form: FormData): AiCityMode {

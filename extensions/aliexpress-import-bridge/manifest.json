@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "VCOM Reviews Import Bridge",
+  "description": "Coleta avaliações do AliExpress e envia para o VCOM Reviews (/app/import).",
+  "version": "0.1.0",
+  "action": {
+    "default_title": "VCOM Import Bridge",
+    "default_popup": "popup.html"
+  },
+  "permissions": ["activeTab", "scripting", "storage", "tabs"],
+  "host_permissions": ["https://*.aliexpress.com/*", "https://admin.shopify.com/*"]
+}
