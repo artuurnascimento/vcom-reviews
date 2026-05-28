@@ -2,7 +2,6 @@ import {
   useFetcher,
   useLocation,
   useSubmit,
-  type FetcherSubmitOptions,
   type SubmitOptions,
 } from "@remix-run/react";
 import { useCallback } from "react";
@@ -41,7 +40,7 @@ export function useEmbeddedFetcher<T = unknown>(key?: string) {
   const submit = useCallback(
     (
       target: Parameters<typeof fetcher.submit>[0],
-      options?: FetcherSubmitOptions,
+      options?: Parameters<typeof fetcher.submit>[1],
     ) => {
       return fetcher.submit(target, {
         ...options,

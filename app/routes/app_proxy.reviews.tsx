@@ -1,5 +1,6 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
+import crypto from "node:crypto";
 import { authenticate } from "../shopify.server";
 import { getFileImageUrls } from "../lib/reviews.server";
 import { getProxyApprovedReviews } from "../lib/review-proxy-cache.server";
@@ -87,7 +88,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       const imageIds = pageReviews.flatMap((r) => r.images);
       imageUrls = await getFileImageUrls(admin, imageIds);
     } catch (imageError) {
-      console.warn("[vcom-reviews] app_proxy image urls", imageError);
+      logWarn("app_proxy image urls failed", {
+        error: imageError instanceof Error ? imageError.message : String(imageError),
+      });
     }
 
     const res = json({
@@ -110,24 +113,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     finish(200);
     return res;
   } catch (e) {
-    logError("app_proxy reviews error", e);
-    let msg = e instanceof Error ? e.message : String(e);
-    try {
-      const maybeStatus = (e as { status?: number; text?: () => Promise<string> })?.status;
-      const maybeTextFn = (e as { text?: () => Promise<string> })?.text;
-      if (typeof maybeStatus === "number" && typeof maybeTextFn === "function") {
-        const body = await maybeTextFn.call(e);
-        msg = `HTTP ${maybeStatus} ${(e as { statusText?: string }).statusText || ""}${
-          body ? ` - ${String(body).slice(0, 500)}` : ""
-        }`;
-      } else if (typeof maybeStatus === "number") {
-        msg = `HTTP ${maybeStatus} ${(e as { statusText?: string }).statusText || ""} - ${String(e)}`;
-      }
-    } catch {
-      // ignore parse error
-    }
+    const correlationId = crypto.randomUUID();
+    logError("app_proxy reviews error", e, { correlationId });
     const res = json(
-      { ok: false, reviews: [], count: 0, avg: 0, error: msg },
+      {
+        ok: false,
+        reviews: [],
+        count: 0,
+        avg: 0,
+        error: `Não foi possível carregar as avaliações. Código: ${correlationId}`,
+      },
       { status: 500 },
     );
     finish(500);

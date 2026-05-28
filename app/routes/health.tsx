@@ -1,7 +1,7 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Client } from "pg";
-import { getMonitoringSnapshot } from "../lib/monitoring.server";
+import { evaluateMonitoringAlerts, getMonitoringSnapshot } from "../lib/monitoring.server";
 import { redisPing } from "../lib/redis-cache.server";
 
 /** Health check para Railway — sem auth Shopify. */
@@ -41,6 +41,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   }
 
   const monitoring = getMonitoringSnapshot();
+  const alerts = evaluateMonitoringAlerts(monitoring);
   const degraded = Object.values(checks).some((c) => !c.ok);
   const status = degraded ? 503 : 200;
 
@@ -50,6 +51,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       status: degraded ? "degraded" : "ok",
       checks,
       monitoring,
+      alerts,
       uptime_s: Math.round(process.uptime()),
       now: new Date().toISOString(),
       duration_ms: Date.now() - started,

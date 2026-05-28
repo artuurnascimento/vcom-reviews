@@ -271,7 +271,7 @@ export default function AppHome() {
                         {stats.setupReady ? "Metaobject OK" : "Setup pendente"}
                       </Badge>
                       <Badge tone={stats.homepagePublished > 0 ? "success" : "info"}>
-                        {stats.homepagePublished} na homepage
+                        {`${String(stats.homepagePublished)} na homepage`}
                       </Badge>
                     </InlineStack>
                     <Text as="p" variant="bodySm" tone="subdued">

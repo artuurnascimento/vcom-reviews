@@ -212,7 +212,10 @@ export function getLocaleSelectOptions(country: string): Array<
   | { label: string; value: string }
   | { title: string; options: Array<{ label: string; value: string }> }
 > {
-  const all = AI_LOCALES.map((l) => ({ label: l.label, value: l.value }));
+  const all: Array<{ label: string; value: string }> = AI_LOCALES.map((l) => ({
+    label: l.label,
+    value: l.value,
+  }));
 
   if (country === "random") {
     return all;
@@ -224,7 +227,7 @@ export function getLocaleSelectOptions(country: string): Array<
   const suggestedSet = new Set(suggestedIds);
   const suggested = suggestedIds
     .map((id) => all.find((l) => l.value === id))
-    .filter((l): l is { label: string; value: string } => Boolean(l));
+    .filter((l): l is NonNullable<(typeof all)[number]> => Boolean(l));
   const others = all.filter((l) => !suggestedSet.has(l.value));
 
   if (others.length === 0) {

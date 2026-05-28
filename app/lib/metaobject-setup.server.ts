@@ -100,6 +100,8 @@ export async function runAutomaticInfrastructureSetup(
 ): Promise<{
   ok: boolean;
   errors: string[];
+  themeErrors: string[];
+  themeOk: boolean;
   theme: ThemeHomepageSyncResult;
 }> {
   const infra = await ensureReviewInfrastructure(admin);

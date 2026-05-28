@@ -3,7 +3,7 @@ import type { ReviewRecord } from "./constants";
 import { REVIEW_METAOBJECT_TYPE } from "./constants";
 import { listAllReviews, listPendingReviews } from "./reviews.server";
 
-type AdminApi = Parameters<typeof listReviews>[0];
+type AdminApi = Parameters<typeof listAllReviews>[0];
 
 export type DashboardStats = {
   shopName: string;
