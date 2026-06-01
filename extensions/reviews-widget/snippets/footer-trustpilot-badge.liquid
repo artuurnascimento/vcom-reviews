@@ -1,4 +1,8 @@
 {%- liquid
+  assign link_only = link_only | default: false
+  if link_only
+    break
+  endif
   assign force_show = force_show | default: false
   assign cfg = shop.metafields.vcom_reviews.storefront_settings.value
   assign tp_show = false

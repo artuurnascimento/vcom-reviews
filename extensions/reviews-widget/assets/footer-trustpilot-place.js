@@ -1,4 +1,3 @@
-<script>
 (function () {
   var SOCIAL_HREF =
     /instagram\.com|facebook\.com|fb\.com|tiktok\.com|youtube\.com|twitter\.com|x\.com|linkedin\.com|pinterest\.com|snapchat\.com|threads\.net/i;
@@ -244,4 +243,3 @@
   }
   document.addEventListener('shopify:section:load', schedulePlace);
 })();
-</script>

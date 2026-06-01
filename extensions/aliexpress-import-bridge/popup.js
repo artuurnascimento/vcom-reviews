@@ -15,105 +15,59 @@ function makeBatchId() {
   return `alx-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function cleanText(input) {
-  return String(input || "").replace(/\s+/g, " ").trim();
-}
-
-async function getActiveTab() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  return tab;
-}
-
-async function getStoredBatch() {
-  const data = await chrome.storage.local.get(STORAGE_KEY);
-  return data[STORAGE_KEY] || null;
-}
-
-async function setStoredBatch(batch) {
-  await chrome.storage.local.set({ [STORAGE_KEY]: batch });
-}
-
-async function clearStoredBatch() {
-  await chrome.storage.local.remove(STORAGE_KEY);
-}
-
-function extractAliExpressReviews() {
-  const possibleCards = Array.from(
-    document.querySelectorAll(
-      [
-        '[data-pl="review-content"]',
-        '[class*="feedback-item"]',
-        '[class*="review-item"]',
-        '[class*="eva-item"]',
-        'li[class*="review"]',
-      ].join(","),
-    ),
-  );
-
-  const fallbackTextBlocks = possibleCards.length
-    ? possibleCards
-    : Array.from(document.querySelectorAll("p, div")).slice(0, 400);
-
-  const reviews = [];
-  for (const node of fallbackTextBlocks) {
-    const body =
-      cleanText(node.querySelector('[class*="content"]')?.textContent) ||
-      cleanText(node.textContent);
-    if (!body || body.length < 25) continue;
-
-    const author =
-      cleanText(
-        node.querySelector('[class*="user"], [class*="author"], [class*="name"]')?.textContent,
-      ) || "Cliente AliExpress";
-    const title =
-      cleanText(node.querySelector("h3, h4, [class*='title']")?.textContent) || "";
-
-    const starIcons = node.querySelectorAll(
-      '[class*="star"][class*="active"], [class*="star"][class*="full"], [aria-label*="star"]',
-    );
-    const rating = starIcons.length > 0 ? Math.min(5, Math.max(1, starIcons.length)) : 5;
-
-    const time =
-      cleanText(node.querySelector("time, [class*='date'], [class*='time']")?.textContent) || "";
-
-    const sourceReviewId =
-      node.getAttribute("data-id") ||
-      node.getAttribute("data-review-id") ||
-      `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-    reviews.push({
-      sourceReviewId,
-      author: author.slice(0, 120),
-      title: title.slice(0, 180),
-      body: body.slice(0, 4000),
-      rating,
-      time: time.slice(0, 60),
-      placement: "homepage",
-      verifiedBuyer: false,
+function getActiveTab() {
+  return new Promise((resolve) => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      resolve(tabs[0] || null);
     });
+  });
+}
 
-    if (reviews.length >= 200) break;
-  }
+function getStoredBatch() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(STORAGE_KEY, (data) => {
+      resolve(data[STORAGE_KEY] || null);
+    });
+  });
+}
 
-  return reviews;
+function setStoredBatch(batch) {
+  return new Promise((resolve) => {
+    chrome.storage.local.set({ [STORAGE_KEY]: batch }, resolve);
+  });
+}
+
+function clearStoredBatch() {
+  return new Promise((resolve) => {
+    chrome.storage.local.remove(STORAGE_KEY, resolve);
+  });
 }
 
 collectBtn.addEventListener("click", async () => {
   try {
     const tab = await getActiveTab();
     if (!tab?.id) throw new Error("Aba ativa inválida.");
-    if (!tab.url || !tab.url.includes("aliexpress.")) {
-      throw new Error("Abra uma página do AliExpress antes de coletar.");
+    if (!tab.url || !tab.url.includes("aliexpress")) {
+      throw new Error("Abra a página do produto no AliExpress (aba Avaliações).");
     }
 
-    const [result] = await chrome.scripting.executeScript({
+    setStatus("Coletando na aba do AliExpress...");
+
+    const [{ result }] = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      func: extractAliExpressReviews,
+      files: ["inject-collect.js"],
     });
 
-    const reviews = result?.result || [];
-    if (!Array.isArray(reviews) || reviews.length === 0) {
-      throw new Error("Nenhuma avaliação detectada na página.");
+    if (!result?.ok) {
+      throw new Error(
+        result?.error ||
+          "Nenhuma avaliação detectada. Abra a página do produto (/item/ID.html) e a aba Avaliações.",
+      );
+    }
+
+    const reviews = result.reviews || [];
+    if (!reviews.length) {
+      throw new Error("Nenhuma avaliação retornada pela coleta.");
     }
 
     const batch = {
@@ -125,8 +79,12 @@ collectBtn.addEventListener("click", async () => {
       sentAt: new Date().toISOString(),
       reviews,
     };
+
     await setStoredBatch(batch);
-    setStatus(`Lote salvo com ${reviews.length} avaliações.`);
+
+    const via = result.source === "api" ? "API" : "DOM";
+    const warn = result.warning ? ` ${result.warning}` : "";
+    setStatus(`Coletadas ${reviews.length} avaliações (${via}, produto ${result.productId}).${warn}`);
   } catch (error) {
     setStatus(error.message || String(error), true);
   }
@@ -153,7 +111,7 @@ sendBtn.addEventListener("click", async () => {
       },
     });
 
-    setStatus(`Lote ${batch.batchId} enviado para /app/import.`);
+    setStatus(`Lote ${batch.batchId} enviado (${batch.reviews.length} avaliações).`);
   } catch (error) {
     setStatus(error.message || String(error), true);
   }
@@ -169,6 +127,6 @@ clearBtn.addEventListener("click", async () => {
   if (batch?.reviews?.length) {
     setStatus(`Lote pronto: ${batch.reviews.length} avaliações.`);
   } else {
-    setStatus("Nenhum lote salvo.");
+    setStatus("Nenhum lote salvo. Abra o produto no AliExpress e clique em Coletar.");
   }
 })();

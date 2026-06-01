@@ -7,6 +7,7 @@ Esta extensão envia avaliações coletadas do AliExpress para a página ` /app/
 - `extensions/aliexpress-import-bridge/manifest.json`
 - `extensions/aliexpress-import-bridge/popup.html`
 - `extensions/aliexpress-import-bridge/popup.js`
+- `extensions/aliexpress-import-bridge/inject-collect.js`
 
 ## Configuração no app (Railway)
 
@@ -61,5 +62,6 @@ Você pode incluir mais de uma origem separando por vírgula.
 ## Observações V1
 
 - Importa sempre com `status: pending` no app.
-- Extração do AliExpress é heurística (seletores HTML podem variar com mudanças no site).
+- A coleta usa a API interna `feedback.aliexpress.com/pc/searchEvaluation.do` **dentro da aba do AliExpress** (com cookies da sessão). Se a API falhar, há fallback por DOM.
+- Após atualizar os arquivos da extensão, recarregue em `chrome://extensions` → **Recarregar**.
 - Se a aba ativa não for ` /app/import `, o envio é bloqueado no popup.

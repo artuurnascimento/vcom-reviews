@@ -4,6 +4,7 @@
 
 {{ 'vcom-layouts.css' | asset_url | stylesheet_tag }}
 <script src="{{ 'vcom-reviews-pagination.js' | asset_url }}" defer></script>
+{%- render 'footer-trustpilot-badge', link_only: true -%}
 
 {%- assign bid = block.id -%}
 {%- assign cfg = shop.metafields.vcom_reviews.storefront_settings.value -%}
@@ -665,7 +666,16 @@
         <div class="product-reviews__image-modal" id="vcom-reviews-image-modal-{{ block.id }}" role="dialog" aria-modal="true" aria-label="Ver imagem">
           <div class="product-reviews__image-modal-inner">
             <button type="button" class="product-reviews__image-modal-close" aria-label="Fechar">&times;</button>
-            <img src="" alt="" width="1200" height="1200" id="vcom-reviews-modal-img-{{ block.id }}">
+            <img
+              src="{{ 'modal-image-placeholder.svg' | asset_url }}"
+              data-placeholder-src="{{ 'modal-image-placeholder.svg' | asset_url }}"
+              alt=""
+              width="1200"
+              height="1200"
+              id="vcom-reviews-modal-img-{{ block.id }}"
+              class="product-reviews__image-modal-img"
+              loading="lazy"
+            >
           </div>
         </div>
         <script>
@@ -678,7 +688,7 @@
             var btns=root.querySelectorAll('.product-reviews__image-link[data-image-src]');
             var closeBtn=modal.querySelector('.product-reviews__image-modal-close');
             function openModal(src){modalImg.src=src;modal.classList.add('is-open');document.body.style.overflow='hidden';}
-            function closeModal(){modal.classList.remove('is-open');modalImg.src='';document.body.style.overflow='';}
+            function closeModal(){modal.classList.remove('is-open');modalImg.src=modalImg.getAttribute('data-placeholder-src')||'';document.body.style.overflow='';}
             btns.forEach(function(b){b.addEventListener('click',function(e){e.preventDefault();var s=this.getAttribute('data-image-src');if(s)openModal(s);});});
             closeBtn&&closeBtn.addEventListener('click',closeModal);
             modal.addEventListener('click',function(e){if(e.target===modal)closeModal();});
