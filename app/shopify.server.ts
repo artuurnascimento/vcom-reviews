@@ -13,6 +13,7 @@ import {
   getStorefrontSettings,
 } from "./lib/storefront-settings.server";
 import { ensureFooterTrustpilotPublished } from "./lib/theme-footer-sync.server";
+import { migrateLegacyOfflineTokenForShop } from "./lib/migrate-expiring-token.server";
 
 initObservability();
 
@@ -42,6 +43,39 @@ function resolveSessionStorage() {
 
 const configuredSessionStorage = resolveSessionStorage();
 
+async function runAfterAuth({
+  admin,
+  session,
+}: {
+  admin: Parameters<typeof runAutomaticInfrastructureSetup>[0];
+  session: { shop: string };
+}) {
+  try {
+    const result = await runAutomaticInfrastructureSetup(admin, session.shop);
+    if (!result.ok) {
+      logWarn("afterAuth setup failed", { shop: session.shop, errors: result.errors });
+    } else {
+      await ensureDefaultStorefrontSettings(admin);
+      const settings = await getStorefrontSettings(admin);
+      if (settings.footer_trustpilot_show) {
+        const footerSync = await ensureFooterTrustpilotPublished(
+          admin as never,
+          session.shop,
+          true,
+        );
+        if (!footerSync.ok) {
+          logWarn("afterAuth footer publish", {
+            shop: session.shop,
+            errors: footerSync.errors,
+          });
+        }
+      }
+    }
+  } catch (error) {
+    logError("afterAuth setup error", error, { shop: session.shop });
+  }
+}
+
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY || "",
   apiSecretKey: process.env.SHOPIFY_API_SECRET || "",
@@ -53,33 +87,12 @@ const shopify = shopifyApp({
   distribution: AppDistribution.AppStore,
   future: {
     unstable_newEmbeddedAuthStrategy: true,
+    expiringOfflineAccessTokens: true,
   },
   hooks: {
     afterAuth: async ({ admin, session }) => {
-      try {
-        const result = await runAutomaticInfrastructureSetup(admin, session.shop);
-        if (!result.ok) {
-          logWarn("afterAuth setup failed", { shop: session.shop, errors: result.errors });
-        } else {
-          await ensureDefaultStorefrontSettings(admin);
-          const settings = await getStorefrontSettings(admin);
-          if (settings.footer_trustpilot_show) {
-            const footerSync = await ensureFooterTrustpilotPublished(
-              admin as never,
-              session.shop,
-              true,
-            );
-            if (!footerSync.ok) {
-              logWarn("afterAuth footer publish", {
-                shop: session.shop,
-                errors: footerSync.errors,
-              });
-            }
-          }
-        }
-      } catch (error) {
-        logError("afterAuth setup error", error, { shop: session.shop });
-      }
+      await migrateLegacyOfflineTokenForShop(session.shop);
+      await runAfterAuth({ admin, session });
     },
   },
   ...(process.env.SHOP_CUSTOM_DOMAIN
