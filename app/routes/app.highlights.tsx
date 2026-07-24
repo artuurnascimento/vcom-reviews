@@ -54,6 +54,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     totalApproved: approved.length,
     distinctProducts,
     shown: top.length,
+    perProductCap: TOP_REVIEWS_DEFAULT_PER_PRODUCT_CAP,
     reviews: top.map((r) => ({
       id: r.id,
       rating: r.rating,
@@ -68,7 +69,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export default function Highlights() {
-  const { themeEditorUrl, totalApproved, distinctProducts, shown, reviews } =
+  const { themeEditorUrl, totalApproved, distinctProducts, shown, perProductCap, reviews } =
     useLoaderData<typeof loader>();
 
   return (
@@ -96,7 +97,7 @@ export default function Highlights() {
             <StatCard
               label="Exibidas neste destaque"
               value={shown}
-              hint={`máx. ${TOP_REVIEWS_DEFAULT_PER_PRODUCT_CAP} por produto`}
+              hint={`máx. ${perProductCap} por produto`}
             />
           </InlineGrid>
         </Layout.Section>
