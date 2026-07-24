@@ -1,6 +1,4 @@
-{%- comment -%}
-  VCOM Reviews — configurações via app (shop.metafields.vcom_reviews.storefront_settings)
-{%- endcomment -%}
+
 
 {{ 'vcom-layouts.css' | asset_url | stylesheet_tag }}
 <script src="{{ 'vcom-reviews-pagination.js' | asset_url }}" defer></script>
@@ -142,7 +140,7 @@
 {%- assign s_layout = cfg.layout | default: 'trustpilot_carousel' -%}
 {%- assign s_reviews_sort = cfg.reviews_sort | default: 'photos_first' -%}
 
-{%- comment -%} Carrega review + $app:review (geradas pelo app) — não usar elsif. {%- endcomment -%}
+
 {%- assign all_reviews_primary = nil -%}
 {%- assign all_reviews_legacy = nil -%}
 {%- assign use_proxy_reviews = false -%}
@@ -175,10 +173,10 @@
   {%- assign reviews_context = 'product' -%}
 {%- endif -%}
 
-{%- comment -%} Página de produto: formulário de avaliação sempre disponível (envio entra como pendente). {%- endcomment -%}
+
 {%- if reviews_context == 'product' -%}{%- assign s_show_review_form = true -%}{%- endif -%}
 
-{%- comment -%} Produto: renderiza via proxy para permitir filtros server-side (estrela/foto/data). {%- endcomment -%}
+
 {%- assign force_product_proxy = false -%}
 {%- if reviews_context == 'product' -%}{%- assign force_product_proxy = true -%}{%- endif -%}
 
@@ -297,7 +295,7 @@
     #vcom-reviews-{{ bid }} .product-reviews__title{color:{{ s_review_title_color }};font-size:{{ s_review_title_size }}px;font-weight:800}
     #vcom-reviews-{{ bid }} .product-reviews__text{color:{{ s_review_body_color }};font-size:{{ s_review_body_size }}px;font-weight:400}
     #vcom-reviews-{{ bid }} .product-reviews__meta{color:{{ s_review_meta_color }}}
-    {%- comment -%} Fundo transparente: adapta título/cards ao tema escuro. {%- endcomment -%}
+    
     #vcom-reviews-{{ bid }} .product-reviews__section-title{color:#fff !important}
     #vcom-reviews-{{ bid }} .product-reviews__section-count{color:#fff !important;opacity:.7}
     #vcom-reviews-{{ bid }} .product-reviews__card{background:rgba(255,255,255,.06) !important;border-color:rgba(255,255,255,.14) !important}
@@ -406,7 +404,34 @@
     <div class="product-reviews__inner" style="padding:{{ s_pad_top }}px {{ s_pad_sides }}px {{ s_pad_bottom }}px;">
 
       {%- if s_trusted_show -%}
-        {%- if s_header_style == 'aggregate' -%}
+        {%- if reviews_context == 'product' -%}
+          {%- assign dist_total = dist_1 | plus: dist_2 | plus: dist_3 | plus: dist_4 | plus: dist_5 -%}
+          {%- assign summary_count = dist_total -%}
+          {%- if summary_count == 0 -%}{%- assign summary_count = review_count -%}{%- endif -%}
+          {%- assign summary_avg = rating_avg | round: 1 -%}
+          <style>#vcom-reviews-{{ bid }} .pr-sum{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:20px 32px;margin-bottom:{{ s_trusted_mb }}px}#vcom-reviews-{{ bid }} .pr-sc{display:flex;flex-direction:column;gap:2px}#vcom-reviews-{{ bid }} .pr-avg{display:flex;align-items:center;gap:12px}#vcom-reviews-{{ bid }} .pr-star{font-size:44px;line-height:1;color:{{ star_color }}}#vcom-reviews-{{ bid }} .pr-num{font-size:52px;font-weight:800;line-height:1;color:#fff}#vcom-reviews-{{ bid }} .pr-cnt{font-size:15px;color:rgba(255,255,255,.6);font-weight:500}#vcom-reviews-{{ bid }} .pr-dist{display:flex;flex-direction:column;gap:7px;min-width:0}#vcom-reviews-{{ bid }} .pr-row{display:flex;align-items:center;gap:10px}#vcom-reviews-{{ bid }} .pr-st{flex:0 0 auto;font-size:14px;letter-spacing:1px;line-height:1;white-space:nowrap}#vcom-reviews-{{ bid }} .pr-st .f{color:{{ star_color }}}#vcom-reviews-{{ bid }} .pr-st .e{color:{{ star_empty_color }}}#vcom-reviews-{{ bid }} .pr-tr{position:relative;flex:1 1 auto;height:8px;border-radius:999px;background:rgba(255,255,255,.13);overflow:hidden;min-width:60px}#vcom-reviews-{{ bid }} .pr-fl{position:absolute;top:0;bottom:0;left:0;border-radius:999px;background:{{ star_color }}}#vcom-reviews-{{ bid }} .pr-c{flex:0 0 auto;font-size:13px;color:rgba(255,255,255,.55);min-width:40px;text-align:right}#vcom-reviews-{{ bid }} .pr-act{display:flex;align-items:center;gap:12px}#vcom-reviews-{{ bid }} .pr-w{padding:12px 22px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;transition:.15s}#vcom-reviews-{{ bid }} .pr-w:hover{background:#fff;color:#111;border-color:#fff}#vcom-reviews-{{ bid }} .pr-fb{width:46px;height:46px;flex:0 0 auto;border-radius:50%;border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:.15s}#vcom-reviews-{{ bid }} .pr-fb:hover,#vcom-reviews-{{ bid }} .pr-fb[aria-expanded="true"]{background:{{ star_color }};border-color:{{ star_color }};color:#fff}#vcom-reviews-{{ bid }} .pr-sum .product-reviews__nav-arrows{grid-column:1/-1;justify-self:end}#vcom-reviews-{{ bid }} .product-reviews__write-btn{display:none!important}#vcom-reviews-{{ bid }} .product-reviews__filters[hidden]{display:none!important}@media(max-width:749px){#vcom-reviews-{{ bid }} .pr-sum{grid-template-columns:1fr;gap:16px}#vcom-reviews-{{ bid }} .pr-act{width:100%}#vcom-reviews-{{ bid }} .pr-w{flex:1 1 auto;text-align:center}#vcom-reviews-{{ bid }} .pr-num{font-size:44px}#vcom-reviews-{{ bid }} .pr-star{font-size:38px}}</style>
+          <header class="pr-sum">
+            <div class="pr-sc">
+              <div class="pr-avg"><span class="pr-star" aria-hidden="true">★</span><span class="pr-num">{{ summary_avg }}</span></div>
+              <span class="pr-cnt" data-word="{{ 'product_reviews.header.reviews_word' | t | default: 'Reviews' }}">{{ summary_count }}{% if summary_count >= 1000 %}+{% endif %} {{ 'product_reviews.header.reviews_word' | t | default: 'Reviews' }}</span>
+            </div>
+            <div class="pr-dist">
+              {%- for i in (1..5) -%}
+                {%- assign level = 6 | minus: i -%}
+                {%- assign lvl_count = dist_5 -%}
+                {%- if level == 4 -%}{%- assign lvl_count = dist_4 -%}{%- elsif level == 3 -%}{%- assign lvl_count = dist_3 -%}{%- elsif level == 2 -%}{%- assign lvl_count = dist_2 -%}{%- elsif level == 1 -%}{%- assign lvl_count = dist_1 -%}{%- endif -%}
+                {%- assign lvl_pct = 0 -%}{%- if dist_total > 0 -%}{%- assign lvl_pct = lvl_count | times: 100.0 | divided_by: dist_total -%}{%- endif -%}
+                {%- assign empties = 5 | minus: level -%}
+                <div class="pr-row" data-dist-level="{{ level }}"><span class="pr-st" aria-label="{{ level }}"><span class="f">{% for i in (1..level) %}★{% endfor %}</span>{% if empties > 0 %}<span class="e">{% for i in (1..empties) %}☆{% endfor %}</span>{% endif %}</span><span class="pr-tr"><span class="pr-fl" style="width:{{ lvl_pct }}%"></span></span><span class="pr-c">({{ lvl_count }})</span></div>
+              {%- endfor -%}
+            </div>
+            <div class="pr-act">
+              {%- if s_show_review_form -%}<button type="button" class="pr-w" data-vcom-write-trigger>{%- if s_form_btn != blank -%}{{ s_form_btn }}{%- else -%}{{ 'product_reviews.form.button' | t }}{%- endif -%}</button>{%- endif -%}
+              <button type="button" class="pr-fb" data-vcom-filter-toggle aria-expanded="false" aria-label="{{ 'product_reviews.filters.aria' | t | default: 'Filtrar avaliações' }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/><circle cx="10" cy="7" r="2.6" fill="currentColor" stroke="none"/><circle cx="16" cy="12" r="2.6" fill="currentColor" stroke="none"/><circle cx="8" cy="17" r="2.6" fill="currentColor" stroke="none"/></svg></button>
+            </div>
+            <nav class="product-reviews__nav-arrows vcom-reviews-nav--desktop" id="vcom-reviews-arrows-{{ block.id }}" aria-label="Navegar avaliações" hidden><button type="button" class="product-reviews__nav-btn product-reviews__nav-prev" aria-label="Anterior" disabled><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span class="product-reviews__nav-status"><span data-current>1</span> / <span data-total>1</span></span><button type="button" class="product-reviews__nav-btn product-reviews__nav-next" aria-label="Próxima" disabled><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></nav>
+          </header>
+        {%- elsif s_header_style == 'aggregate' -%}
           {%- assign display_rating = s_footer_rating -%}
           {%- if has_reviews -%}{%- assign display_rating = rating_avg | round: 1 -%}{%- endif -%}
           {%- assign header_stars = display_rating | plus: 0.0 -%}
@@ -479,7 +504,7 @@
       {%- endif -%}
 
       {%- if has_reviews -%}
-        <style>#vcom-reviews-{{ bid }} .product-reviews__verified{color:{{ verified_color }}}#vcom-reviews-{{ bid }} .product-reviews__images{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}#vcom-reviews-{{ bid }} .product-reviews__image-link{display:block;border-radius:8px;overflow:hidden;border:1px solid rgba(0,0,0,.08);cursor:pointer;background:none;padding:0;margin:0;font:inherit;text-align:left}#vcom-reviews-{{ bid }} .product-reviews__image{width:80px;height:80px;object-fit:cover;display:block;pointer-events:none}#vcom-reviews-{{ bid }} .product-reviews__image-more{width:80px;height:80px;min-width:80px;min-height:80px;border-radius:8px;border:1px solid rgba(0,0,0,.08);background:rgba(0,0,0,.06);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#555}#vcom-reviews-{{ bid }} .product-reviews__image-link--hidden{display:none}#vcom-reviews-{{ bid }} .product-reviews__images.is-expanded .product-reviews__image-link--hidden{display:block}#vcom-reviews-{{ bid }} .product-reviews__images.is-expanded .product-reviews__image-see-more{display:none!important}#vcom-reviews-{{ bid }} .product-reviews__images.is-expanded .product-reviews__image-see-less{display:inline-block!important}#vcom-reviews-{{ bid }} .product-reviews__image-see-less{display:none;width:100%}#vcom-reviews-{{ bid }} .product-reviews__text-wrap{margin:0 0 10px}#vcom-reviews-{{ bid }} .product-reviews__text-more,#vcom-reviews-{{ bid }} .product-reviews__text-less{background:none;border:none;padding:0;font-size:13px;font-weight:600;color:{{ star_color}};cursor:pointer;margin-top:4px;text-decoration:underline}#vcom-reviews-{{ bid }} .product-reviews__image-modal{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:24px;opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s}#vcom-reviews-{{ bid }} .product-reviews__image-modal.is-open{opacity:1;visibility:visible}#vcom-reviews-{{ bid }} .product-reviews__image-modal-inner{position:relative;max-width:90vw;max-height:90vh}#vcom-reviews-{{ bid }} .product-reviews__image-modal img{max-width:100%;max-height:85vh;width:auto;height:auto;object-contain;display:block;border-radius:8px}#vcom-reviews-{{ bid }} .product-reviews__image-modal-close{position:absolute;top:-44px;right:0;width:36px;height:36px;border:none;background:rgba(255,255,255,.2);color:#fff;border-radius:50%;cursor:pointer;font-size:24px;line-height:1;padding:0}#vcom-reviews-{{ bid }}:not(.vcom-layout--trustpilot_list) .product-reviews__avatar,#vcom-reviews-{{ bid }}:not(.vcom-layout--trustpilot_list) .product-reviews__head{display:none}#vcom-reviews-{{ bid }}.vcom-layout--trustpilot_list .product-reviews__stars--default{display:none}#vcom-reviews-{{ bid }}.vcom-layout--trustpilot_list .product-reviews__meta-author{display:none}</style>
+        <style>#vcom-reviews-{{ bid }} .product-reviews__verified{color:{{ verified_color }}}#vcom-reviews-{{ bid }} .product-reviews__text-more,#vcom-reviews-{{ bid }} .product-reviews__text-less{color:{{ star_color}}}</style>
         {%- if s_layout == 'trustpilot_split' -%}
         <div class="vcom-split">
           <aside class="vcom-split__summary" aria-label="Resumo das avaliações">
@@ -531,9 +556,10 @@
           #vcom-reviews-{{ bid }} .product-reviews__filter-date option{color:#111}
           @media (max-width:991px){#vcom-reviews-{{ bid }} .product-reviews__filter-date{margin-left:0;width:100%}}
         </style>
-        <div class="product-reviews__filters" data-vcom-filters data-empty-text="{{ 'product_reviews.filters.empty' | t | default: 'Nenhuma avaliação para este filtro.' | escape }}" role="group" aria-label="{{ 'product_reviews.filters.aria' | t | default: 'Filtrar avaliações' }}">
+        <div class="product-reviews__filters" data-vcom-filters hidden data-empty-text="{{ 'product_reviews.filters.empty' | t | default: 'Nenhuma avaliação para este filtro.' | escape }}" role="group" aria-label="{{ 'product_reviews.filters.aria' | t | default: 'Filtrar avaliações' }}">
           <div class="product-reviews__filter-group" role="group" aria-label="{{ 'product_reviews.filters.by_rating' | t | default: 'Filtrar por nota' }}">
-            {%- for n in (5..1) -%}
+            {%- for i in (1..5) -%}
+              {%- assign n = 6 | minus: i -%}
               <button type="button" class="product-reviews__filter-chip" data-filter-rating="{{ n }}" aria-pressed="false">{{ n }}<svg width="13" height="13" viewBox="0 0 32 32" aria-hidden="true"><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="currentColor"/></svg></button>
             {%- endfor -%}
           </div>
@@ -783,12 +809,12 @@
         </div>
       {%- endif -%}
 
-      {%- comment -%} Schema aggregateRating para SEO {%- endcomment -%}
+      
       {%- if has_reviews and s_footer_show and product != blank and product.url != blank -%}
         <script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","@id":"{{ shop.url }}{{ product.url }}#product","aggregateRating":{"@type":"AggregateRating","ratingValue":"{{ rating_avg | round: 1 }}","reviewCount":"{{ review_count }}","bestRating":"5"}}</script>
       {%- endif -%}
 
-      {%- comment -%} Rodapé: calculado ou fallback {%- endcomment -%}
+      
       {%- if s_footer_show -%}
         <p class="product-reviews__footer" id="vcom-reviews-footer-{{ block.id }}" style="margin-top:16px;font-size:14px;color:{{ s_footer_text_color}};">
           {{ s_footer_prefix}}
@@ -798,7 +824,7 @@
         </p>
       {%- endif -%}
 
-      {%- comment -%} Botão e formulário fake de envio de avaliação {%- endcomment -%}
+      
       {%- if s_show_review_form -%}
         <div class="product-reviews__write-wrap" style="margin-top:24px;">
           <button type="button" class="product-reviews__write-btn" id="product-reviews-write-btn-{{ block.id }}" aria-expanded="false" aria-controls="product-reviews-form-{{ block.id }}" style="display:inline-flex;align-items:center;gap:8px;padding:12px 20px;border:1px solid {{ star_color}};background:transparent;color:{{ star_color}};font-size:14px;font-weight:600;border-radius:8px;cursor:pointer;transition:background .2s,color .2s;">
@@ -894,6 +920,8 @@
             function setStarDisplay(val){var r=parseFloat(val)||0;starBtns&&starBtns.forEach(function(btn,i){var idx=i+1;var fill=btn.querySelector('.product-reviews__form-star-fill');if(!fill)return;if(r>=idx)fill.setAttribute('width',32);else if(r>=idx-0.5)fill.setAttribute('width',16);else fill.setAttribute('width',0);});}
             function resetForm(){formEl.reset();if(ratingInput)ratingInput.value='';setStarDisplay(0);clearImages();}
             btn.addEventListener('click',function(){openForm();resetForm();});
+            var writeTriggers=document.querySelectorAll('#vcom-reviews-'+sid+' [data-vcom-write-trigger]');
+            Array.prototype.forEach.call(writeTriggers,function(t){t.addEventListener('click',function(){openForm();resetForm();var target=(formOuter&&!formOuter.hidden)?formOuter:btn;var y=target.getBoundingClientRect().top+window.pageYOffset-24;window.scrollTo({top:y,behavior:'smooth'});});});
             cancelBtn&&cancelBtn.addEventListener('click',function(){formOuter.hidden=true;btn.setAttribute('aria-expanded','false');btn.style.display='inline-flex';if(successEl)successEl.hidden=true;resetForm();});
             starBtns&&starBtns.forEach(function(btn){
               btn.addEventListener('click',function(e){var rect=this.getBoundingClientRect();var x=e.clientX-rect.left;var isLeftHalf=x<rect.width/2;var vFull=parseFloat(this.getAttribute('data-value-full'));var vHalf=parseFloat(this.getAttribute('data-value-half'));var v=isLeftHalf?vHalf:vFull;ratingInput.value=v;setStarDisplay(v);});

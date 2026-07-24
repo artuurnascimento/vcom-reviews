@@ -22,7 +22,8 @@
       "view_less": "See less"
     },
     "header": {
-      "product_reviews": "Product reviews"
+      "product_reviews": "Product reviews",
+      "reviews_word": "Reviews"
     },
     "filters": {
       "aria": "Filter reviews",

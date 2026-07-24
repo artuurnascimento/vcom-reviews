@@ -393,6 +393,26 @@
       var headCount = document.querySelector("#vcom-reviews-" + bid + " .product-reviews__section-count");
       if (headCount) headCount.textContent = headerPrefix + " " + countLabel + " reviews";
     }
+    function updateDistribution(data) {
+      if (!root || !data || !data.dist) return;
+      var total = parseInt(data.total, 10) || 0;
+      for (var lvl = 1; lvl <= 5; lvl++) {
+        var n = parseInt(data.dist[lvl], 10) || 0;
+        var row = root.querySelector('[data-dist-level="' + lvl + '"]');
+        if (!row) continue;
+        var c = row.querySelector(".pr-c");
+        if (c) c.textContent = "(" + n + ")";
+        var fl = row.querySelector(".pr-fl");
+        if (fl) fl.style.width = (total > 0 ? (n * 100) / total : 0) + "%";
+      }
+      var cnt = root.querySelector(".pr-cnt");
+      if (cnt && total > 0) {
+        var word = cnt.getAttribute("data-word") || "Reviews";
+        cnt.textContent = total + (total >= 1000 ? "+" : "") + " " + word;
+      }
+      var num = root.querySelector(".pr-num");
+      if (num && data.avg_all) num.textContent = data.avg_all;
+    }
     function filterSig() {
       return "r" + filterRating + "p" + (filterPhotos ? 1 : 0) + "d" + (filterDate || "");
     }
@@ -454,6 +474,7 @@
       var err = g.querySelector("[data-proxy-error]");
       if (err) err.hidden = true;
       updateAggregateStats(data);
+      updateDistribution(data);
       var empty = document.querySelector("#vcom-reviews-" + bid + " .vcom-reviews-proxy-empty");
       if (empty) empty.style.display = "none";
       var html = "";
@@ -656,6 +677,15 @@
           filterDate = dateSel.value || "";
           applyFilters();
         });
+    }
+    var filterToggle = root && root.querySelector("[data-vcom-filter-toggle]");
+    if (filterToggle && filterBar) {
+      filterBar.hidden = true;
+      filterToggle.addEventListener("click", function () {
+        var willOpen = filterBar.hidden;
+        filterBar.hidden = !willOpen;
+        filterToggle.setAttribute("aria-expanded", willOpen ? "true" : "false");
+      });
     }
 
     bindCardMediaOnce();

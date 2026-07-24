@@ -98,6 +98,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const start = (page - 1) * limit;
     const pageReviews = filtered.slice(start, start + limit);
 
+    // Distribuição real (todas as avaliações aprovadas do produto, antes dos filtros)
+    // — o histograma do cabeçalho é preenchido a partir disto via JS.
+    const dist: Record<string, number> = { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0 };
+    let ratingSumAll = 0;
+    for (const r of approved) {
+      const bucket = Math.min(5, Math.max(1, Math.round(r.rating || 0)));
+      dist[String(bucket)] += 1;
+      ratingSumAll += r.rating || 0;
+    }
+    const totalAll = approved.length;
+    const avgAll = totalAll > 0 ? Math.round((ratingSumAll / totalAll) * 10) / 10 : 0;
+
     let imageUrls: Record<string, string> = {};
     try {
       const imageIds = pageReviews.flatMap((r) => r.images);
@@ -112,6 +124,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       ok: true,
       count,
       avg: Math.round(avg * 10) / 10,
+      total: totalAll,
+      avg_all: avgAll,
+      dist,
       page,
       limit,
       total_pages: totalPages,
