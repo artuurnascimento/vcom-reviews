@@ -77,6 +77,7 @@ export function useAppPaths() {
     app: embedPath("/app"),
     import: embedPath("/app/import"),
     appearance: embedPath("/app/appearance"),
+    highlights: embedPath("/app/highlights"),
     setup: embedPath("/app/setup"),
     reviews: embedPath("/app/reviews"),
     reviewsNew: embedPath("/app/reviews/new"),

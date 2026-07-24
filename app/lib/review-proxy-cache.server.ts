@@ -64,7 +64,7 @@ export async function getProxyApprovedReviews(
   return reviews;
 }
 
-async function getApprovedProductReviewsByShop(
+export async function getApprovedProductReviewsByShop(
   admin: AdminApi,
   shop: string,
 ): Promise<ReviewRecord[]> {

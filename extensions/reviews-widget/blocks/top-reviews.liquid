@@ -1,0 +1,216 @@
+{%- comment -%}
+  VCOM Reviews — Principais avaliações de TODOS os produtos.
+  Estilo herdado de shop.metafields.vcom_reviews.storefront_settings (mesma
+  Aparência do bloco product-reviews). Dados via app proxy /apps/vcom-reviews/top-reviews.
+{%- endcomment -%}
+
+{{ 'vcom-layouts.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'vcom-reviews-pagination.js' | asset_url }}" defer></script>
+
+{%- assign bid = block.id -%}
+{%- assign cfg = shop.metafields.vcom_reviews.storefront_settings.value -%}
+
+{%- assign s_layout = cfg.layout | default: 'trustpilot_carousel' -%}
+{%- assign s_background = cfg.background | default: '#ffffff' -%}
+{%- assign s_pad_top = cfg.section_padding_top | default: 24 -%}
+{%- assign s_pad_bottom = cfg.section_padding_bottom | default: 24 -%}
+{%- assign s_pad_sides = cfg.section_padding_sides | default: 16 -%}
+{%- assign s_pad_top_m = cfg.section_padding_top_mobile | default: s_pad_top -%}
+{%- assign s_pad_bottom_m = cfg.section_padding_bottom_mobile | default: s_pad_bottom -%}
+{%- assign s_pad_sides_m = cfg.section_padding_sides_mobile | default: s_pad_sides -%}
+{%- assign s_section_headline_size = cfg.section_headline_font_size | default: 22 -%}
+{%- assign s_section_headline_size_m = cfg.section_headline_font_size_mobile | default: s_section_headline_size -%}
+{%- assign star_color = cfg.stars_color | default: '#1d8a42' -%}
+{%- assign star_empty_color = cfg.stars_empty_color | default: '#dcdce6' -%}
+{%- assign s_show_verified = cfg.show_verified -%}
+{%- if s_show_verified == nil -%}{%- assign s_show_verified = true -%}{%- endif -%}
+{%- assign s_verified_label = cfg.verified_label | default: 'Verified Buyer' -%}
+{%- assign verified_color = cfg.verified_icon_color | default: '#1d8a42' -%}
+{%- assign s_show_images = cfg.show_images -%}
+{%- if s_show_images == nil -%}{%- assign s_show_images = true -%}{%- endif -%}
+{%- assign text_max_chars = cfg.reviews_text_max_chars | default: 120 -%}
+{%- assign text_max_chars_m = cfg.reviews_text_max_chars_mobile | default: 85 -%}
+{%- assign images_initial = cfg.reviews_images_initial | default: 2 -%}
+{%- assign images_initial_m = cfg.reviews_images_initial_mobile | default: 2 -%}
+{%- assign title_max_chars = cfg.reviews_title_max_chars | default: 80 -%}
+{%- assign reviews_per_page_mobile = cfg.reviews_per_page_mobile | default: 10 -%}
+{%- assign reviews_mobile_layout = cfg.reviews_mobile_layout | default: 'masonry' -%}
+{%- unless reviews_mobile_layout == 'stack' or reviews_mobile_layout == 'masonry' -%}
+  {%- assign reviews_mobile_layout = 'masonry' -%}
+{%- endunless -%}
+{%- assign s_cols_desktop = cfg.reviews_columns_desktop | default: 3 -%}
+{%- if s_cols_desktop < 1 -%}{%- assign s_cols_desktop = 1 -%}{%- endif -%}
+{%- if s_cols_desktop > 4 -%}{%- assign s_cols_desktop = 4 -%}{%- endif -%}
+{%- assign s_pag_active = cfg.pagination_active_color | default: '#1d8a42' -%}
+{%- assign s_pag_inactive = cfg.pagination_inactive_color | default: '#dcdce6' -%}
+
+{%- comment -%} Configurações próprias deste bloco (Theme Editor). {%- endcomment -%}
+{%- assign b_headline = block.settings.headline | default: 'Principais avaliações' -%}
+{%- assign b_total = block.settings.total_reviews | default: 12 -%}
+{%- if b_total < 1 -%}{%- assign b_total = 1 -%}{%- endif -%}
+{%- if b_total > 50 -%}{%- assign b_total = 50 -%}{%- endif -%}
+{%- assign b_per_product = block.settings.per_product_cap | default: 3 -%}
+{%- if b_per_product < 0 -%}{%- assign b_per_product = 0 -%}{%- endif -%}
+{%- assign b_rows = block.settings.rows | default: 2 -%}
+{%- if b_rows < 1 -%}{%- assign b_rows = 1 -%}{%- endif -%}
+{%- if b_rows > 4 -%}{%- assign b_rows = 4 -%}{%- endif -%}
+{%- assign b_sort = block.settings.sort | default: 'rating_high' -%}
+
+{%- assign proxy_url = '/apps/vcom-reviews/top-reviews?sort=' | append: b_sort | append: '&total=' | append: b_total | append: '&per_product=' | append: b_per_product -%}
+
+<div
+  id="vcom-reviews-{{ bid }}"
+  class="product-reviews vcom-reviews-app-block vcom-reviews-top-block vcom-layout--{{ s_layout }}"
+  style="background:{{ s_background }};scroll-margin-top:96px;padding:{{ s_pad_top }}px {{ s_pad_sides }}px {{ s_pad_bottom }}px;"
+  data-layout="{{ s_layout }}"
+  data-text-limit-desktop="{{ text_max_chars }}"
+  data-text-limit-mobile="{{ text_max_chars_m }}"
+  data-images-initial-desktop="{{ images_initial }}"
+  data-images-initial-mobile="{{ images_initial_m }}"
+>
+  <style>
+    #vcom-reviews-{{ bid }}{padding:{{ s_pad_top }}px {{ s_pad_sides }}px {{ s_pad_bottom }}px}
+    @media (max-width:991px){#vcom-reviews-{{ bid }}{padding:{{ s_pad_top_m }}px {{ s_pad_sides_m }}px {{ s_pad_bottom_m }}px}}
+    #vcom-reviews-{{ bid }} .product-reviews__wrap [data-proxy-cards]{display:contents}
+    #vcom-reviews-{{ bid }} .product-reviews__wrap [data-proxy-loading],
+    #vcom-reviews-{{ bid }} .product-reviews__wrap [data-proxy-error]{grid-column:1/-1;width:100%}
+    #vcom-reviews-{{ bid }} .product-reviews__section-title{font-size:{{ s_section_headline_size }}px}
+    @media (max-width:991px){#vcom-reviews-{{ bid }} .product-reviews__section-title{font-size:{{ s_section_headline_size_m }}px}}
+  </style>
+
+  <header class="product-reviews__section-head" style="margin-bottom:16px;">
+    <div class="product-reviews__section-head-top">
+      <h2 class="product-reviews__section-title">{{ b_headline }}</h2>
+      <nav
+        class="product-reviews__nav-arrows vcom-reviews-nav--desktop"
+        id="vcom-reviews-arrows-{{ bid }}"
+        aria-label="Navegar avaliações"
+        hidden
+      >
+        <button type="button" class="product-reviews__nav-btn product-reviews__nav-prev" aria-label="Página anterior" disabled>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <span class="product-reviews__nav-status"><span data-current>1</span> / <span data-total>1</span></span>
+        <button type="button" class="product-reviews__nav-btn product-reviews__nav-next" aria-label="Próxima página" disabled>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <div
+    class="product-reviews__wrap vcom-reviews-mobile--{{ reviews_mobile_layout }}"
+    id="vcom-reviews-grid-{{ bid }}"
+    data-vcom-pagination
+    data-block-id="{{ bid }}"
+    data-bid="{{ bid }}"
+    data-star-color="{{ star_color }}"
+    data-star-empty="{{ star_empty_color }}"
+    data-show-verified="{% if s_show_verified %}true{% else %}false{% endif %}"
+    data-verified-label="{{ s_verified_label | escape }}"
+    data-verified-color="{{ verified_color }}"
+    data-title-max="{{ title_max_chars }}"
+    data-text-max="{{ text_max_chars }}"
+    data-header-prefix=""
+    data-proxy-url="{{ proxy_url }}"
+    data-reviews-sort="{{ b_sort }}"
+    data-layout="{{ s_layout }}"
+    data-cols-desktop="{{ s_cols_desktop }}"
+    data-cols-mobile="1"
+    data-mobile-layout="{{ reviews_mobile_layout }}"
+    data-reviews-rows="{{ b_rows }}"
+    data-per-page-mobile="{{ reviews_per_page_mobile }}"
+    data-scroll-root="vcom-reviews-{{ bid }}"
+    data-review-count="{{ b_total }}"
+    data-use-proxy="true"
+    data-show-images="{% if s_show_images %}true{% else %}false{% endif %}"
+  >
+    <p class="vcom-reviews-proxy-loading" data-proxy-loading>Carregando avaliações…</p>
+    <p class="vcom-reviews-proxy-error" data-proxy-error hidden>
+      <span data-proxy-error-text>Não foi possível carregar as avaliações.</span>
+      <button type="button" class="vcom-reviews-proxy-retry" data-proxy-retry>Tentar novamente</button>
+    </p>
+    <div data-proxy-cards></div>
+  </div>
+
+  <div class="product-reviews__image-modal" id="vcom-reviews-image-modal-{{ bid }}" role="dialog" aria-modal="true" aria-label="Ver imagem">
+    <div class="product-reviews__image-modal-inner">
+      <button type="button" class="product-reviews__image-modal-close" aria-label="Fechar">&times;</button>
+      <img
+        src="{{ 'modal-image-placeholder.svg' | asset_url }}"
+        data-placeholder-src="{{ 'modal-image-placeholder.svg' | asset_url }}"
+        alt=""
+        width="1200"
+        height="1200"
+        id="vcom-reviews-modal-img-{{ bid }}"
+        class="product-reviews__image-modal-img"
+        loading="lazy"
+      >
+    </div>
+  </div>
+
+  <nav
+    class="product-reviews__pagination product-reviews__pagination--mobile vcom-reviews-nav--mobile"
+    id="vcom-reviews-pagination-{{ bid }}"
+    aria-label="Paginação das avaliações"
+    style="--vcom-pag-active: {{ s_pag_active }}; --vcom-pag-inactive: {{ s_pag_inactive }};"
+    hidden
+  >
+    <div class="product-reviews__pagination-pager" data-mobile-pager></div>
+  </nav>
+</div>
+
+{% schema %}
+{
+  "name": "Principais avaliações",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "headline",
+      "label": "Título da seção",
+      "default": "Principais avaliações"
+    },
+    {
+      "type": "range",
+      "id": "total_reviews",
+      "label": "Total de avaliações no bloco",
+      "min": 3,
+      "max": 50,
+      "step": 1,
+      "default": 12
+    },
+    {
+      "type": "range",
+      "id": "per_product_cap",
+      "label": "Máx. avaliações por produto (0 = sem limite)",
+      "info": "Evita que um só produto domine o bloco.",
+      "min": 0,
+      "max": 10,
+      "step": 1,
+      "default": 3
+    },
+    {
+      "type": "range",
+      "id": "rows",
+      "label": "Linhas visíveis (desktop) antes de paginar",
+      "min": 1,
+      "max": 4,
+      "step": 1,
+      "default": 2
+    },
+    {
+      "type": "select",
+      "id": "sort",
+      "label": "Ordenar por",
+      "options": [
+        { "value": "rating_high", "label": "Maior nota (padrão)" },
+        { "value": "photos_first", "label": "Com foto primeiro" },
+        { "value": "verified_first", "label": "Comprador verificado primeiro" },
+        { "value": "text_longest", "label": "Texto mais longo" }
+      ],
+      "default": "rating_high"
+    }
+  ]
+}
+{% endschema %}

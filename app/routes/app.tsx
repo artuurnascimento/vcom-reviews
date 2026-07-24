@@ -68,6 +68,7 @@ function AppNav() {
       <Link to={paths.reviewsPending}>Pendentes</Link>
       <Link to={paths.import}>Importar</Link>
       <Link to={paths.appearance}>Aparência</Link>
+      <Link to={paths.highlights}>Destaques</Link>
       <Link to={paths.setup}>Configuração</Link>
     </NavMenu>
   );
