@@ -99,3 +99,45 @@ export async function getProductTitlesByIds(
   }
   return out;
 }
+
+export interface ProductCardInfo {
+  title: string;
+  handle: string;
+  image: string | null;
+}
+
+/** Nome, handle (URL) e imagem de destaque do produto — para a vitrine na home. */
+export async function getProductCardInfoByIds(
+  admin: AdminApi,
+  productIds: string[],
+): Promise<Record<string, ProductCardInfo>> {
+  const ids = Array.from(new Set(productIds.filter(Boolean))).slice(0, 250);
+  if (!ids.length) return {};
+
+  const response = await admin.graphql(
+    `#graphql
+    query TopReviewsProductCards($ids: [ID!]!) {
+      nodes(ids: $ids) {
+        ... on Product {
+          id
+          title
+          handle
+          featuredImage { url }
+        }
+      }
+    }`,
+    { variables: { ids } },
+  );
+  const json = await response.json();
+  const out: Record<string, ProductCardInfo> = {};
+  for (const node of json.data?.nodes || []) {
+    if (node?.id) {
+      out[node.id] = {
+        title: (node.title as string) || "",
+        handle: (node.handle as string) || "",
+        image: node.featuredImage?.url || null,
+      };
+    }
+  }
+  return out;
+}

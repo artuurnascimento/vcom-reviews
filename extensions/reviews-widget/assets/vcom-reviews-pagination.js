@@ -158,9 +158,9 @@
 
     function verifiedBadgeHtml() {
       return (
-        '<div class="product-reviews__verified"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="' +
+        '<div class="product-reviews__verified"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="' +
         verifiedColor +
-        '" d="M1 12C1 5.925 5.925 1 12 1s11 4.925 11 11-4.925 11-11 11S1 18.075 1 12Zm10.207 4.207 7-7-1.414-1.414L10.5 14.086 7.207 10.793 5.793 12.207l4 4c.188.188.442.293.707.293s.519-.105.707-.293Z"/></svg><span>' +
+        '"/><path fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M6.8 12.4l3.3 3.3L17 8.8"/></svg><span>' +
         esc(String(verifiedLabel)) +
         "</span></div>"
       );
@@ -248,7 +248,7 @@
       var show = pages > 1;
       if (pMobile) {
         pMobile.hidden = !show;
-        pMobile.classList.toggle("is-visible", show && !isDesktop());
+        pMobile.classList.toggle("is-visible", show);
       }
       if (pDesktop) {
         pDesktop.hidden = !show;
@@ -382,7 +382,23 @@
       if (author) html += '<span class="product-reviews__meta-author">' + esc(author) + "</span>";
       if (author && rv.time) html += '<span class="product-reviews__meta-sep"> - </span>';
       if (rv.time) html += "<span>" + esc(rv.time) + "</span>";
-      html += "</div></div></article>";
+      html += "</div>";
+      if (rv.product && rv.product.title) {
+        var p = rv.product;
+        var pin =
+          (p.image
+            ? '<img src="' +
+              escAttr(p.image) +
+              '" alt="" width="40" height="40" class="vcom-prod-thumb" loading="lazy">'
+            : "") +
+          '<span class="vcom-prod-name">' +
+          esc(p.title) +
+          "</span>";
+        html += p.url
+          ? '<a href="' + escAttr(p.url) + '" class="vcom-prod-link">' + pin + "</a>"
+          : '<div class="vcom-prod-link">' + pin + "</div>";
+      }
+      html += "</div></article>";
       return html;
     }
     function updateAggregateStats(data) {
@@ -704,7 +720,7 @@
         } else applyLocal();
         applyImageLimits();
         if (totalPages > 1) {
-          if (pMobile) pMobile.classList.toggle("is-visible", !isDesktop());
+          if (pMobile) pMobile.classList.toggle("is-visible", true);
           if (pDesktop) pDesktop.classList.toggle("is-visible", isDesktop());
         }
       }, 150);

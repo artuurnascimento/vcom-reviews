@@ -4,10 +4,12 @@ import crypto from "node:crypto";
 import { authenticate } from "../shopify.server";
 import { getFileImageUrls } from "../lib/reviews.server";
 import {
+  getProductCardInfoByIds,
   getTopProductReviews,
   TOP_REVIEWS_DEFAULT_LIMIT,
   TOP_REVIEWS_DEFAULT_PER_PRODUCT_CAP,
   TOP_REVIEWS_MAX_LIMIT,
+  type ProductCardInfo,
 } from "../lib/top-reviews.server";
 import { normalizeReviewsSortMode } from "../lib/review-sort.shared";
 import { incrementCounter, recordRequestMetric } from "../lib/monitoring.server";
@@ -99,6 +101,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       });
     }
 
+    let productInfo: Record<string, ProductCardInfo> = {};
+    try {
+      const productIds = pageReviews
+        .map((r) => r.productId)
+        .filter((id): id is string => Boolean(id));
+      productInfo = await getProductCardInfoByIds(admin, productIds);
+    } catch (productError) {
+      logWarn("app_proxy top-reviews product info failed", {
+        error: productError instanceof Error ? productError.message : String(productError),
+      });
+    }
+
     const res = json({
       ok: true,
       count,
@@ -106,15 +120,25 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       page,
       limit,
       total_pages: totalPages,
-      reviews: pageReviews.map((r) => ({
-        rating: r.rating,
-        verified_buyer: r.verified_buyer,
-        title: r.title,
-        body: r.body,
-        author: r.author,
-        time: r.time,
-        images: r.images.map((id) => imageUrls[id]).filter(Boolean),
-      })),
+      reviews: pageReviews.map((r) => {
+        const info = r.productId ? productInfo[r.productId] : undefined;
+        return {
+          rating: r.rating,
+          verified_buyer: r.verified_buyer,
+          title: r.title,
+          body: r.body,
+          author: r.author,
+          time: r.time,
+          images: r.images.map((id) => imageUrls[id]).filter(Boolean),
+          product: info
+            ? {
+                title: info.title,
+                url: info.handle ? `/products/${info.handle}` : null,
+                image: info.image,
+              }
+            : null,
+        };
+      }),
     });
     finish(200);
     return res;
