@@ -20,6 +20,9 @@
       "view_image": "Ver imagem",
       "view_more": "Ver mais",
       "view_less": "Ver menos"
+    },
+    "header": {
+      "product_reviews": "Avaliações do produto"
     }
   }
 }

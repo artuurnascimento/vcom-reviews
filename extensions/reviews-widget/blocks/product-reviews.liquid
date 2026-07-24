@@ -175,6 +175,9 @@
   {%- assign reviews_context = 'product' -%}
 {%- endif -%}
 
+{%- comment -%} Página de produto: formulário de avaliação sempre disponível (envio entra como pendente). {%- endcomment -%}
+{%- if reviews_context == 'product' -%}{%- assign s_show_review_form = true -%}{%- endif -%}
+
 {%- assign has_reviews = false -%}
 
 
@@ -276,7 +279,7 @@
 {%- assign total_pages = review_count | plus: reviews_per_page | minus: 1 | divided_by: reviews_per_page -%}
 {%- if total_pages < 1 -%}{%- assign total_pages = 1 -%}{%- endif -%}
 
-<div id="vcom-reviews-{{ bid }}" class="product-reviews vcom-reviews-app-block vcom-layout--{{ s_layout }}" style="background:{{ s_background}};scroll-margin-top:96px;" data-layout="{{ s_layout }}" data-text-limit-desktop="{{ text_max_chars }}" data-text-limit-mobile="{{ text_max_chars_m }}" data-images-initial-desktop="{{ images_initial }}" data-images-initial-mobile="{{ images_initial_m }}">
+<div id="vcom-reviews-{{ bid }}" class="product-reviews vcom-reviews-app-block vcom-layout--{{ s_layout }}" style="background:transparent;scroll-margin-top:96px;" data-layout="{{ s_layout }}" data-text-limit-desktop="{{ text_max_chars }}" data-text-limit-mobile="{{ text_max_chars_m }}" data-images-initial-desktop="{{ images_initial }}" data-images-initial-mobile="{{ images_initial_m }}">
   <style>
     #vcom-reviews-{{ bid }} .product-reviews__card{background:{{ s_card_bg }};border:1px solid {{ s_card_border }};border-radius:{{ s_card_radius }}px;padding:{{ s_card_pad }}px}
     #vcom-reviews-{{ bid }} .product-reviews__wrap{gap:{{ s_cards_gap }}px !important}
@@ -286,6 +289,14 @@
     #vcom-reviews-{{ bid }} .product-reviews__title{color:{{ s_review_title_color }};font-size:{{ s_review_title_size }}px;font-weight:800}
     #vcom-reviews-{{ bid }} .product-reviews__text{color:{{ s_review_body_color }};font-size:{{ s_review_body_size }}px;font-weight:400}
     #vcom-reviews-{{ bid }} .product-reviews__meta{color:{{ s_review_meta_color }}}
+    {%- comment -%} Fundo transparente: adapta título/cards ao tema escuro. {%- endcomment -%}
+    #vcom-reviews-{{ bid }} .product-reviews__section-title{color:#fff !important}
+    #vcom-reviews-{{ bid }} .product-reviews__section-count{color:#fff !important;opacity:.7}
+    #vcom-reviews-{{ bid }} .product-reviews__card{background:rgba(255,255,255,.06) !important;border-color:rgba(255,255,255,.14) !important}
+    #vcom-reviews-{{ bid }} .product-reviews__title{color:#fff !important}
+    #vcom-reviews-{{ bid }} .product-reviews__text,
+    #vcom-reviews-{{ bid }} .product-reviews__author-name{color:rgba(255,255,255,.82) !important}
+    #vcom-reviews-{{ bid }} .product-reviews__meta{color:rgba(255,255,255,.55) !important}
     #vcom-reviews-{{ bid }} .product-reviews__form-outer{background:{{ s_form_panel_bg }};border:1px solid {{ s_form_panel_border }};border-radius:{{ s_form_panel_radius }}px}
     #vcom-reviews-{{ bid }} .product-reviews__form-row label{color:{{ s_form_label }}}
     #vcom-reviews-{{ bid }} .product-reviews__form-row input,#vcom-reviews-{{ bid }} .product-reviews__form-row textarea{border-color:{{ s_form_input_border }}}
@@ -391,9 +402,11 @@
           {%- assign display_rating = s_footer_rating -%}
           {%- if has_reviews -%}{%- assign display_rating = rating_avg | round: 1 -%}{%- endif -%}
           {%- assign header_stars = display_rating | plus: 0.0 -%}
+          {%- assign header_title = s_section_headline -%}
+          {%- if reviews_context == 'product' -%}{%- assign header_title = 'product_reviews.header.product_reviews' | t -%}{%- endif -%}
           <header class="product-reviews__section-head" style="margin-bottom:{{ s_trusted_mb }}px;">
             <div class="product-reviews__section-head-top">
-              <h2 class="product-reviews__section-title">{{ s_section_headline }}</h2>
+              <h2 class="product-reviews__section-title">{{ header_title }}</h2>
               <nav
                 class="product-reviews__nav-arrows vcom-reviews-nav--desktop"
                 id="vcom-reviews-arrows-{{ block.id }}"
@@ -411,7 +424,7 @@
             </div>
             <div class="product-reviews__section-summary">
               <div class="product-reviews__section-badge" aria-label="Trustpilot {{ display_rating }}">
-                {%- if s_header_show_trustpilot -%}
+                {%- if s_header_show_trustpilot and reviews_context != 'product' -%}
                   <img
                     class="product-reviews__trustpilot-logo"
                     src="{{ 'trustpilot-logo.svg' | asset_url }}"
