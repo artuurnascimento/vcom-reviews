@@ -4,7 +4,9 @@ export type ReviewsSortMode =
   | "rating_low"
   | "text_longest"
   | "text_shortest"
-  | "verified_first";
+  | "verified_first"
+  | "date_new"
+  | "date_old";
 
 export const DEFAULT_REVIEWS_SORT: ReviewsSortMode = "photos_first";
 
@@ -42,6 +44,16 @@ export const REVIEWS_SORT_OPTIONS: {
     value: "verified_first",
     label: "Comprador verificado primeiro",
     helpText: "Verified Buyer antes das demais; depois por nota (maior primeiro).",
+  },
+  {
+    value: "date_new",
+    label: "Mais recentes",
+    helpText: "Avaliações mais recentes primeiro.",
+  },
+  {
+    value: "date_old",
+    label: "Mais antigas",
+    helpText: "Avaliações mais antigas primeiro.",
   },
 ];
 
@@ -101,6 +113,11 @@ export function sortStorefrontReviews<T extends SortableReview>(
         if (verifiedDiff !== 0) return verifiedDiff;
         return compareRatingDesc(a, b);
       });
+    case "date_new":
+      // Entrada já vem do mais novo para o mais antigo (updated_at desc).
+      return sorted;
+    case "date_old":
+      return sorted.reverse();
     default:
       return sorted;
   }

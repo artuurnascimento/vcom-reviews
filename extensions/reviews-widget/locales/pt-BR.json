@@ -23,6 +23,16 @@
     },
     "header": {
       "product_reviews": "Avaliações do produto"
+    },
+    "filters": {
+      "aria": "Filtrar avaliações",
+      "by_rating": "Filtrar por nota",
+      "by_date": "Ordenar por data",
+      "with_photos": "Com foto",
+      "sort_relevance": "Mais relevantes",
+      "date_new": "Mais recentes",
+      "date_old": "Mais antigas",
+      "empty": "Nenhuma avaliação para este filtro."
     }
   }
 }

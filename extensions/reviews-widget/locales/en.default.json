@@ -23,6 +23,16 @@
     },
     "header": {
       "product_reviews": "Product reviews"
+    },
+    "filters": {
+      "aria": "Filter reviews",
+      "by_rating": "Filter by rating",
+      "by_date": "Sort by date",
+      "with_photos": "With photos",
+      "sort_relevance": "Most relevant",
+      "date_new": "Newest",
+      "date_old": "Oldest",
+      "empty": "No reviews match this filter."
     }
   }
 }

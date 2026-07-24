@@ -178,6 +178,10 @@
 {%- comment -%} Página de produto: formulário de avaliação sempre disponível (envio entra como pendente). {%- endcomment -%}
 {%- if reviews_context == 'product' -%}{%- assign s_show_review_form = true -%}{%- endif -%}
 
+{%- comment -%} Produto: renderiza via proxy para permitir filtros server-side (estrela/foto/data). {%- endcomment -%}
+{%- assign force_product_proxy = false -%}
+{%- if reviews_context == 'product' -%}{%- assign force_product_proxy = true -%}{%- endif -%}
+
 {%- assign has_reviews = false -%}
 
 
@@ -268,6 +272,10 @@
     {%- assign use_proxy_reviews = false -%}
     {%- assign embedded_reviews_json = cache_reviews_list | json -%}
   {%- endif -%}
+{%- endif -%}
+{%- if force_product_proxy -%}
+  {%- assign use_proxy_reviews = true -%}
+  {%- assign use_embedded_reviews = false -%}
 {%- endif -%}
 {%- if s_layout == 'trustpilot_carousel' or s_layout == 'trustpilot_grid' or s_layout == 'trustpilot_mosaic' -%}
   {%- assign grid_capacity_desktop = s_cols_desktop | times: reviews_rows -%}
@@ -510,6 +518,32 @@
             <p class="vcom-split__count">{{ review_count }} avaliações</p>
           </aside>
           <div class="vcom-split__reviews">
+        {%- endif -%}
+        {%- if reviews_context == 'product' -%}
+        <style>
+          #vcom-reviews-{{ bid }} .product-reviews__filters{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:16px}
+          #vcom-reviews-{{ bid }} .product-reviews__filter-group{display:flex;flex-wrap:wrap;gap:6px}
+          #vcom-reviews-{{ bid }} .product-reviews__filter-chip{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.05);color:rgba(255,255,255,.85);border-radius:999px;font-size:13px;font-weight:600;line-height:1;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+          #vcom-reviews-{{ bid }} .product-reviews__filter-chip svg{display:block}
+          #vcom-reviews-{{ bid }} .product-reviews__filter-chip:hover{border-color:{{ star_color }}}
+          #vcom-reviews-{{ bid }} .product-reviews__filter-chip[aria-pressed="true"]{background:{{ star_color }};border-color:{{ star_color }};color:#fff}
+          #vcom-reviews-{{ bid }} .product-reviews__filter-date{margin-left:auto;padding:7px 12px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.05);color:rgba(255,255,255,.85);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+          #vcom-reviews-{{ bid }} .product-reviews__filter-date option{color:#111}
+          @media (max-width:991px){#vcom-reviews-{{ bid }} .product-reviews__filter-date{margin-left:0;width:100%}}
+        </style>
+        <div class="product-reviews__filters" data-vcom-filters data-empty-text="{{ 'product_reviews.filters.empty' | t | default: 'Nenhuma avaliação para este filtro.' | escape }}" role="group" aria-label="{{ 'product_reviews.filters.aria' | t | default: 'Filtrar avaliações' }}">
+          <div class="product-reviews__filter-group" role="group" aria-label="{{ 'product_reviews.filters.by_rating' | t | default: 'Filtrar por nota' }}">
+            {%- for n in (5..1) -%}
+              <button type="button" class="product-reviews__filter-chip" data-filter-rating="{{ n }}" aria-pressed="false">{{ n }}<svg width="13" height="13" viewBox="0 0 32 32" aria-hidden="true"><path d="M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z" fill="currentColor"/></svg></button>
+            {%- endfor -%}
+          </div>
+          <button type="button" class="product-reviews__filter-chip" data-filter-photos aria-pressed="false">{{ 'product_reviews.filters.with_photos' | t | default: 'Com foto' }}</button>
+          <select class="product-reviews__filter-date" data-filter-date aria-label="{{ 'product_reviews.filters.by_date' | t | default: 'Ordenar por data' }}">
+            <option value="">{{ 'product_reviews.filters.sort_relevance' | t | default: 'Mais relevantes' }}</option>
+            <option value="date_new">{{ 'product_reviews.filters.date_new' | t | default: 'Mais recentes' }}</option>
+            <option value="date_old">{{ 'product_reviews.filters.date_old' | t | default: 'Mais antigas' }}</option>
+          </select>
+        </div>
         {%- endif -%}
         <div class="product-reviews__wrap vcom-reviews-mobile--{{ reviews_mobile_layout }}" id="vcom-reviews-grid-{{ block.id }}" data-vcom-pagination data-block-id="{{ block.id }}" data-bid="{{ bid }}" data-star-color="{{ star_color }}" data-star-empty="{{ star_empty_color }}" data-show-verified="{% if s_show_verified %}true{% else %}false{% endif %}" data-verified-label="{{ s_verified_label | escape }}" data-verified-color="{{ verified_color }}" data-title-max="{{ title_max_chars }}" data-text-max="{{ text_max_chars }}" data-header-prefix="{{ s_header_based_on_prefix | escape }}" data-proxy-url="/apps/vcom-reviews/reviews?placement={{ submit_placement }}&sort={{ s_reviews_sort }}{% if submit_product_id != blank %}&product_id={{ submit_product_id | replace: 'gid://shopify/Product/', '' }}{% endif %}" data-reviews-sort="{{ s_reviews_sort }}" data-layout="{{ s_layout }}" data-cols-desktop="{{ s_cols_desktop }}" data-cols-mobile="1" data-mobile-layout="{{ reviews_mobile_layout }}" data-reviews-rows="{{ reviews_rows }}" data-per-page-mobile="{{ reviews_per_page_mobile }}" data-scroll-root="vcom-reviews-{{ bid }}" data-review-count="{{ review_count }}" data-use-proxy="{% if use_proxy_reviews %}true{% else %}false{% endif %}" data-use-embedded="{% if use_embedded_reviews %}true{% else %}false{% endif %}" data-show-images="{% if s_show_images %}true{% else %}false{% endif %}">
           {%- if use_proxy_reviews or use_embedded_reviews -%}

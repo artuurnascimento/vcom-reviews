@@ -63,6 +63,9 @@
     var textMax = parseInt(g.getAttribute("data-text-max"), 10) || 200;
     var headerPrefix = g.getAttribute("data-header-prefix") || "";
     var showImages = g.getAttribute("data-show-images") === "true";
+    var filterRating = 0;
+    var filterPhotos = false;
+    var filterDate = "";
 
     function imagesInitialCount() {
       if (!root) return 2;
@@ -390,12 +393,35 @@
       var headCount = document.querySelector("#vcom-reviews-" + bid + " .product-reviews__section-count");
       if (headCount) headCount.textContent = headerPrefix + " " + countLabel + " reviews";
     }
+    function filterSig() {
+      return "r" + filterRating + "p" + (filterPhotos ? 1 : 0) + "d" + (filterDate || "");
+    }
     function cacheKey(page) {
-      return String(page) + ":" + perPage();
+      return String(page) + ":" + perPage() + ":" + filterSig();
     }
     function proxyFetchUrl(page, pp) {
-      var sep = proxyUrl.indexOf("?") >= 0 ? "&" : "?";
-      return proxyUrl + sep + "page=" + page + "&limit=" + pp;
+      var u;
+      try {
+        u = new URL(proxyUrl, window.location.origin);
+      } catch (e) {
+        u = null;
+      }
+      if (!u) {
+        var sep = proxyUrl.indexOf("?") >= 0 ? "&" : "?";
+        var extra = "";
+        if (filterRating >= 1 && filterRating <= 5) extra += "&rating=" + filterRating;
+        if (filterPhotos) extra += "&photos=1";
+        if (filterDate) extra += "&sort=" + filterDate;
+        return proxyUrl + sep + "page=" + page + "&limit=" + pp + extra;
+      }
+      u.searchParams.set("page", page);
+      u.searchParams.set("limit", pp);
+      if (filterRating >= 1 && filterRating <= 5) u.searchParams.set("rating", filterRating);
+      else u.searchParams.delete("rating");
+      if (filterPhotos) u.searchParams.set("photos", "1");
+      else u.searchParams.delete("photos");
+      if (filterDate) u.searchParams.set("sort", filterDate);
+      return u.pathname + u.search;
     }
     function getEmbeddedPageData(page) {
       var pp = perPage();
@@ -434,6 +460,12 @@
       (data.reviews || []).forEach(function (rv) {
         html += buildCard(rv);
       });
+      if (!html && (filterRating || filterPhotos)) {
+        html =
+          '<p class="product-reviews__filter-empty" style="grid-column:1/-1;width:100%;text-align:center;opacity:.6;padding:24px 0;margin:0;">' +
+          esc(filterEmptyText || "Nenhuma avaliação para este filtro.") +
+          "</p>";
+      }
       cardSlot.innerHTML = html;
       bindCardMediaOnce();
       applyImageLimits();
@@ -582,6 +614,50 @@
       retryBtn.addEventListener("click", function () {
         fetchProxyPage(currentPage || 1, false, true);
       });
+
+    function applyFilters() {
+      currentPage = 1;
+      pageCache = {};
+      fetchProxyPage(1, false, true);
+    }
+    var filterBar = root && root.querySelector("[data-vcom-filters]");
+    var filterEmptyText = "";
+    if (filterBar) {
+      filterEmptyText = filterBar.getAttribute("data-empty-text") || "";
+      var ratingBtns = Array.prototype.slice.call(
+        filterBar.querySelectorAll("[data-filter-rating]"),
+      );
+      ratingBtns.forEach(function (b) {
+        b.addEventListener("click", function () {
+          var val = parseInt(b.getAttribute("data-filter-rating"), 10) || 0;
+          if (filterRating === val) {
+            filterRating = 0;
+            b.setAttribute("aria-pressed", "false");
+          } else {
+            filterRating = val;
+            ratingBtns.forEach(function (x) {
+              x.setAttribute("aria-pressed", "false");
+            });
+            b.setAttribute("aria-pressed", "true");
+          }
+          applyFilters();
+        });
+      });
+      var photosBtn = filterBar.querySelector("[data-filter-photos]");
+      if (photosBtn)
+        photosBtn.addEventListener("click", function () {
+          filterPhotos = !filterPhotos;
+          photosBtn.setAttribute("aria-pressed", filterPhotos ? "true" : "false");
+          applyFilters();
+        });
+      var dateSel = filterBar.querySelector("[data-filter-date]");
+      if (dateSel)
+        dateSel.addEventListener("change", function () {
+          filterDate = dateSel.value || "";
+          applyFilters();
+        });
+    }
+
     bindCardMediaOnce();
     if ((embeddedReviews && embeddedReviews.length > 0) || (usesRemoteProxy() && totalCount > 0)) {
       fetchProxyPage(1, false);

@@ -63,6 +63,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       Math.max(1, parseInt(url.searchParams.get("limit") || "8", 10) || 8),
     );
     const sort = normalizeReviewsSortMode(url.searchParams.get("sort"));
+    const ratingFilter = parseInt(url.searchParams.get("rating") || "0", 10) || 0;
+    const photosOnly = url.searchParams.get("photos") === "1";
 
     if (productId && !productId.startsWith("gid://")) {
       productId = `gid://shopify/Product/${productId.replace(/\D/g, "")}`;
@@ -76,12 +78,25 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       sort,
     );
 
-    const ratingSum = approved.reduce((sum, r) => sum + r.rating, 0);
-    const count = approved.length;
+    const filtered = approved.filter((r) => {
+      if (ratingFilter >= 1 && ratingFilter <= 5) {
+        if (Math.round(r.rating || 0) !== ratingFilter) return false;
+      }
+      if (photosOnly) {
+        const imgs = r.images;
+        if (!Array.isArray(imgs) || !imgs.some((x) => x != null && x !== "")) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    const ratingSum = filtered.reduce((sum, r) => sum + r.rating, 0);
+    const count = filtered.length;
     const avg = count > 0 ? ratingSum / count : 0;
     const totalPages = count > 0 ? Math.ceil(count / limit) : 0;
     const start = (page - 1) * limit;
-    const pageReviews = approved.slice(start, start + limit);
+    const pageReviews = filtered.slice(start, start + limit);
 
     let imageUrls: Record<string, string> = {};
     try {
