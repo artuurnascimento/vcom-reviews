@@ -78,9 +78,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       sort,
     );
 
+    // Mesma regra de balde do painel admin (ratingToDistributionBucket):
+    // 4,6 e 4,9 contam como 4★; só 5,0 conta como 5★.
+    const toStarBucket = (rating: number): number => {
+      const n = Math.min(5, Math.max(0.5, Math.round((rating || 0) * 10) / 10));
+      return n >= 5 ? 5 : Math.max(1, Math.floor(n));
+    };
+
     const filtered = approved.filter((r) => {
       if (ratingFilter >= 1 && ratingFilter <= 5) {
-        if (Math.round(r.rating || 0) !== ratingFilter) return false;
+        if (toStarBucket(r.rating) !== ratingFilter) return false;
       }
       if (photosOnly) {
         const imgs = r.images;
@@ -103,8 +110,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const dist: Record<string, number> = { "1": 0, "2": 0, "3": 0, "4": 0, "5": 0 };
     let ratingSumAll = 0;
     for (const r of approved) {
-      const bucket = Math.min(5, Math.max(1, Math.round(r.rating || 0)));
-      dist[String(bucket)] += 1;
+      dist[String(toStarBucket(r.rating))] += 1;
       ratingSumAll += r.rating || 0;
     }
     const totalAll = approved.length;
