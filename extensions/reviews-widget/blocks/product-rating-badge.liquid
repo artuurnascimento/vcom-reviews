@@ -1,0 +1,10 @@
+{{ 'vcom-layouts.css' | asset_url | stylesheet_tag }}
+<script src="{{ 'vcom-reviews-badge.js' | asset_url }}" defer></script>
+{%- assign cfg = shop.metafields.vcom_reviews.storefront_settings.value -%}
+{%- assign sc = cfg.stars_color | default: '#1d8a42' -%}
+{%- assign se = cfg.stars_empty_color | default: '#dcdce6' -%}
+{%- assign pid = '' -%}{%- if product != blank -%}{%- assign pid = product.id | replace: 'gid://shopify/Product/', '' -%}{%- endif -%}
+<a class="vcom-badge" data-vcom-badge href="#" role="button" style="--sc:{{ sc }};--se:{{ se }}" data-product-id="{{ pid }}" data-word="{{ 'product_reviews.header.reviews_word' | t | default: 'reviews' | downcase }}"><span class="vcom-badge__stars" data-badge-stars aria-hidden="true"></span><span class="vcom-badge__num" data-badge-num></span><span class="vcom-badge__count" data-badge-count></span></a>
+{% schema %}
+{"name":"Nota VCOM (badge)","target":"section","settings":[]}
+{% endschema %}

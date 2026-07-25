@@ -83,10 +83,11 @@
   {%- assign display_rating = rating_sum | times: 1.0 | divided_by: review_count | round: 1 -%}
 {%- endif -%}
 {%- assign header_stars = display_rating | plus: 0.0 -%}
-{%- assign display_count = review_count -%}
+{%- assign display_count = mo_count_review | default: 0 -%}
+{%- assign mo_app_total = mo_count_app | default: 0 -%}
+{%- if mo_app_total > display_count -%}{%- assign display_count = mo_app_total -%}{%- endif -%}
 {%- assign vcom_stats = shop.metafields.vcom_reviews.storefront_stats.value -%}
-{%- if vcom_stats != blank and vcom_stats.homepage_count > display_count -%}
-  {%- assign display_count = vcom_stats.homepage_count -%}
+{%- if vcom_stats != blank -%}
   {%- assign display_rating = vcom_stats.homepage_avg | default: display_rating -%}
   {%- assign header_stars = display_rating | plus: 0.0 -%}
 {%- endif -%}
@@ -98,7 +99,7 @@
 <div class="vcom-footer-trustpilot vcom-footer-trustpilot--app vcom-footer-trustpilot--pending" style="color:{{ tp_text }};">
   <img
     class="vcom-footer-trustpilot__logo"
-    src="{{ 'trustpilot-logo.svg' | asset_url }}"
+    src="{{ 'trustpilot-logo-white.svg' | asset_url }}"
     alt="Trustpilot"
     width="83"
     height="{{ tp_logo_h }}"
@@ -119,11 +120,11 @@
       {%- endif -%}
     {%- endfor -%}
   </div>
-  <p class="vcom-footer-trustpilot__score" style="margin:0;font-size:14px;line-height:1.4;color:{{ tp_text }};">
-    <span style="color:{{ tp_muted }};">{{ tp_score_label }}</span>
-    <strong style="font-weight:700;color:{{ tp_text }};"> {{ display_rating }}</strong>
+  <p class="vcom-footer-trustpilot__score" style="margin:0;font-size:14px;line-height:1.4;color:#EEF1F5;">
+    <span style="color:#EEF1F5;">{{ tp_score_label }}</span>
+    <strong style="font-weight:700;color:#FFFFFF;"> {{ display_rating }}</strong>
     {%- if display_count > 0 -%}
-      <span class="vcom-footer-trustpilot__count" style="color:{{ tp_muted }};text-decoration:underline;text-underline-offset:2px;">
+      <span class="vcom-footer-trustpilot__count" style="color:#EEF1F5;text-decoration:underline;text-underline-offset:2px;">
         {{ display_count }}{% if display_count >= 1000 %}+{% endif %} {{ tp_reviews_word }}
       </span>
     {%- endif -%}

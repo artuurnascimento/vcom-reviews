@@ -80,6 +80,9 @@ export function useAppPaths() {
     highlights: embedPath("/app/highlights"),
     setup: embedPath("/app/setup"),
     reviews: embedPath("/app/reviews"),
+    products: embedPath("/app/products"),
+    productReviews: (id: string) =>
+      embedPath(`/app/products/${encodeURIComponent(id)}`),
     reviewsNew: embedPath("/app/reviews/new"),
     reviewsGenerate: embedPath("/app/reviews/generate"),
     reviewsPending: embedPath("/app/reviews/pending"),

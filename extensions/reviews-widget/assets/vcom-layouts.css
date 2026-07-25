@@ -573,5 +573,49 @@
 /* Vitrine "Principais avaliações": produto (foto+nome+link) no rodapé de cada card. */
 .vcom-reviews-app-block .vcom-prod-link{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(128,128,128,.25);text-decoration:none;color:inherit}
 .vcom-reviews-app-block .vcom-prod-thumb{width:40px;height:40px;border-radius:8px;object-fit:cover;flex:0 0 auto;background:rgba(128,128,128,.15)}
-.vcom-reviews-app-block .vcom-prod-name{font-size:13px;font-weight:600;line-height:1.3;color:inherit;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.vcom-reviews-app-block .vcom-prod-name{font-size:13px;font-weight:600;line-height:1.3;color:rgba(255,255,255,.9);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .vcom-reviews-app-block a.vcom-prod-link:hover .vcom-prod-name{text-decoration:underline}
+
+/* Badge de nota VCOM (embaixo do titulo). Estrelas com preenchimento parcial via --pct. */
+.vcom-badge{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:inherit;cursor:pointer;line-height:1;visibility:hidden}
+.vcom-badge.is-ready{visibility:visible}
+.vcom-badge__stars{--pct:100%;display:inline-block;font-size:16px;line-height:1;letter-spacing:2px}
+.vcom-badge__stars::before{content:"\2605\2605\2605\2605\2605";background:linear-gradient(90deg,var(--sc,#1d8a42) var(--pct),var(--se,#dcdce6) var(--pct));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
+.vcom-badge__num{font-weight:700;font-size:14px;color:inherit}
+.vcom-badge__count{font-size:13px;opacity:.7;color:inherit}
+
+/* Overrides de tema escuro do bloco product-reviews (movidos do inline p/ liberar bytes do limite de 100KB). Exclui top-reviews (vitrine pode estar em fundo claro). */
+.vcom-reviews-app-block .product-reviews__section-title{color:#fff!important}
+.vcom-reviews-app-block .product-reviews__section-count{color:#fff!important;opacity:.7}
+.vcom-reviews-app-block .product-reviews__card{background:rgba(255,255,255,.06)!important;border-color:rgba(255,255,255,.14)!important}
+.vcom-reviews-app-block .product-reviews__title{color:#fff!important}
+.vcom-reviews-app-block .product-reviews__text,.vcom-reviews-app-block .product-reviews__author-name{color:rgba(255,255,255,.82)!important}
+.vcom-reviews-app-block .product-reviews__meta{color:rgba(255,255,255,.55)!important}
+.vcom-reviews-app-block .product-reviews__verified{color:#fff!important}
+
+/* Estado vazio (produto sem avaliação) — referência: Judge.me/Loox. */
+.vcom-reviews-app-block .vcom-empty{grid-column:1/-1;width:100%;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:36px 16px}
+.vcom-reviews-app-block .vcom-empty__icon{width:46px;height:46px;color:rgba(255,255,255,.35);margin-bottom:4px}
+.vcom-reviews-app-block .vcom-empty__title{margin:0;font-size:18px;font-weight:700;color:#fff}
+.vcom-reviews-app-block .vcom-empty__sub{margin:0;font-size:14px;color:rgba(255,255,255,.6)}
+.vcom-reviews-app-block .vcom-empty__slot{margin-top:12px}
+
+/* Gaveta de filtro flutuante (por cima dos cards). */
+.vcom-reviews-app-block .product-reviews__filters{z-index:40;box-shadow:0 14px 36px rgba(0,0,0,.55)}
+
+/* Formulário de avaliação em dark (padrão do bloco de produto). */
+.vcom-reviews-app-block .product-reviews__form-outer{background:rgba(255,255,255,.04)!important;border-color:rgba(255,255,255,.14)!important}
+.vcom-reviews-app-block .product-reviews__form-row label{color:#fff!important}
+.vcom-reviews-app-block .product-reviews__form-row input,
+.vcom-reviews-app-block .product-reviews__form-row textarea{background:rgba(255,255,255,.06)!important;border-color:rgba(255,255,255,.2)!important;color:#fff!important}
+.vcom-reviews-app-block .product-reviews__form-row input::placeholder,
+.vcom-reviews-app-block .product-reviews__form-row textarea::placeholder{color:rgba(255,255,255,.4)!important}
+.vcom-reviews-app-block .product-reviews__form-add-images{background:transparent!important;border-color:rgba(255,255,255,.25)!important;color:rgba(255,255,255,.7)!important}
+.vcom-reviews-app-block .product-reviews__form-cancel{background:transparent!important;border-color:rgba(255,255,255,.25)!important;color:rgba(255,255,255,.85)!important}
+
+/* "Principais avaliações": logo Trustpilot no topo + regras de grid compartilhadas. */
+.vcom-reviews-app-block .vcom-tp-top{height:28px;width:auto;display:block;margin-bottom:12px}
+.vcom-reviews-app-block .vcom-tp-boxes{position:relative;display:inline-block;height:20px;width:112px;flex:0 0 auto;vertical-align:middle;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 32'%3E%3Crect width='32' height='32' fill='%23555'/%3E%3Cpath d='M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z' fill='%23fff'/%3E%3C/svg%3E") left center/22.4px 20px repeat-x}
+.vcom-reviews-app-block .vcom-tp-boxes::before{content:"";position:absolute;top:0;bottom:0;left:0;width:var(--pct,100%);overflow:hidden;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 32'%3E%3Crect width='32' height='32' fill='%2300b67a'/%3E%3Cpath d='M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z' fill='%23fff'/%3E%3C/svg%3E") left center/22.4px 20px repeat-x}
+.vcom-reviews-app-block .product-reviews__wrap [data-proxy-cards]{display:contents}
+.vcom-reviews-app-block .product-reviews__wrap [data-proxy-loading],.vcom-reviews-app-block .product-reviews__wrap [data-proxy-error]{grid-column:1/-1;width:100%}

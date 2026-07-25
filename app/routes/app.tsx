@@ -64,6 +64,7 @@ function AppNav() {
         Painel
       </Link>
       <Link to={paths.reviews}>Avaliações</Link>
+      <Link to={paths.products}>Por produto</Link>
       <Link to={paths.reviewsGenerate}>Gerar com IA</Link>
       <Link to={paths.reviewsPending}>Pendentes</Link>
       <Link to={paths.import}>Importar</Link>

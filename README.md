@@ -36,6 +36,7 @@ Arquivos em `assets/`:
 |---------|-----|
 | `app-icon-1200.png` | Upload no **Partner Dashboard** → App → Configuração → **Ícone do app** (1200×1200 px) |
 | `app-icon.svg` | Versão vetorial para edição futura |
+| `navigation-icon-16.svg` | **Barra de navegação** (legado): SVG **16×16**, **uma cor**, fundo **transparente** — balão + estrela. Não use o ícone 1200×1200 nem PNG com texto. O menu embarcado já usa **App Bridge** (`NavMenu` em `app/routes/app.tsx`). |
 
 No [Partner Dashboard](https://partners.shopify.com), abra **vcom reviwers** → **Configuração** → envie `assets/app-icon-1200.png` como ícone do app.
 

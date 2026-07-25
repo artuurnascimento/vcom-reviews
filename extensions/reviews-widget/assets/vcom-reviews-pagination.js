@@ -407,11 +407,16 @@
       g.setAttribute("data-review-count", String(totalCount));
       var countLabel = totalCount + (totalCount >= 1000 ? "+" : "");
       var headCount = document.querySelector("#vcom-reviews-" + bid + " .product-reviews__section-count");
-      if (headCount) headCount.textContent = headerPrefix + " " + countLabel + " reviews";
+      if (headCount && g.getAttribute("data-static-count") !== "true") headCount.textContent = headerPrefix + " " + countLabel + " reviews";
     }
     function updateDistribution(data) {
       if (!root || !data || !data.dist) return;
       var total = parseInt(data.total, 10) || 0;
+      var isEmpty = total <= 0;
+      var avgEl = root.querySelector(".pr-avg");
+      if (avgEl) avgEl.style.display = isEmpty ? "none" : "";
+      var distEl = root.querySelector(".pr-dist");
+      if (distEl) distEl.style.display = isEmpty ? "none" : "";
       for (var lvl = 1; lvl <= 5; lvl++) {
         var n = parseInt(data.dist[lvl], 10) || 0;
         var row = root.querySelector('[data-dist-level="' + lvl + '"]');
@@ -422,12 +427,40 @@
         if (fl) fl.style.width = (total > 0 ? (n * 100) / total : 0) + "%";
       }
       var cnt = root.querySelector(".pr-cnt");
-      if (cnt && total > 0) {
+      if (cnt) {
         var word = cnt.getAttribute("data-word") || "Reviews";
-        cnt.textContent = total + (total >= 1000 ? "+" : "") + " " + word;
+        cnt.textContent = (isEmpty ? 0 : total) + (total >= 1000 ? "+" : "") + " " + word;
       }
-      var num = root.querySelector(".pr-num");
-      if (num && data.avg_all) num.textContent = data.avg_all;
+      if (!isEmpty) {
+        var num = root.querySelector(".pr-num");
+        if (num && data.avg_all) num.textContent = data.avg_all;
+      }
+    }
+    function emptyStrings() {
+      var lang = (document.documentElement.lang || "en").toLowerCase();
+      if (lang.indexOf("pt") === 0)
+        return { t: "Ainda não há avaliações", s: "Seja o primeiro a avaliar este produto" };
+      if (lang.indexOf("it") === 0)
+        return { t: "Ancora nessuna recensione", s: "Sii il primo a recensire questo prodotto" };
+      return { t: "No reviews yet", s: "Be the first to review this product" };
+    }
+    function renderEmptyState() {
+      var s = emptyStrings();
+      var filters = root && root.querySelector("[data-vcom-filters]");
+      if (filters) filters.hidden = true;
+      var sum = root && root.querySelector(".pr-sum");
+      var writeBtn = root && root.querySelector(".pr-w");
+      cardSlot.innerHTML =
+        '<div class="vcom-empty">' +
+        '<svg class="vcom-empty__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M11.05 2.93c.3-.92 1.6-.92 1.9 0l1.83 5.63h5.92c.97 0 1.37 1.24.59 1.81l-4.79 3.48 1.83 5.63c.3.92-.76 1.69-1.54 1.12L12 18.75l-4.79 3.48c-.78.57-1.84-.2-1.54-1.12l1.83-5.63-4.79-3.48c-.78-.57-.38-1.81.59-1.81h5.92l1.83-5.63Z"/></svg>' +
+        '<p class="vcom-empty__title">' +
+        esc(s.t) +
+        '</p><p class="vcom-empty__sub">' +
+        esc(s.s) +
+        '</p><span class="vcom-empty__slot"></span></div>';
+      var slot = cardSlot.querySelector(".vcom-empty__slot");
+      if (writeBtn && slot) slot.appendChild(writeBtn);
+      if (sum) sum.style.display = "none";
     }
     function filterSig() {
       return "r" + filterRating + "p" + (filterPhotos ? 1 : 0) + "d" + (filterDate || "");
@@ -504,10 +537,16 @@
           "</p>";
       }
       cardSlot.innerHTML = html;
+      var totalReviews = parseInt(data.total, 10);
+      if (isNaN(totalReviews)) totalReviews = parseInt(data.count, 10) || 0;
+      if (totalReviews <= 0 && !filterRating && !filterPhotos) {
+        renderEmptyState();
+      }
       bindCardMediaOnce();
       applyImageLimits();
       var pp = perPage();
-      var pages = data.total_pages || Math.ceil((data.count || totalCount) / pp) || 1;
+      var apiCount = typeof data.count === "number" ? data.count : totalCount;
+      var pages = data.total_pages || (apiCount > 0 ? Math.ceil(apiCount / pp) : 0);
       updatePaginationUI(pages, page);
       if (scroll) scrollToFirstReview();
     }
@@ -661,23 +700,43 @@
     var filterEmptyText = "";
     if (filterBar) {
       filterEmptyText = filterBar.getAttribute("data-empty-text") || "";
+      var actWrap = root && root.querySelector(".pr-act");
+      if (actWrap && filterBar.parentNode !== actWrap) actWrap.appendChild(filterBar);
       var ratingBtns = Array.prototype.slice.call(
         filterBar.querySelectorAll("[data-filter-rating]"),
       );
+      var distRows = root
+        ? Array.prototype.slice.call(root.querySelectorAll("[data-dist-level]"))
+        : [];
+      function syncRatingUI() {
+        ratingBtns.forEach(function (x) {
+          x.setAttribute(
+            "aria-pressed",
+            (parseInt(x.getAttribute("data-filter-rating"), 10) || 0) === filterRating
+              ? "true"
+              : "false",
+          );
+        });
+        distRows.forEach(function (r) {
+          r.classList.toggle(
+            "is-active",
+            (parseInt(r.getAttribute("data-dist-level"), 10) || 0) === filterRating,
+          );
+        });
+      }
+      function setRating(val) {
+        filterRating = filterRating === val ? 0 : val;
+        syncRatingUI();
+        applyFilters();
+      }
       ratingBtns.forEach(function (b) {
         b.addEventListener("click", function () {
-          var val = parseInt(b.getAttribute("data-filter-rating"), 10) || 0;
-          if (filterRating === val) {
-            filterRating = 0;
-            b.setAttribute("aria-pressed", "false");
-          } else {
-            filterRating = val;
-            ratingBtns.forEach(function (x) {
-              x.setAttribute("aria-pressed", "false");
-            });
-            b.setAttribute("aria-pressed", "true");
-          }
-          applyFilters();
+          setRating(parseInt(b.getAttribute("data-filter-rating"), 10) || 0);
+        });
+      });
+      distRows.forEach(function (r) {
+        r.addEventListener("click", function () {
+          setRating(parseInt(r.getAttribute("data-dist-level"), 10) || 0);
         });
       });
       var photosBtn = filterBar.querySelector("[data-filter-photos]");
