@@ -47,6 +47,7 @@ export default function AppHome() {
       primaryAction={{ content: "Nova avaliação", url: paths.reviewsNew }}
       secondaryActions={[
         { content: "Ver todas", url: paths.reviews },
+        { content: "Por produto", url: paths.products },
         { content: "Gerar com IA", url: paths.reviewsGenerate },
         { content: "Aparência", url: paths.appearance },
         { content: "Configuração", url: paths.setup },
@@ -238,6 +239,9 @@ export default function AppHome() {
                     </Button>
                     <Button url={paths.reviews} fullWidth>
                       Gerenciar avaliações
+                    </Button>
+                    <Button url={paths.products} fullWidth>
+                      Avaliações por produto
                     </Button>
                     <Button url={paths.setup} fullWidth>
                       Configuração da loja
