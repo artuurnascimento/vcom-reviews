@@ -41,6 +41,7 @@ export default function ProductsIndex() {
     <Page
       title="Avaliações por produto"
       subtitle="Clique em um produto para ver todas as suas avaliações"
+      backAction={{ content: "Painel", onAction: () => navigate(paths.app) }}
     >
       <Layout>
         <Layout.Section>
