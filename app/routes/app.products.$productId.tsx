@@ -7,6 +7,7 @@ import {
   Card,
   Text,
   Badge,
+  Button,
   EmptyState,
   InlineStack,
   BlockStack,
@@ -81,19 +82,24 @@ export default function ProductReviewsDetail() {
                   {i > 0 ? <Divider /> : null}
                   <Box padding="400">
                     <BlockStack gap="200">
-                      <InlineStack gap="300" blockAlign="center" wrap={false}>
-                        <ReviewStars rating={r.rating} size={16} />
-                        <Text as="span" variant="bodySm" fontWeight="semibold">
-                          {r.rating.toFixed(1)}
-                        </Text>
-                        {r.verified_buyer ? (
-                          <Badge tone="success">Verified</Badge>
-                        ) : null}
-                        {r.status !== "approved" ? (
-                          <Badge tone={r.status === "pending" ? "attention" : "critical"}>
-                            {r.status === "pending" ? "Pendente" : "Rejeitada"}
-                          </Badge>
-                        ) : null}
+                      <InlineStack align="space-between" blockAlign="center" gap="300">
+                        <InlineStack gap="300" blockAlign="center" wrap={false}>
+                          <ReviewStars rating={r.rating} size={16} />
+                          <Text as="span" variant="bodySm" fontWeight="semibold">
+                            {r.rating.toFixed(1)}
+                          </Text>
+                          {r.verified_buyer ? (
+                            <Badge tone="success">Verified</Badge>
+                          ) : null}
+                          {r.status !== "approved" ? (
+                            <Badge tone={r.status === "pending" ? "attention" : "critical"}>
+                              {r.status === "pending" ? "Pendente" : "Rejeitada"}
+                            </Badge>
+                          ) : null}
+                        </InlineStack>
+                        <Button url={paths.reviewEdit(r.id)} size="slim">
+                          Editar
+                        </Button>
                       </InlineStack>
 
                       {r.title ? (
