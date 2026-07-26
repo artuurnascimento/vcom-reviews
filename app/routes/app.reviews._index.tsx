@@ -24,6 +24,8 @@ import {
   InlineStack,
   Banner,
   Box,
+  Tabs,
+  useIndexResourceState,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import {
@@ -148,14 +150,39 @@ export default function ReviewsIndex() {
   const [searchQuery, setSearchQuery] = useState("");
   const [batchError, setBatchError] = useState<string | null>(null);
   const [batchMode, setBatchMode] = useState<
-    "pending" | "rejected" | "delete-pending" | "delete-rejected" | null
+    | "pending"
+    | "rejected"
+    | "delete-pending"
+    | "delete-rejected"
+    | "delete-selected"
+    | null
   >(null);
+  const [placementFilter, setPlacementFilter] = useState<
+    "all" | "homepage" | "product"
+  >("all");
   const isBatchRunning = batchProgress !== null;
   const normalizedSearch = searchQuery.trim().toLowerCase();
+
+  // Contagens por origem (produto = placement "product"; página inicial = o resto).
+  const placementCounts = {
+    all: reviews.length,
+    product: reviews.filter((r) => r.placement === "product").length,
+    homepage: reviews.filter((r) => r.placement !== "product").length,
+  };
+
+  const byPlacement =
+    placementFilter === "all"
+      ? reviews
+      : reviews.filter((r) =>
+          placementFilter === "product"
+            ? r.placement === "product"
+            : r.placement !== "product",
+        );
+
   const filteredReviews =
     normalizedSearch.length === 0
-      ? reviews
-      : reviews.filter((review) => {
+      ? byPlacement
+      : byPlacement.filter((review) => {
           const haystack = [
             review.author,
             review.title,
@@ -170,6 +197,24 @@ export default function ReviewsIndex() {
           return haystack.includes(normalizedSearch);
         });
 
+  const placementTabs = [
+    { id: "all", content: `Todas (${placementCounts.all})` },
+    { id: "homepage", content: `Página inicial (${placementCounts.homepage})` },
+    { id: "product", content: `Produto (${placementCounts.product})` },
+  ];
+  const placementTabIndex = placementTabs.findIndex(
+    (t) => t.id === placementFilter,
+  );
+
+  const {
+    selectedResources,
+    allResourcesSelected,
+    handleSelectionChange,
+    clearSelection,
+  } = useIndexResourceState(
+    filteredReviews as unknown as { [key: string]: unknown; id: string }[],
+  );
+
   const post = useCallback(
     (data: Record<string, string>) => {
       submit(data, { method: "post" });
@@ -181,13 +226,15 @@ export default function ReviewsIndex() {
     async (
       mode: "approve" | "reject" | "delete",
       ids: string[],
-      source: "pending" | "rejected",
+      source: "pending" | "rejected" | "selected",
     ) => {
       if (ids.length === 0) return;
 
       setBatchError(null);
       setBatchMode(
-        mode === "delete" ? (`delete-${source}` as const) : source,
+        mode === "delete"
+          ? (`delete-${source}` as const)
+          : (source as "pending" | "rejected"),
       );
       setBatchProgress({ done: 0, total: ids.length });
 
@@ -291,6 +338,20 @@ export default function ReviewsIndex() {
     void runBulkModeration("delete", rejectedIds, "rejected");
   }, [rejectedCount, rejectedIds, runBulkModeration]);
 
+  const handleDeleteSelected = useCallback(() => {
+    const ids = selectedResources;
+    if (ids.length === 0) return;
+    if (
+      !window.confirm(
+        `Excluir permanentemente ${ids.length} avaliação(ões) selecionada(s)? Esta ação não pode ser desfeita.`,
+      )
+    ) {
+      return;
+    }
+    void runBulkModeration("delete", ids, "selected");
+    clearSelection();
+  }, [selectedResources, runBulkModeration, clearSelection]);
+
   const batchStatusLabel =
     batchMode === "rejected"
       ? "Aprovando rejeitadas"
@@ -298,7 +359,9 @@ export default function ReviewsIndex() {
         ? "Excluindo pendentes"
         : batchMode === "delete-rejected"
           ? "Excluindo rejeitadas"
-          : "Processando";
+          : batchMode === "delete-selected"
+            ? "Excluindo selecionadas"
+            : "Processando";
 
   return (
     <Page
@@ -410,6 +473,22 @@ export default function ReviewsIndex() {
         <Layout>
           <Layout.Section>
             <BlockStack gap="300">
+              <Card padding="0">
+                <Tabs
+                  tabs={placementTabs}
+                  selected={placementTabIndex === -1 ? 0 : placementTabIndex}
+                  onSelect={(index) => {
+                    const next = placementTabs[index]?.id as
+                      | "all"
+                      | "homepage"
+                      | "product";
+                    setPlacementFilter(next);
+                    clearSelection();
+                  }}
+                  fitted
+                />
+              </Card>
+
               <TextField
                 label="Pesquisar avaliações"
                 value={searchQuery}
@@ -454,16 +533,35 @@ export default function ReviewsIndex() {
                 <Card padding="0">
                   <IndexTable
                     itemCount={filteredReviews.length}
+                    selectedItemsCount={
+                      allResourcesSelected ? "All" : selectedResources.length
+                    }
+                    onSelectionChange={handleSelectionChange}
                     headings={[
                       { title: "Autor / nota" },
                       { title: "Avaliação" },
                       { title: "Status" },
                       { title: "Ações", alignment: "end" },
                     ]}
-                    selectable={false}
+                    promotedBulkActions={[
+                      {
+                        content: `Excluir selecionadas${
+                          selectedResources.length
+                            ? ` (${selectedResources.length})`
+                            : ""
+                        }`,
+                        onAction: handleDeleteSelected,
+                        disabled: isBatchRunning,
+                      },
+                    ]}
                   >
                     {filteredReviews.map((r, i) => (
-                      <IndexTable.Row id={r.id} key={r.id} position={i}>
+                      <IndexTable.Row
+                        id={r.id}
+                        key={r.id}
+                        position={i}
+                        selected={selectedResources.includes(r.id)}
+                      >
                         <IndexTable.Cell>
                           <BlockStack gap="100">
                             <Text as="span" variant="bodyMd" fontWeight="semibold">
