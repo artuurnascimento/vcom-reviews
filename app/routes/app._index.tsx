@@ -1,5 +1,5 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
+import { useLoaderData, useNavigate } from "@remix-run/react";
 import {
   Page,
   Layout,
@@ -15,9 +15,11 @@ import {
   Box,
   IndexTable,
   EmptyState,
+  Thumbnail,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
 import { getDashboardStats } from "../lib/dashboard.server";
+import { getReviewsByProduct } from "../lib/reviews-by-product.server";
 import { publishAllReviewMetaobjects } from "../lib/metaobject-publish.server";
 import { syncStorefrontReviewStats } from "../lib/storefront-stats.server";
 import { StatCard, RatingBar } from "../components/StatCard";
@@ -28,7 +30,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
   await publishAllReviewMetaobjects(admin);
   await syncStorefrontReviewStats(admin);
-  return getDashboardStats(admin);
+  const [stats, groups] = await Promise.all([
+    getDashboardStats(admin),
+    getReviewsByProduct(admin),
+  ]);
+  const productGroups = groups.map((g) => ({
+    numericId: g.numericId,
+    title: g.title,
+    image: g.image,
+    count: g.count,
+    avg: g.avg,
+  }));
+  return { ...stats, productGroups };
 };
 
 function truncate(text: string, max: number) {
@@ -39,6 +52,7 @@ function truncate(text: string, max: number) {
 export default function AppHome() {
   const stats = useLoaderData<typeof loader>();
   const paths = useAppPaths();
+  const navigate = useNavigate();
 
   return (
     <Page
@@ -112,6 +126,7 @@ export default function AppHome() {
 
         <Layout>
           <Layout.Section variant="oneHalf">
+            <BlockStack gap="400">
             <Card>
               <BlockStack gap="400">
                 <InlineStack align="space-between" blockAlign="center">
@@ -189,6 +204,82 @@ export default function AppHome() {
                 )}
               </BlockStack>
             </Card>
+
+            <Card>
+              <BlockStack gap="400">
+                <InlineStack align="space-between" blockAlign="center">
+                  <Text as="h2" variant="headingMd">
+                    Avaliações por produto
+                  </Text>
+                  <Button url={paths.products} variant="plain">
+                    Ver todos
+                  </Button>
+                </InlineStack>
+                {stats.productGroups.length === 0 ? (
+                  <Text as="p" tone="subdued">
+                    Nenhuma avaliação vinculada a um produto ainda.
+                  </Text>
+                ) : (
+                  <BlockStack gap="0">
+                    {stats.productGroups.map((p, i) => (
+                      <Box key={p.numericId}>
+                        {i > 0 ? <Divider /> : null}
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          style={{ cursor: "pointer" }}
+                          onClick={() => navigate(paths.productReviews(p.numericId))}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              navigate(paths.productReviews(p.numericId));
+                            }
+                          }}
+                        >
+                          <Box padding="300">
+                            <InlineStack
+                              gap="300"
+                              blockAlign="center"
+                              wrap={false}
+                            >
+                              <Thumbnail
+                                source={
+                                  p.image ||
+                                  "https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
+                                }
+                                alt={p.title}
+                                size="small"
+                              />
+                              <Box width="100%">
+                                <BlockStack gap="100">
+                                  <Text
+                                    as="span"
+                                    variant="bodyMd"
+                                    fontWeight="semibold"
+                                  >
+                                    {p.title}
+                                  </Text>
+                                  <InlineStack gap="200" blockAlign="center">
+                                    <ReviewStars rating={p.avg} size={14} />
+                                    <Text as="span" variant="bodySm" tone="subdued">
+                                      {p.avg.toFixed(1)}
+                                    </Text>
+                                    <Badge tone="success">{`${p.count} ${
+                                      p.count === 1 ? "avaliação" : "avaliações"
+                                    }`}</Badge>
+                                  </InlineStack>
+                                </BlockStack>
+                              </Box>
+                            </InlineStack>
+                          </Box>
+                        </div>
+                      </Box>
+                    ))}
+                  </BlockStack>
+                )}
+              </BlockStack>
+            </Card>
+            </BlockStack>
           </Layout.Section>
 
           <Layout.Section variant="oneHalf">
