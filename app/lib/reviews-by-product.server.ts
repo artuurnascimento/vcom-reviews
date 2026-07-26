@@ -56,9 +56,16 @@ export async function getReviewsByProduct(
       image: card?.image || null,
       count: reviews.length,
       avg: reviews.length ? Math.round((sum / reviews.length) * 10) / 10 : 0,
-      reviews: reviews
-        .slice()
-        .sort((a, b) => (a.time < b.time ? 1 : a.time > b.time ? -1 : 0)),
+      reviews: reviews.slice().sort((a, b) => {
+        // 1) avaliações com foto primeiro
+        const aHasPhoto = a.images.length > 0 ? 1 : 0;
+        const bHasPhoto = b.images.length > 0 ? 1 : 0;
+        if (aHasPhoto !== bHasPhoto) return bHasPhoto - aHasPhoto;
+        // 2) nota de 5.0 para baixo
+        if (b.rating !== a.rating) return b.rating - a.rating;
+        // 3) mais recentes primeiro como desempate
+        return a.time < b.time ? 1 : a.time > b.time ? -1 : 0;
+      }),
     };
   });
 
