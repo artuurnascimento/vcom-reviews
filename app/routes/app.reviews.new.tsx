@@ -27,7 +27,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return { error: "Selecione um produto." };
     }
     await createReview(admin, data);
-    return redirectWithEmbeddedSearch(request, "/app/reviews");
+    return redirectWithEmbeddedSearch(request, "/app/reviews?created=1");
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Erro ao salvar";
     if (msg.includes("metaobject definition")) {

@@ -1,9 +1,14 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { redirectWithEmbeddedSearch } from "../lib/embedded-app-path.server";
-import { useLoaderData, useNavigate, useRevalidator } from "@remix-run/react";
+import {
+  useLoaderData,
+  useNavigate,
+  useRevalidator,
+  useSearchParams,
+} from "@remix-run/react";
 import { useEmbeddedSubmit } from "../hooks/useEmbeddedAppPath";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   MODERATION_BATCH_SIZE,
   parseIdsJson,
@@ -144,6 +149,25 @@ export default function ReviewsIndex() {
   const { reviews, stats, pendingIds, rejectedIds, rejectedCount } =
     useLoaderData<typeof loader>();
   const submit = useEmbeddedSubmit();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [createdVisible, setCreatedVisible] = useState(false);
+  useEffect(() => {
+    if (searchParams.get("created") === "1") {
+      setCreatedVisible(true);
+      try {
+        (
+          window as unknown as {
+            shopify?: { toast?: { show?: (m: string) => void } };
+          }
+        ).shopify?.toast?.show?.("Avaliação criada com sucesso");
+      } catch {
+        /* app bridge indisponível — o banner cobre o feedback */
+      }
+      const next = new URLSearchParams(searchParams);
+      next.delete("created");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(
     null,
   );
@@ -378,6 +402,16 @@ export default function ReviewsIndex() {
       ]}
     >
       <BlockStack gap="500">
+        {createdVisible ? (
+          <Banner
+            tone="success"
+            title="Avaliação criada"
+            onDismiss={() => setCreatedVisible(false)}
+          >
+            <p>A nova avaliação foi criada e já aparece na lista abaixo.</p>
+          </Banner>
+        ) : null}
+
         <InlineGrid columns={{ xs: 2, sm: 4 }} gap="400">
           <StatCard label="Publicadas" value={stats.totalReviews} />
           <StatCard label="Pendentes" value={stats.pendingCount} />
