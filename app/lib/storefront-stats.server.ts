@@ -23,6 +23,9 @@ export const STOREFRONT_STATS_METAFIELD_KEY = "storefront_stats";
 export type StorefrontReviewStats = {
   homepage_count: number;
   homepage_avg: number;
+  // Média/quantidade de TODAS as avaliações aprovadas (produto + página inicial).
+  all_count: number;
+  all_avg: number;
   total_approved: number;
   updated_at: string;
 };
@@ -40,9 +43,15 @@ export function computeStorefrontReviewStats(
   const homepage_avg =
     homepage.length > 0 ? roundRating(sum / homepage.length) : 0;
 
+  // Média/quantidade do site inteiro (todas as aprovadas, produto + página inicial).
+  const allSum = approved.reduce((acc, r) => acc + r.rating, 0);
+  const all_avg = approved.length > 0 ? roundRating(allSum / approved.length) : 0;
+
   return {
     homepage_count: homepage.length,
     homepage_avg,
+    all_count: approved.length,
+    all_avg,
     total_approved: approved.length,
     updated_at: new Date().toISOString(),
   };

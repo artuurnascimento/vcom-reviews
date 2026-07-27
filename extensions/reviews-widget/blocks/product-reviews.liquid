@@ -106,7 +106,7 @@
 {%- assign s_pag_inactive = cfg.pagination_inactive_color | default: '#dcdce6' -%}
 {%- assign s_show_empty = cfg.show_empty_message -%}
 {%- if s_show_empty == nil -%}{%- assign s_show_empty = false -%}{%- endif -%}
-{%- assign s_empty_message = cfg.empty_message | default: 'Adicione avaliações no app VCOM Reviews.' -%}
+{%- assign s_empty_message = cfg.empty_message | default: 'No reviews yet.' -%}
 {%- assign s_show_review_form = cfg.show_review_form -%}
 {%- if s_show_review_form == nil -%}{%- assign s_show_review_form = true -%}{%- endif -%}
 {%- assign s_form_success = cfg.review_form_success_message | default: '' -%}
@@ -240,6 +240,12 @@
 {%- assign use_proxy_reviews = true -%}
 {%- endif -%}
 {%- endif -%}
+{%- endif -%}
+{%- comment -%} Média do site inteiro (todas as avaliações: produto + página inicial). {%- endcomment -%}
+{%- assign site_avg = rating_avg -%}
+{%- if vcom_stats != blank and vcom_stats.all_avg != blank and vcom_stats.all_avg > 0 -%}
+{%- assign site_avg = vcom_stats.all_avg | plus: 0.0 -%}
+{%- assign has_reviews = true -%}
 {%- endif -%}
 {%- if s_reviews_sort != 'photos_first' -%}
 {%- assign use_proxy_reviews = true -%}
@@ -383,7 +389,7 @@ scroll-snap-type:none;
 {%- assign dist_total = dist_1 | plus: dist_2 | plus: dist_3 | plus: dist_4 | plus: dist_5 -%}
 {%- assign summary_count = dist_total -%}
 {%- if summary_count == 0 -%}{%- assign summary_count = review_count -%}{%- endif -%}
-{%- assign summary_avg = rating_avg | round: 1 -%}
+{%- assign summary_avg = site_avg | round: 1 -%}
 <style>#vcom-reviews-{{ bid }} .pr-sum{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:20px 32px;margin-bottom:{{ s_trusted_mb }}px}#vcom-reviews-{{ bid }} .pr-sc{display:flex;flex-direction:column;gap:2px}#vcom-reviews-{{ bid }} .pr-avg{display:flex;align-items:center;gap:12px}#vcom-reviews-{{ bid }} .pr-star{font-size:44px;line-height:1;color:{{ star_color }}}#vcom-reviews-{{ bid }} .pr-tp{height:{{ s_trustpilot_logo_h }}px;width:auto;flex:0 0 auto;margin-left:2px}#vcom-reviews-{{ bid }} .pr-num{font-size:52px;font-weight:800;line-height:1;color:#fff}#vcom-reviews-{{ bid }} .pr-cnt{font-size:15px;color:rgba(255,255,255,.6);font-weight:500}#vcom-reviews-{{ bid }} .pr-dist{display:flex;flex-direction:column;gap:7px;min-width:0}#vcom-reviews-{{ bid }} .pr-row{display:flex;align-items:center;gap:10px;cursor:pointer}#vcom-reviews-{{ bid }} .pr-row:hover .pr-c{color:#fff}#vcom-reviews-{{ bid }} .pr-row.is-active .pr-c{color:#fff;font-weight:700}#vcom-reviews-{{ bid }} .pr-st{flex:0 0 auto;font-size:14px;letter-spacing:1px;line-height:1;white-space:nowrap}#vcom-reviews-{{ bid }} .pr-st .f{color:{{ star_color }}}#vcom-reviews-{{ bid }} .pr-st .e{color:{{ star_empty_color }}}#vcom-reviews-{{ bid }} .pr-tr{position:relative;flex:1 1 auto;height:8px;border-radius:999px;background:rgba(255,255,255,.13);overflow:hidden;min-width:60px}#vcom-reviews-{{ bid }} .pr-fl{position:absolute;top:0;bottom:0;left:0;border-radius:999px;background:{{ star_color }}}#vcom-reviews-{{ bid }} .pr-c{flex:0 0 auto;font-size:13px;color:rgba(255,255,255,.55);min-width:40px;text-align:right}#vcom-reviews-{{ bid }} .pr-act{display:flex;align-items:center;gap:12px;position:relative}#vcom-reviews-{{ bid }} .pr-w{padding:12px 22px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;transition:.15s}#vcom-reviews-{{ bid }} .pr-w:hover{background:#fff;color:#111;border-color:#fff}#vcom-reviews-{{ bid }} .pr-fb{width:46px;height:46px;flex:0 0 auto;border-radius:50%;border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:.15s}#vcom-reviews-{{ bid }} .pr-fb:hover,#vcom-reviews-{{ bid }} .pr-fb[aria-expanded="true"]{background:{{ star_color }};border-color:{{ star_color }};color:#fff}@media(min-width:992px){#vcom-reviews-{{ bid }} .product-reviews__pagination--mobile.is-visible{display:flex!important}}#vcom-reviews-{{ bid }} .product-reviews__pag-ctrl,#vcom-reviews-{{ bid }} .product-reviews__pag-page{background:rgba(255,255,255,.08);color:#fff}#vcom-reviews-{{ bid }} .product-reviews__pag-page.is-active{background:{{ star_color }};color:#fff}#vcom-reviews-{{ bid }} .product-reviews__pag-ctrl:hover:not(:disabled),#vcom-reviews-{{ bid }} .product-reviews__pag-page:hover:not(.is-active){background:rgba(255,255,255,.16)}#vcom-reviews-{{ bid }} .product-reviews__pag-ellipsis{color:rgba(255,255,255,.6)}#vcom-reviews-{{ bid }} .product-reviews__write-btn{display:none!important}#vcom-reviews-{{ bid }} .product-reviews__filters[hidden]{display:none!important}@media(max-width:749px){#vcom-reviews-{{ bid }} .pr-sum{grid-template-columns:1fr;gap:16px}#vcom-reviews-{{ bid }} .pr-act{width:100%}#vcom-reviews-{{ bid }} .pr-w{flex:1 1 auto;text-align:center}#vcom-reviews-{{ bid }} .pr-num{font-size:44px}#vcom-reviews-{{ bid }} .pr-star{font-size:38px}}</style>
 <header class="pr-sum">
 <div class="pr-sc">
@@ -407,7 +413,7 @@ scroll-snap-type:none;
 </header>
 {%- elsif s_header_style == 'aggregate' -%}
 {%- assign display_rating = s_footer_rating -%}
-{%- if has_reviews -%}{%- assign display_rating = rating_avg | round: 1 -%}{%- endif -%}
+{%- if has_reviews -%}{%- assign display_rating = site_avg | round: 1 -%}{%- endif -%}
 {%- assign header_stars = display_rating | plus: 0.0 -%}
 {%- assign header_title = s_section_headline -%}
 {%- if reviews_context == 'product' -%}{%- assign header_title = 'product_reviews.header.product_reviews' | t -%}{%- endif -%}
@@ -417,14 +423,14 @@ scroll-snap-type:none;
 <nav
 class="product-reviews__nav-arrows vcom-reviews-nav--desktop"
 id="vcom-reviews-arrows-{{ block.id }}"
-aria-label="Navegar avaliações"
+aria-label="Navigate reviews"
 hidden
 >
-<button type="button" class="product-reviews__nav-btn product-reviews__nav-prev" aria-label="Página anterior" disabled>
+<button type="button" class="product-reviews__nav-btn product-reviews__nav-prev" aria-label="Previous page" disabled>
 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 </button>
 <span class="product-reviews__nav-status"><span data-current>1</span> / <span data-total>1</span></span>
-<button type="button" class="product-reviews__nav-btn product-reviews__nav-next" aria-label="Próxima página" disabled>
+<button type="button" class="product-reviews__nav-btn product-reviews__nav-next" aria-label="Next page" disabled>
 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 </button>
 </nav>
@@ -480,7 +486,7 @@ loading="lazy"
 <style>#vcom-reviews-{{ bid }} .product-reviews__verified{color:{{ verified_color }}}#vcom-reviews-{{ bid }} .product-reviews__text-more,#vcom-reviews-{{ bid }} .product-reviews__text-less{color:{{ star_color}}}</style>
 {%- if s_layout == 'trustpilot_split' -%}
 <div class="vcom-split">
-<aside class="vcom-split__summary" aria-label="Resumo das avaliações">
+<aside class="vcom-split__summary" aria-label="Reviews summary">
 <div class="vcom-split__score">{{ rating_avg | round: 1 }}</div>
 <div class="product-reviews__stars" style="justify-content:center;margin-bottom:8px;" aria-hidden="true">
 {%- assign split_stars = rating_avg | plus: 0.0 -%}
@@ -513,7 +519,7 @@ loading="lazy"
 <span>{{ dist_count }}</span>
 </div>
 {%- endfor -%}
-<p class="vcom-split__count">{{ review_count }} avaliações</p>
+<p class="vcom-split__count">{{ review_count }} reviews</p>
 </aside>
 <div class="vcom-split__reviews">
 {%- endif -%}
@@ -547,9 +553,9 @@ loading="lazy"
 <div class="product-reviews__wrap vcom-reviews-mobile--{{ reviews_mobile_layout }}" id="vcom-reviews-grid-{{ block.id }}" data-vcom-pagination data-block-id="{{ block.id }}" data-bid="{{ bid }}" data-star-color="{{ star_color }}" data-star-empty="{{ star_empty_color }}" data-show-verified="{% if s_show_verified %}true{% else %}false{% endif %}" data-verified-label="{{ s_verified_label | escape }}" data-verified-color="{{ verified_color }}" data-title-max="{{ title_max_chars }}" data-text-max="{{ text_max_chars }}" data-header-prefix="{{ s_header_based_on_prefix | escape }}" data-proxy-url="/apps/vcom-reviews/reviews?placement={{ submit_placement }}&sort={{ s_reviews_sort }}{% if submit_product_id != blank %}&product_id={{ submit_product_id | replace: 'gid://shopify/Product/', '' }}{% endif %}" data-reviews-sort="{{ s_reviews_sort }}" data-layout="{{ s_layout }}" data-cols-desktop="{{ s_cols_desktop }}" data-cols-mobile="1" data-mobile-layout="{{ reviews_mobile_layout }}" data-reviews-rows="{{ reviews_rows }}" data-per-page-mobile="{{ reviews_per_page_mobile }}" data-scroll-root="vcom-reviews-{{ bid }}" data-review-count="{{ review_count }}" data-use-proxy="{% if use_proxy_reviews %}true{% else %}false{% endif %}" data-use-embedded="{% if use_embedded_reviews %}true{% else %}false{% endif %}" data-show-images="{% if s_show_images %}true{% else %}false{% endif %}">
 {%- if use_proxy_reviews or use_embedded_reviews -%}
 {%- if use_proxy_reviews -%}
-<p class="vcom-reviews-proxy-loading" data-proxy-loading>Carregando avaliações…</p>
+<p class="vcom-reviews-proxy-loading" data-proxy-loading>Loading reviews…</p>
 <p class="vcom-reviews-proxy-error" data-proxy-error hidden>
-<span data-proxy-error-text>Não foi possível carregar as avaliações.</span>
+<span data-proxy-error-text>Could not load reviews.</span>
 <button type="button" class="vcom-reviews-proxy-retry" data-proxy-retry>Tentar novamente</button>
 </p>
 {%- endif -%}
@@ -708,7 +714,7 @@ loading="lazy"
 </div>
 </div>
 {%- endif -%}
-<div class="product-reviews__image-modal" id="vcom-reviews-image-modal-{{ block.id }}" role="dialog" aria-modal="true" aria-label="Ver imagem">
+<div class="product-reviews__image-modal" id="vcom-reviews-image-modal-{{ block.id }}" role="dialog" aria-modal="true" aria-label="View image">
 <div class="product-reviews__image-modal-inner">
 <button type="button" class="product-reviews__image-modal-close" aria-label="Fechar">&times;</button>
 <img
@@ -756,7 +762,7 @@ window.addEventListener('resize',function(){clearTimeout(resizeTimer);resizeTime
 <nav
 class="product-reviews__pagination product-reviews__pagination--mobile vcom-reviews-nav--mobile"
 id="vcom-reviews-pagination-{{ block.id }}"
-aria-label="Paginação das avaliações"
+aria-label="Reviews pagination"
 style="--vcom-pag-active: {{ s_pag_active }}; --vcom-pag-inactive: {{ s_pag_inactive }};"
 hidden
 >
@@ -766,9 +772,9 @@ hidden
 {%- else -%}
 <style>#vcom-reviews-{{ bid }} .product-reviews__verified{color:{{ verified_color }}}#vcom-reviews-{{ bid }}:not(.vcom-layout--trustpilot_list) .product-reviews__avatar,#vcom-reviews-{{ bid }}:not(.vcom-layout--trustpilot_list) .product-reviews__head{display:none}#vcom-reviews-{{ bid }}.vcom-layout--trustpilot_list .product-reviews__stars--default{display:none}#vcom-reviews-{{ bid }}.vcom-layout--trustpilot_list .product-reviews__meta-author{display:none}</style>
 <div class="product-reviews__wrap vcom-reviews-mobile--{{ reviews_mobile_layout }}" id="vcom-reviews-grid-{{ block.id }}" data-proxy-url="/apps/vcom-reviews/reviews?placement={{ submit_placement }}&sort={{ s_reviews_sort }}{% if submit_product_id != blank %}&product_id={{ submit_product_id | replace: 'gid://shopify/Product/', '' }}{% endif %}" data-reviews-sort="{{ s_reviews_sort }}" data-layout="{{ s_layout }}" data-cols-desktop="{{ s_cols_desktop }}" data-cols-mobile="1" data-mobile-layout="{{ reviews_mobile_layout }}" data-reviews-rows="{{ reviews_rows }}" data-per-page-mobile="{{ reviews_per_page_mobile }}" data-scroll-root="vcom-reviews-{{ bid }}" data-review-count="{{ review_count }}" data-use-proxy="true">
-<p class="vcom-reviews-proxy-loading" data-proxy-loading>Carregando avaliações…</p>
+<p class="vcom-reviews-proxy-loading" data-proxy-loading>Loading reviews…</p>
 <p class="vcom-reviews-proxy-error" data-proxy-error hidden>
-<span data-proxy-error-text>Não foi possível carregar as avaliações.</span>
+<span data-proxy-error-text>Could not load reviews.</span>
 <button type="button" class="vcom-reviews-proxy-retry" data-proxy-retry>Tentar novamente</button>
 </p>
 <div data-proxy-cards></div>
@@ -880,7 +886,7 @@ var maxImages={{ s_form_images_max}};
 if(!btn||!formOuter||!formEl)return;
 function openForm(){formOuter.hidden=false;if(successEl)successEl.hidden=true;if(errorEl)errorEl.hidden=true;btn.setAttribute('aria-expanded','true');btn.style.display='none';}
 function closeForm(){formOuter.hidden=true;if(successEl)successEl.hidden=!showSuccess;if(errorEl)errorEl.hidden=true;btn.setAttribute('aria-expanded','false');btn.style.display='inline-flex';}
-function showError(msg){if(errorEl){errorEl.textContent=msg||'Erro ao enviar.';errorEl.hidden=false;}if(successEl)successEl.hidden=true;}
+function showError(msg){if(errorEl){errorEl.textContent=msg||'Submission failed.';errorEl.hidden=false;}if(successEl)successEl.hidden=true;}
 function clearImages(){if(fileInput){fileInput.value='';}if(imagesPreview){imagesPreview.innerHTML='';}}
 function setStarDisplay(val){var r=parseFloat(val)||0;starBtns&&starBtns.forEach(function(btn,i){var idx=i+1;var fill=btn.querySelector('.product-reviews__form-star-fill');if(!fill)return;if(r>=idx)fill.setAttribute('width',32);else if(r>=idx-0.5)fill.setAttribute('width',16);else fill.setAttribute('width',0);});}
 function resetForm(){formEl.reset();if(ratingInput)ratingInput.value='';setStarDisplay(0);clearImages();}
@@ -896,10 +902,10 @@ formEl.addEventListener('submit',function(e){
 e.preventDefault();
 if(errorEl)errorEl.hidden=true;
 var ratingVal=parseFloat(ratingInput&&ratingInput.value)||0;
-if(!ratingVal||ratingVal<0.5){showError('Selecione uma nota.');return;}
+if(!ratingVal||ratingVal<0.5){showError('Please select a rating.');return;}
 var bodyVal=formEl.querySelector('[name="body"]');
 var authorVal=formEl.querySelector('[name="author"]');
-if(!bodyVal||!bodyVal.value.trim()||!authorVal||!authorVal.value.trim()){showError('Preencha nome e texto.');return;}
+if(!bodyVal||!bodyVal.value.trim()||!authorVal||!authorVal.value.trim()){showError('Please fill in your name and review.');return;}
 var fd=new FormData(formEl);
 fd.set('placement',placement);
 if(productId)fd.set('product_id',productId);
@@ -908,11 +914,11 @@ if(submitBtn){submitBtn.disabled=true;submitBtn.textContent='Enviando…';}
 fetch(submitUrl,{method:'POST',body:fd,credentials:'same-origin'})
 .then(function(r){return r.json().then(function(data){return {ok:r.ok,data:data};});})
 .then(function(res){
-if(submitBtn){submitBtn.disabled=false;submitBtn.textContent=submitBtn.getAttribute('data-label')||'Enviar';}
+if(submitBtn){submitBtn.disabled=false;submitBtn.textContent=submitBtn.getAttribute('data-label')||'Submit';}
 if(res.data&&res.data.ok){closeForm();}
-else{showError((res.data&&res.data.error)||'Não foi possível enviar.');}
+else{showError((res.data&&res.data.error)||'Could not submit.');}
 })
-.catch(function(){if(submitBtn){submitBtn.disabled=false;}showError('Erro de conexão. Tente novamente.');});
+.catch(function(){if(submitBtn){submitBtn.disabled=false;}showError('Connection error. Please try again.');});
 });
 var submitBtnInit=formEl.querySelector('[type="submit"]');
 if(submitBtnInit&&!submitBtnInit.getAttribute('data-label')){submitBtnInit.setAttribute('data-label',submitBtnInit.textContent);}

@@ -48,7 +48,7 @@
 {%- assign s_based_on = cfg.header_based_on_prefix | default: 'Based on' -%}
 {%- assign tp_rating = cfg.footer_rating | default: '4.8' -%}
 {%- assign tp_stats = shop.metafields.vcom_reviews.storefront_stats.value -%}
-{%- if tp_stats != blank -%}{%- assign tp_rating = tp_stats.homepage_avg | default: tp_rating -%}{%- endif -%}
+{%- if tp_stats != blank -%}{%- assign tp_rating = tp_stats.all_avg | default: tp_stats.homepage_avg | default: tp_rating -%}{%- endif -%}
 {%- assign tp_count = 0 -%}
 {%- if shop.metaobjects.review -%}{%- assign tp_count = shop.metaobjects.review.values_count | default: 0 -%}{%- endif -%}
 {%- if shop.metaobjects["$app:review"] -%}{%- assign tp_app = shop.metaobjects["$app:review"].values_count | default: 0 -%}{%- if tp_app > tp_count -%}{%- assign tp_count = tp_app -%}{%- endif -%}{%- endif -%}
@@ -76,14 +76,14 @@ data-images-initial-mobile="{{ images_initial_m }}"
 <nav
 class="product-reviews__nav-arrows vcom-reviews-nav--desktop"
 id="vcom-reviews-arrows-{{ bid }}"
-aria-label="Navegar avaliações"
+aria-label="Navigate reviews"
 hidden
 >
-<button type="button" class="product-reviews__nav-btn product-reviews__nav-prev" aria-label="Página anterior" disabled>
+<button type="button" class="product-reviews__nav-btn product-reviews__nav-prev" aria-label="Previous page" disabled>
 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 </button>
 <span class="product-reviews__nav-status"><span data-current>1</span> / <span data-total>1</span></span>
-<button type="button" class="product-reviews__nav-btn product-reviews__nav-next" aria-label="Próxima página" disabled>
+<button type="button" class="product-reviews__nav-btn product-reviews__nav-next" aria-label="Next page" disabled>
 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
 </button>
 </nav>
@@ -125,14 +125,14 @@ data-review-count="{{ b_total }}"
 data-use-proxy="true"
 data-show-images="{% if s_show_images %}true{% else %}false{% endif %}"
 >
-<p class="vcom-reviews-proxy-loading" data-proxy-loading>Carregando avaliações…</p>
+<p class="vcom-reviews-proxy-loading" data-proxy-loading>Loading reviews…</p>
 <p class="vcom-reviews-proxy-error" data-proxy-error hidden>
-<span data-proxy-error-text>Não foi possível carregar as avaliações.</span>
+<span data-proxy-error-text>Could not load reviews.</span>
 <button type="button" class="vcom-reviews-proxy-retry" data-proxy-retry>Tentar novamente</button>
 </p>
 <div data-proxy-cards></div>
 </div>
-<div class="product-reviews__image-modal" id="vcom-reviews-image-modal-{{ bid }}" role="dialog" aria-modal="true" aria-label="Ver imagem">
+<div class="product-reviews__image-modal" id="vcom-reviews-image-modal-{{ bid }}" role="dialog" aria-modal="true" aria-label="View image">
 <div class="product-reviews__image-modal-inner">
 <button type="button" class="product-reviews__image-modal-close" aria-label="Fechar">&times;</button>
 <img
@@ -150,7 +150,7 @@ loading="lazy"
 <nav
 class="product-reviews__pagination product-reviews__pagination--mobile vcom-reviews-nav--mobile"
 id="vcom-reviews-pagination-{{ bid }}"
-aria-label="Paginação das avaliações"
+aria-label="Reviews pagination"
 style="--vcom-pag-active: {{ s_pag_active }}; --vcom-pag-inactive: {{ s_pag_inactive }};"
 hidden
 >
