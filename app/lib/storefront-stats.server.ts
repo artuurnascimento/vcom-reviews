@@ -57,6 +57,74 @@ export function computeStorefrontReviewStats(
   };
 }
 
+/**
+ * Grava, por produto, os metafields PADRÃO de avaliação do Shopify
+ * (`reviews.rating` + `reviews.rating_count`), que os cards de coleção do tema
+ * leem para exibir as estrelas. Considera apenas avaliações aprovadas.
+ */
+export async function syncProductRatingMetafields(
+  admin: AdminApi,
+  reviews: Awaited<ReturnType<typeof listAllReviews>>,
+): Promise<void> {
+  const byProduct = new Map<string, { sum: number; count: number }>();
+  for (const r of reviews) {
+    if (r.status !== "approved" || !r.productId) continue;
+    const cur = byProduct.get(r.productId) || { sum: 0, count: 0 };
+    cur.sum += r.rating;
+    cur.count += 1;
+    byProduct.set(r.productId, cur);
+  }
+  if (byProduct.size === 0) return;
+
+  const metafields: Array<Record<string, string>> = [];
+  for (const [ownerId, { sum, count }] of byProduct) {
+    const avg = roundRating(sum / count);
+    metafields.push({
+      ownerId,
+      namespace: "reviews",
+      key: "rating",
+      type: "rating",
+      value: JSON.stringify({
+        value: avg.toFixed(1),
+        scale_min: "1.0",
+        scale_max: "5.0",
+      }),
+    });
+    metafields.push({
+      ownerId,
+      namespace: "reviews",
+      key: "rating_count",
+      type: "number_integer",
+      value: String(count),
+    });
+  }
+
+  const mutation = `#graphql
+    mutation SaveProductRatings($metafields: [MetafieldsSetInput!]!) {
+      metafieldsSet(metafields: $metafields) {
+        userErrors { field message }
+      }
+    }`;
+
+  for (let i = 0; i < metafields.length; i += 25) {
+    const chunk = metafields.slice(i, i + 25);
+    try {
+      const res = await admin.graphql(mutation, {
+        variables: { metafields: chunk },
+      });
+      const j = await res.json();
+      const errs = j.data?.metafieldsSet?.userErrors || [];
+      if (errs.length) {
+        logWarn("product rating metafields save failed", { errors: errs });
+      }
+    } catch (e) {
+      logWarn("product rating metafields chunk error", {
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
+  }
+}
+
 export async function syncStorefrontReviewStats(admin: AdminApi): Promise<void> {
   try {
     try {
@@ -68,6 +136,11 @@ export async function syncStorefrontReviewStats(admin: AdminApi): Promise<void> 
     }
     const reviews = await listAllReviews(admin);
     const stats = computeStorefrontReviewStats(reviews);
+    await syncProductRatingMetafields(admin, reviews).catch((e) =>
+      logWarn("syncProductRatingMetafields failed", {
+        error: e instanceof Error ? e.message : String(e),
+      }),
+    );
     const settings = await getStorefrontSettings(admin);
     const homepageCache = await buildHomepageReviewsCacheWithImages(
       admin,
