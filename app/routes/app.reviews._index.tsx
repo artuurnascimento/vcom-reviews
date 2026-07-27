@@ -30,6 +30,7 @@ import {
   Banner,
   Box,
   Tabs,
+  Select,
   useIndexResourceState,
 } from "@shopify/polaris";
 import { authenticate } from "../shopify.server";
@@ -45,6 +46,7 @@ import {
   rejectReviewsByIds,
 } from "../lib/reviews.server";
 import { getDashboardStats } from "../lib/dashboard.server";
+import { getProductCardInfoByIds } from "../lib/top-reviews.server";
 import { StatCard } from "../components/StatCard";
 import { ReviewStars } from "../components/ReviewStars";
 import { ReviewModerationActions } from "../components/ReviewModerationActions";
@@ -60,9 +62,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     listPendingReviews(admin),
     listRejectedReviews(admin),
   ]);
+  const productIds = [
+    ...new Set(
+      reviews
+        .filter((r) => r.placement === "product" && r.productId)
+        .map((r) => r.productId as string),
+    ),
+  ];
+  const productInfo = productIds.length
+    ? await getProductCardInfoByIds(admin, productIds)
+    : {};
   return {
     reviews,
     stats,
+    productInfo,
     pendingIds: pending.map((r) => r.id),
     rejectedIds: rejected.map((r) => r.id),
     rejectedCount: rejected.length,
@@ -146,7 +159,7 @@ export default function ReviewsIndex() {
   const embedPath = useEmbeddedAppPath();
   const navigate = useNavigate();
   const revalidator = useRevalidator();
-  const { reviews, stats, pendingIds, rejectedIds, rejectedCount } =
+  const { reviews, stats, productInfo, pendingIds, rejectedIds, rejectedCount } =
     useLoaderData<typeof loader>();
   const submit = useEmbeddedSubmit();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -184,6 +197,7 @@ export default function ReviewsIndex() {
   const [placementFilter, setPlacementFilter] = useState<
     "all" | "homepage" | "product"
   >("all");
+  const [productSelected, setProductSelected] = useState<string>("all");
   const isBatchRunning = batchProgress !== null;
   const normalizedSearch = searchQuery.trim().toLowerCase();
 
@@ -194,7 +208,22 @@ export default function ReviewsIndex() {
     homepage: reviews.filter((r) => r.placement !== "product").length,
   };
 
-  const byPlacement =
+  // Grupos por produto (id → título + quantidade), ordenados por quantidade desc.
+  const productTitleOf = (id: string | undefined | null): string =>
+    (id && productInfo[id]?.title) || (id ? `Produto ${id}` : "Produto");
+  const productGroups = (() => {
+    const map = new Map<string, number>();
+    for (const r of reviews) {
+      if (r.placement === "product" && r.productId) {
+        map.set(r.productId, (map.get(r.productId) || 0) + 1);
+      }
+    }
+    return [...map.entries()]
+      .map(([id, count]) => ({ id, count, title: productTitleOf(id) }))
+      .sort((a, b) => b.count - a.count || a.title.localeCompare(b.title));
+  })();
+
+  let byPlacement =
     placementFilter === "all"
       ? reviews
       : reviews.filter((r) =>
@@ -202,6 +231,9 @@ export default function ReviewsIndex() {
             ? r.placement === "product"
             : r.placement !== "product",
         );
+  if (placementFilter === "product" && productSelected !== "all") {
+    byPlacement = byPlacement.filter((r) => r.productId === productSelected);
+  }
 
   const filteredReviews =
     normalizedSearch.length === 0
@@ -517,11 +549,33 @@ export default function ReviewsIndex() {
                       | "homepage"
                       | "product";
                     setPlacementFilter(next);
+                    setProductSelected("all");
                     clearSelection();
                   }}
                   fitted
                 />
               </Card>
+
+              {placementFilter === "product" && productGroups.length > 0 ? (
+                <Select
+                  label="Produto"
+                  options={[
+                    {
+                      label: `Todos os produtos (${placementCounts.product})`,
+                      value: "all",
+                    },
+                    ...productGroups.map((g) => ({
+                      label: `${g.title} (${g.count})`,
+                      value: g.id,
+                    })),
+                  ]}
+                  value={productSelected}
+                  onChange={(v) => {
+                    setProductSelected(v);
+                    clearSelection();
+                  }}
+                />
+              ) : null}
 
               <TextField
                 label="Pesquisar avaliações"
@@ -632,7 +686,9 @@ export default function ReviewsIndex() {
                                 <Badge tone="info">{`${r.images.length} foto(s)`}</Badge>
                               ) : null}
                               {r.placement === "product" ? (
-                                <Badge tone="info">Produto</Badge>
+                                <Badge tone="info">
+                                  {truncate(productTitleOf(r.productId), 32)}
+                                </Badge>
                               ) : null}
                             </InlineStack>
                           </BlockStack>
