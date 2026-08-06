@@ -237,8 +237,21 @@
     function isDesktop() {
       return window.matchMedia("(min-width:992px)").matches;
     }
+    /** Colunas realmente renderizadas: o CSS pode exibir menos que o configurado. */
+    function renderedCols() {
+      try {
+        var tpl = window.getComputedStyle(g).gridTemplateColumns;
+        if (tpl && tpl !== "none") {
+          var n = tpl.trim().split(/\s+/).length;
+          if (n > 0) return n;
+        }
+      } catch (e) {
+        /* usa o valor configurado abaixo */
+      }
+      return colsD;
+    }
     function perPage() {
-      return isDesktop() ? colsD * rows : perPageMobile;
+      return isDesktop() ? renderedCols() * rows : perPageMobile;
     }
     function getCards() {
       return Array.prototype.slice.call(g.querySelectorAll(".product-reviews__card"));
@@ -630,7 +643,9 @@
       applyImageLimits();
       var pp = perPage();
       var apiCount = typeof data.count === "number" ? data.count : totalCount;
-      var pages = data.total_pages || (apiCount > 0 ? Math.ceil(apiCount / pp) : 0);
+      // Só páginas cheias: descarta a sobra que deixaria espaço vazio no grid.
+      var usable = pp > 0 && apiCount >= pp ? Math.floor(apiCount / pp) * pp : apiCount;
+      var pages = usable > 0 ? Math.ceil(usable / pp) : 0;
       updatePaginationUI(pages, page);
       if (scroll) scrollToFirstReview();
     }

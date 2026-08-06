@@ -87,9 +87,15 @@
 {%- assign mo_app_total = mo_count_app | default: 0 -%}
 {%- if mo_app_total > display_count -%}{%- assign display_count = mo_app_total -%}{%- endif -%}
 {%- assign vcom_stats = shop.metafields.vcom_reviews.storefront_stats.value -%}
+{%- comment -%} Nota do site inteiro (all_avg). O filtro default nao troca zero, entao testa > 0. {%- endcomment -%}
 {%- if vcom_stats != blank -%}
-  {%- assign display_rating = vcom_stats.homepage_avg | default: display_rating -%}
-  {%- assign header_stars = display_rating | plus: 0.0 -%}
+  {%- if vcom_stats.all_avg != blank and vcom_stats.all_avg > 0 -%}
+    {%- assign display_rating = vcom_stats.all_avg -%}
+    {%- assign header_stars = display_rating | plus: 0.0 -%}
+  {%- elsif vcom_stats.homepage_avg != blank and vcom_stats.homepage_avg > 0 -%}
+    {%- assign display_rating = vcom_stats.homepage_avg -%}
+    {%- assign header_stars = display_rating | plus: 0.0 -%}
+  {%- endif -%}
 {%- endif -%}
 {%- if display_count == 0 -%}
   {%- assign display_count = cfg.footer_trustpilot_fallback_count | default: 0 -%}

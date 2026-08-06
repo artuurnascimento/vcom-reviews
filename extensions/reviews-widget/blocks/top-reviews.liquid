@@ -65,7 +65,7 @@
 {%- assign s_based_on = cfg.header_based_on_prefix | default: 'Based on' -%}
 {%- assign tp_rating = cfg.footer_rating | default: '4.8' -%}
 {%- assign tp_stats = shop.metafields.vcom_reviews.storefront_stats.value -%}
-{%- if tp_stats != blank -%}{%- assign tp_rating = tp_stats.all_avg | default: tp_stats.homepage_avg | default: tp_rating -%}{%- endif -%}
+{%- if tp_stats != blank -%}{%- if tp_stats.all_avg != blank and tp_stats.all_avg > 0 -%}{%- assign tp_rating = tp_stats.all_avg -%}{%- elsif tp_stats.homepage_avg != blank and tp_stats.homepage_avg > 0 -%}{%- assign tp_rating = tp_stats.homepage_avg -%}{%- endif -%}{%- endif -%}
 {%- assign tp_count = 0 -%}
 {%- if shop.metaobjects.review -%}{%- assign tp_count = shop.metaobjects.review.values_count | default: 0 -%}{%- endif -%}
 {%- if shop.metaobjects["$app:review"] -%}{%- assign tp_app = shop.metaobjects["$app:review"].values_count | default: 0 -%}{%- if tp_app > tp_count -%}{%- assign tp_count = tp_app -%}{%- endif -%}{%- endif -%}
