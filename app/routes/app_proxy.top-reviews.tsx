@@ -77,11 +77,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     );
     const page = Math.max(1, parseIntParam(url.searchParams.get("page"), 1));
     const limit = Math.min(50, Math.max(1, parseIntParam(url.searchParams.get("limit"), 8)));
+    // Rodízio entre produtos (padrão) e quantas do mesmo produto por rodada.
+    const interleave = url.searchParams.get("mix") !== "0";
+    const perRound = Math.max(1, parseIntParam(url.searchParams.get("per_round"), 1));
+    const productIds = (url.searchParams.get("products") || "")
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean);
 
     const top = await getTopProductReviews(admin, session.shop, {
       sort,
       limit: total,
       perProductCap,
+      interleave,
+      perRound,
+      productIds,
     });
 
     const ratingSum = top.reduce((sum, r) => sum + r.rating, 0);

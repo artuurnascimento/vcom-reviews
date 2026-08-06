@@ -16,11 +16,26 @@ export const TOP_REVIEWS_MAX_LIMIT = 50;
 /** Teto por produto para o bloco representar vários produtos, não só um. */
 export const TOP_REVIEWS_DEFAULT_PER_PRODUCT_CAP = 3;
 
+/** Quantas avaliações do mesmo produto entram em cada rodada do rodízio. */
+export const TOP_REVIEWS_DEFAULT_PER_ROUND = 1;
+
 export interface TopReviewsOptions {
   sort?: ReviewsSortMode;
   limit?: number;
   /** Máximo de avaliações do mesmo produto. 0 = sem teto. */
   perProductCap?: number;
+  /** Intercalar produtos (rodízio) em vez de agrupar todos do mesmo produto. */
+  interleave?: boolean;
+  /** Avaliações do mesmo produto por rodada (1 = uma de cada, 2 = duas...). */
+  perRound?: number;
+  /** Se informado, só estes produtos entram no bloco (id numérico ou gid). */
+  productIds?: string[];
+}
+
+/** Aceita tanto `123` quanto `gid://shopify/Product/123`. */
+function numericProductId(value: string): string {
+  const match = String(value || "").match(/(\d+)\s*$/);
+  return match ? match[1] : String(value || "");
 }
 
 function clampInt(value: number, min: number, max: number, fallback: number): number {
@@ -50,24 +65,77 @@ export async function getTopProductReviews(
       ? TOP_REVIEWS_DEFAULT_PER_PRODUCT_CAP
       : Math.max(0, Math.round(options.perProductCap));
 
+  const interleave = options.interleave !== false;
+  const perRound = Math.max(
+    1,
+    Math.round(options.perRound ?? TOP_REVIEWS_DEFAULT_PER_ROUND),
+  );
+
   const approved = await getApprovedProductReviewsByShop(admin, shop);
   // getApprovedProductReviewsByShop já vem em ordem de recência (updated_at desc),
   // então o sort estável preserva a mais recente como desempate.
-  const ordered = sortStorefrontReviews(approved, sort);
+  let ordered = sortStorefrontReviews(approved, sort);
 
-  if (perProductCap <= 0) {
-    return ordered.slice(0, limit);
+  // Filtro opcional: só os produtos escolhidos nas configurações do bloco.
+  if (options.productIds && options.productIds.length > 0) {
+    const allowed = new Set(options.productIds.map(numericProductId));
+    const filtered = ordered.filter(
+      (r) => r.productId && allowed.has(numericProductId(r.productId)),
+    );
+    if (filtered.length > 0) ordered = filtered;
   }
 
-  const perProductCount = new Map<string, number>();
-  const picked: ReviewRecord[] = [];
+  if (!interleave) {
+    if (perProductCap <= 0) return ordered.slice(0, limit);
+    const perProductCount = new Map<string, number>();
+    const seq: ReviewRecord[] = [];
+    for (const review of ordered) {
+      if (seq.length >= limit) break;
+      const key = review.productId || review.id;
+      const seen = perProductCount.get(key) ?? 0;
+      if (seen >= perProductCap) continue;
+      perProductCount.set(key, seen + 1);
+      seq.push(review);
+    }
+    return seq;
+  }
+
+  // Rodízio entre produtos: pega `perRound` de cada produto por vez, começando
+  // pelos produtos com mais avaliações (representação proporcional).
+  const groups = new Map<string, ReviewRecord[]>();
   for (const review of ordered) {
-    if (picked.length >= limit) break;
     const key = review.productId || review.id;
-    const seen = perProductCount.get(key) ?? 0;
-    if (seen >= perProductCap) continue;
-    perProductCount.set(key, seen + 1);
-    picked.push(review);
+    const list = groups.get(key);
+    if (list) list.push(review);
+    else groups.set(key, [review]);
+  }
+  const lists = [...groups.values()].sort((a, b) => b.length - a.length);
+  const cursors = new Array(lists.length).fill(0);
+  const picked: ReviewRecord[] = [];
+  let advanced = true;
+  while (picked.length < limit && advanced) {
+    advanced = false;
+    for (let g = 0; g < lists.length && picked.length < limit; g++) {
+      for (let n = 0; n < perRound && picked.length < limit; n++) {
+        const i = cursors[g];
+        if (i >= lists[g].length) break;
+        if (perProductCap > 0 && i >= perProductCap) break;
+        picked.push(lists[g][i]);
+        cursors[g] = i + 1;
+        advanced = true;
+      }
+    }
+  }
+
+  // Se o teto por produto deixou o bloco incompleto, completa com as restantes
+  // para o grid não ficar com espaço vazio.
+  if (picked.length < limit) {
+    const chosen = new Set(picked.map((r) => r.id));
+    for (const review of ordered) {
+      if (picked.length >= limit) break;
+      if (chosen.has(review.id)) continue;
+      picked.push(review);
+    }
   }
   return picked;
 }

@@ -44,7 +44,24 @@
 {%- if b_rows < 1 -%}{%- assign b_rows = 1 -%}{%- endif -%}
 {%- if b_rows > 4 -%}{%- assign b_rows = 4 -%}{%- endif -%}
 {%- assign b_sort = block.settings.sort | default: 'rating_high' -%}
-{%- assign proxy_url = '/apps/vcom-reviews/top-reviews?sort=' | append: b_sort | append: '&total=' | append: b_total | append: '&per_product=' | append: b_per_product -%}
+{%- comment -%} Arredonda o total p/ múltiplo do grid (colunas x linhas) e evitar espaço vazio. {%- endcomment -%}
+{%- assign grid_cap = s_cols_desktop | times: b_rows -%}
+{%- if grid_cap > 0 -%}
+{%- assign grid_rest = b_total | modulo: grid_cap -%}
+{%- if grid_rest > 0 -%}{%- assign b_total = b_total | plus: grid_cap | minus: grid_rest -%}{%- endif -%}
+{%- endif -%}
+{%- if b_total > 50 -%}{%- assign b_total = 50 -%}{%- endif -%}
+{%- assign b_mix = '1' -%}
+{%- if block.settings.mix_products == false -%}{%- assign b_mix = '0' -%}{%- endif -%}
+{%- assign b_per_round = block.settings.per_round | default: 1 -%}
+{%- if b_per_round < 1 -%}{%- assign b_per_round = 1 -%}{%- endif -%}
+{%- assign b_products = '' -%}
+{%- for p in block.settings.products -%}
+{%- assign b_products = b_products | append: p.id -%}
+{%- unless forloop.last -%}{%- assign b_products = b_products | append: ',' -%}{%- endunless -%}
+{%- endfor -%}
+{%- assign proxy_url = '/apps/vcom-reviews/top-reviews?sort=' | append: b_sort | append: '&total=' | append: b_total | append: '&per_product=' | append: b_per_product | append: '&mix=' | append: b_mix | append: '&per_round=' | append: b_per_round -%}
+{%- if b_products != blank -%}{%- assign proxy_url = proxy_url | append: '&products=' | append: b_products -%}{%- endif -%}
 {%- assign s_based_on = cfg.header_based_on_prefix | default: 'Based on' -%}
 {%- assign tp_rating = cfg.footer_rating | default: '4.8' -%}
 {%- assign tp_stats = shop.metafields.vcom_reviews.storefront_stats.value -%}
@@ -163,6 +180,9 @@ hidden
 {"type":"text","id":"headline","label":"Título da seção","default":"Top reviews"},
 {"type":"range","id":"total_reviews","label":"Total de avaliações no bloco","min":3,"max":50,"step":1,"default":12},
 {"type":"range","id":"per_product_cap","label":"Máx. avaliações por produto (0 = sem limite)","info":"Evita que um só produto domine o bloco.","min":0,"max":10,"step":1,"default":3},
+{"type":"checkbox","id":"mix_products","label":"Misturar produtos (rodízio)","info":"Alterna entre produtos em vez de mostrar todas as avaliações do mesmo produto seguidas.","default":true},
+{"type":"range","id":"per_round","label":"Avaliações por produto em cada rodada","info":"1 = uma de cada produto por vez; 2 = duas de cada.","min":1,"max":4,"step":1,"default":1},
+{"type":"product_list","id":"products","label":"Produtos exibidos (vazio = todos)","limit":20},
 {"type":"range","id":"rows","label":"Linhas visíveis (desktop) antes de paginar","min":1,"max":4,"step":1,"default":2},
 {"type":"select","id":"sort","label":"Ordenar por","options":[{"value":"rating_high","label":"Maior nota (padrão)"},{"value":"photos_first","label":"Com foto primeiro"},{"value":"verified_first","label":"Comprador verificado primeiro"},{"value":"text_longest","label":"Texto mais longo"}],"default":"rating_high"}
 ]

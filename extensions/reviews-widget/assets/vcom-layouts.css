@@ -558,6 +558,11 @@
 .vcom-reviews-app-block .product-reviews__images.is-expanded .product-reviews__image-link--hidden{display:block}
 .vcom-reviews-app-block .product-reviews__images.is-expanded .product-reviews__image-see-more{display:none!important}
 .vcom-reviews-app-block .product-reviews__images.is-expanded .product-reviews__image-see-less{display:inline-block!important}
+.vcom-reviews-app-block .product-reviews__image-see-more{position:relative;width:80px;height:80px;min-width:80px;min-height:80px;border-radius:8px;overflow:hidden;border:1px solid rgba(0,0,0,.08);cursor:pointer;padding:0;margin:0;display:block;background:#222}
+.vcom-reviews-app-block .product-reviews__image-see-more-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(3px);transform:scale(1.15);pointer-events:none}
+.vcom-reviews-app-block .product-reviews__image-see-more-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:rgba(0,0,0,.5);color:#fff;pointer-events:none}
+.vcom-reviews-app-block .product-reviews__image-see-more-label{font-size:11px;font-weight:600;line-height:1.1}
+.vcom-reviews-app-block .product-reviews__image-see-more-count{font-size:16px;font-weight:800;line-height:1.1}
 .vcom-reviews-app-block .product-reviews__image-see-less{display:none;width:100%}
 .vcom-reviews-app-block .product-reviews__text-wrap{margin:0 0 10px}
 .vcom-reviews-app-block .product-reviews__text-more,.vcom-reviews-app-block .product-reviews__text-less{background:none;border:none;padding:0;font-size:13px;font-weight:600;cursor:pointer;margin-top:4px;text-decoration:underline}
@@ -566,6 +571,12 @@
 .vcom-reviews-app-block .product-reviews__image-modal-inner{position:relative;max-width:90vw;max-height:90vh}
 .vcom-reviews-app-block .product-reviews__image-modal img{max-width:100%;max-height:85vh;width:auto;height:auto;display:block;border-radius:8px}
 .vcom-reviews-app-block .product-reviews__image-modal-close{position:absolute;top:-44px;right:0;width:36px;height:36px;border:none;background:rgba(255,255,255,.2);color:#fff;border-radius:50%;cursor:pointer;font-size:24px;line-height:1;padding:0}
+.vcom-reviews-app-block .product-reviews__image-modal-nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border:none;background:rgba(255,255,255,.2);color:#fff;border-radius:50%;cursor:pointer;font-size:20px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;transition:background .2s}
+.vcom-reviews-app-block .product-reviews__image-modal-nav:hover{background:rgba(255,255,255,.35)}
+.vcom-reviews-app-block .product-reviews__image-modal-prev{left:-56px}
+.vcom-reviews-app-block .product-reviews__image-modal-next{right:-56px}
+.vcom-reviews-app-block .product-reviews__image-modal-counter{position:absolute;bottom:-36px;left:50%;transform:translateX(-50%);color:#fff;font-size:13px;font-weight:600;letter-spacing:.02em}
+@media (max-width:600px){.vcom-reviews-app-block .product-reviews__image-modal-prev{left:4px}.vcom-reviews-app-block .product-reviews__image-modal-next{right:4px}.vcom-reviews-app-block .product-reviews__image-modal-nav{background:rgba(0,0,0,.45)}}
 .vcom-reviews-app-block:not(.vcom-layout--trustpilot_list) .product-reviews__avatar,.vcom-reviews-app-block:not(.vcom-layout--trustpilot_list) .product-reviews__head{display:none}
 .vcom-reviews-app-block.vcom-layout--trustpilot_list .product-reviews__stars--default{display:none}
 .vcom-reviews-app-block.vcom-layout--trustpilot_list .product-reviews__meta-author{display:none}
@@ -594,11 +605,10 @@
 .vcom-reviews-app-block .product-reviews__verified{color:#fff!important}
 
 /* Estado vazio (produto sem avaliação) — referência: Judge.me/Loox. */
-.vcom-reviews-app-block .vcom-empty{grid-column:1/-1;width:100%;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:36px 16px}
-.vcom-reviews-app-block .vcom-empty__icon{width:46px;height:46px;color:rgba(255,255,255,.35);margin-bottom:4px}
-.vcom-reviews-app-block .vcom-empty__title{margin:0;font-size:18px;font-weight:700;color:#fff}
-.vcom-reviews-app-block .vcom-empty__sub{margin:0;font-size:14px;color:rgba(255,255,255,.6)}
-.vcom-reviews-app-block .vcom-empty__slot{margin-top:12px}
+.vcom-reviews-app-block .vcom-empty{grid-column:1/-1;width:100%;display:flex;flex-direction:column;align-items:center;text-align:center;gap:0;padding:52px 24px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:16px}
+.vcom-reviews-app-block .vcom-empty__title{margin:0 0 8px;font-size:21px;line-height:1.2;font-weight:800;letter-spacing:-.01em;color:#fff}
+.vcom-reviews-app-block .vcom-empty__sub{margin:0;font-size:14px;line-height:1.5;color:rgba(255,255,255,.5);max-width:36ch}
+.vcom-reviews-app-block .vcom-empty__slot{margin-top:24px}
 
 /* Gaveta de filtro flutuante (por cima dos cards). */
 .vcom-reviews-app-block .product-reviews__filters{z-index:40;box-shadow:0 14px 36px rgba(0,0,0,.55)}
@@ -619,3 +629,17 @@
 .vcom-reviews-app-block .vcom-tp-boxes::before{content:"";position:absolute;top:0;bottom:0;left:0;width:var(--pct,100%);overflow:hidden;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 32'%3E%3Crect width='32' height='32' fill='%2300b67a'/%3E%3Cpath d='M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z' fill='%23fff'/%3E%3C/svg%3E") left center/22.4px 20px repeat-x}
 .vcom-reviews-app-block .product-reviews__wrap [data-proxy-cards]{display:contents}
 .vcom-reviews-app-block .product-reviews__wrap [data-proxy-loading],.vcom-reviews-app-block .product-reviews__wrap [data-proxy-error]{grid-column:1/-1;width:100%}
+
+/* Bloco da home (top-reviews): alinhar título e conteúdo ao padrão das seções do tema Vybe World (container + fonte display + linha dourada). Usa as variáveis do tema com fallback. */
+.vcom-reviews-top-block{padding-inline:0!important}
+.vcom-reviews-top-block .product-reviews__section-head,
+.vcom-reviews-top-block .product-reviews__wrap,
+.vcom-reviews-top-block .product-reviews__pagination--mobile,
+.vcom-reviews-top-block .product-reviews__nav-arrows.vcom-reviews-nav--mobile{width:min(100% - 40px, var(--container, 1200px));margin-inline:auto}
+.vcom-reviews-top-block .product-reviews__section-title{display:flex;align-items:center;gap:16px;font-family:var(--font-display, inherit);letter-spacing:.05em;font-weight:var(--font-display-weight, 700);font-style:var(--font-display-style, normal);color:#fff}
+.vcom-reviews-top-block .product-reviews__section-title::after{content:"";flex:0 0 auto;width:clamp(30px, 8vw, 90px);height:2px;background:linear-gradient(90deg, var(--vw-gold, #c9952a), transparent)}
+.vcom-reviews-top-block .product-reviews__section-head-top{margin-bottom:14px}
+
+/* Estado vazio: caixas Trustpilot (cinza, 0%) como elemento-assinatura. Precisa vir DEPOIS de .vcom-tp-boxes para sobrescrever o shorthand background. */
+.vcom-reviews-app-block .vcom-empty__logo{height:30px;width:auto;display:block;margin-bottom:16px}
+.vcom-reviews-app-block .vcom-empty__boxes{width:145.6px;height:26px;background-size:29.12px 26px;opacity:.5;margin-bottom:20px}

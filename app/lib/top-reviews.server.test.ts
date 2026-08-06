@@ -56,13 +56,58 @@ describe("getTopProductReviews", () => {
 
     const top = await getTopProductReviews(admin, "shop.myshopify.com", {
       perProductCap: 2,
-      limit: 10,
+      limit: 3,
     });
 
-    const fromProduct1 = top.filter((r) => r.productId === "gid://shopify/Product/1");
-    expect(fromProduct1).toHaveLength(2);
-    expect(top).toHaveLength(3);
+    // Padrão: rodízio entre produtos (a1, b1, a2) em vez de agrupar (a1, a2, b1).
+    expect(top.map((r) => r.id)).toEqual(["a1", "b1", "a2"]);
+  });
+
+  it("completa o bloco quando o teto por produto deixaria espaço vazio", async () => {
+    mocked.mockResolvedValue([
+      rec({ id: "a1", rating: 5, productId: "gid://shopify/Product/1" }),
+      rec({ id: "a2", rating: 5, productId: "gid://shopify/Product/1" }),
+      rec({ id: "a3", rating: 5, productId: "gid://shopify/Product/1" }),
+      rec({ id: "b1", rating: 4, productId: "gid://shopify/Product/2" }),
+    ]);
+
+    const top = await getTopProductReviews(admin, "shop.myshopify.com", {
+      perProductCap: 2,
+      limit: 4,
+    });
+
+    expect(top.map((r) => r.id)).toEqual(["a1", "b1", "a2", "a3"]);
+  });
+
+  it("agrupa por produto quando o rodízio é desligado", async () => {
+    mocked.mockResolvedValue([
+      rec({ id: "a1", rating: 5, productId: "gid://shopify/Product/1" }),
+      rec({ id: "a2", rating: 5, productId: "gid://shopify/Product/1" }),
+      rec({ id: "a3", rating: 5, productId: "gid://shopify/Product/1" }),
+      rec({ id: "b1", rating: 4, productId: "gid://shopify/Product/2" }),
+    ]);
+
+    const top = await getTopProductReviews(admin, "shop.myshopify.com", {
+      perProductCap: 2,
+      limit: 10,
+      interleave: false,
+    });
+
     expect(top.map((r) => r.id)).toEqual(["a1", "a2", "b1"]);
+  });
+
+  it("filtra pelos produtos escolhidos nas configurações", async () => {
+    mocked.mockResolvedValue([
+      rec({ id: "a1", rating: 5, productId: "gid://shopify/Product/1" }),
+      rec({ id: "b1", rating: 4, productId: "gid://shopify/Product/2" }),
+    ]);
+
+    const top = await getTopProductReviews(admin, "shop.myshopify.com", {
+      limit: 10,
+      productIds: ["2"],
+    });
+
+    expect(top.map((r) => r.id)).toEqual(["b1"]);
   });
 
   it("respeita o limite total", async () => {

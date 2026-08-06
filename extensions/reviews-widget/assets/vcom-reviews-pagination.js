@@ -95,7 +95,9 @@
         if (seeMore) {
           seeMore.style.display =
             gallery.classList.contains("is-expanded") || hidden <= 0 ? "none" : "";
-          var countSpan = seeMore.querySelectorAll("span")[1];
+          var countSpan =
+            seeMore.querySelector(".product-reviews__image-see-more-count") ||
+            seeMore.querySelectorAll("span")[1];
           if (countSpan) countSpan.textContent = "+" + hidden;
         }
       });
@@ -108,31 +110,89 @@
       var modalImg = document.getElementById("vcom-reviews-modal-img-" + s);
       if (!modal || !modalImg) return;
 
-      function openModal(src) {
-        modalImg.src = src;
+      var galleryList = [];
+      var galleryIndex = 0;
+
+      // Setas de navegação (injetadas uma vez no modal).
+      var inner = modal.querySelector(".product-reviews__image-modal-inner") || modal;
+      var prevBtn = document.createElement("button");
+      prevBtn.type = "button";
+      prevBtn.className = "product-reviews__image-modal-nav product-reviews__image-modal-prev";
+      prevBtn.setAttribute("aria-label", "Previous");
+      prevBtn.innerHTML = "&#10094;";
+      var nextBtn = document.createElement("button");
+      nextBtn.type = "button";
+      nextBtn.className = "product-reviews__image-modal-nav product-reviews__image-modal-next";
+      nextBtn.setAttribute("aria-label", "Next");
+      nextBtn.innerHTML = "&#10095;";
+      var counterEl = document.createElement("div");
+      counterEl.className = "product-reviews__image-modal-counter";
+      inner.appendChild(prevBtn);
+      inner.appendChild(nextBtn);
+      inner.appendChild(counterEl);
+
+      function renderGallery() {
+        if (!galleryList.length) return;
+        if (galleryIndex < 0) galleryIndex = galleryList.length - 1;
+        if (galleryIndex >= galleryList.length) galleryIndex = 0;
+        modalImg.src = galleryList[galleryIndex];
+        var multi = galleryList.length > 1;
+        prevBtn.style.display = multi ? "" : "none";
+        nextBtn.style.display = multi ? "" : "none";
+        counterEl.style.display = multi ? "" : "none";
+        counterEl.textContent = galleryIndex + 1 + " / " + galleryList.length;
+      }
+      function openGallery(list, index) {
+        galleryList = list && list.length ? list : [];
+        galleryIndex = index || 0;
+        if (!galleryList.length) return;
+        renderGallery();
         modal.classList.add("is-open");
         document.body.style.overflow = "hidden";
       }
       function closeModal() {
         modal.classList.remove("is-open");
         modalImg.src = "";
+        galleryList = [];
         document.body.style.overflow = "";
       }
+      function galleryFromWrap(wrap) {
+        return Array.prototype.slice
+          .call(wrap.querySelectorAll(".product-reviews__image-link[data-image-src]"))
+          .map(function (b) {
+            return b.getAttribute("data-image-src");
+          })
+          .filter(Boolean);
+      }
+
+      prevBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        galleryIndex -= 1;
+        renderGallery();
+      });
+      nextBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        galleryIndex += 1;
+        renderGallery();
+      });
 
       root.addEventListener("click", function (e) {
         var link = e.target.closest(".product-reviews__image-link[data-image-src]");
         if (link) {
           e.preventDefault();
-          var src = link.getAttribute("data-image-src");
-          if (src) openModal(src);
+          var wrapL = link.closest(".product-reviews__images");
+          var list = wrapL ? galleryFromWrap(wrapL) : [link.getAttribute("data-image-src")];
+          var idx = list.indexOf(link.getAttribute("data-image-src"));
+          openGallery(list, idx < 0 ? 0 : idx);
           return;
         }
         var seeMore = e.target.closest(".product-reviews__image-see-more");
         if (seeMore) {
+          e.preventDefault();
           var wrap = seeMore.closest(".product-reviews__images");
           if (wrap) {
-            wrap.classList.add("is-expanded");
-            applyImageLimits();
+            var allImgs = galleryFromWrap(wrap);
+            openGallery(allImgs, imagesInitialCount());
           }
           return;
         }
@@ -152,7 +212,15 @@
         if (e.target === modal) closeModal();
       });
       document.addEventListener("keydown", function (e) {
-        if (e.key === "Escape" && modal.classList.contains("is-open")) closeModal();
+        if (!modal.classList.contains("is-open")) return;
+        if (e.key === "Escape") closeModal();
+        else if (e.key === "ArrowLeft") {
+          galleryIndex -= 1;
+          renderGallery();
+        } else if (e.key === "ArrowRight") {
+          galleryIndex += 1;
+          renderGallery();
+        }
       });
     }
 
@@ -202,7 +270,7 @@
       var prevBtn = document.createElement("button");
       prevBtn.type = "button";
       prevBtn.className = "product-reviews__pag-ctrl";
-      prevBtn.setAttribute("aria-label", "Página anterior");
+      prevBtn.setAttribute("aria-label", "Previous page");
       prevBtn.textContent = "«";
       prevBtn.disabled = active <= 1;
       prevBtn.addEventListener("click", function () {
@@ -224,7 +292,7 @@
         if (item.page === active) pageBtn.classList.add("is-active");
         pageBtn.textContent = String(item.page);
         pageBtn.setAttribute("data-page", String(item.page));
-        pageBtn.setAttribute("aria-label", "Página " + item.page);
+        pageBtn.setAttribute("aria-label", "Page " + item.page);
         if (item.page === active) pageBtn.setAttribute("aria-current", "page");
         pageBtn.addEventListener("click", function () {
           go(item.page, true);
@@ -234,7 +302,7 @@
       var nextBtn = document.createElement("button");
       nextBtn.type = "button";
       nextBtn.className = "product-reviews__pag-ctrl";
-      nextBtn.setAttribute("aria-label", "Próxima página");
+      nextBtn.setAttribute("aria-label", "Next page");
       nextBtn.textContent = "»";
       nextBtn.disabled = active >= pages;
       nextBtn.addEventListener("click", function () {
@@ -329,7 +397,7 @@
           hiddenClass +
           '" data-image-src="' +
           escAttr(url) +
-          '" aria-label="Ver imagem"' +
+          '" aria-label="View image"' +
           hiddenStyle +
           ">";
         html +=
@@ -339,14 +407,18 @@
         html += "</button>";
       });
       if (hidden > 0) {
+        var previewUrl = urls[initial] || urls[urls.length - 1];
         html +=
           '<button type="button" class="product-reviews__image-see-more" data-hidden-count="' +
           hidden +
-          '"><span>Ver mais</span><span>+' +
+          '"><img src="' +
+          escAttr(previewUrl) +
+          '" alt="" loading="lazy" width="80" height="80" class="product-reviews__image-see-more-bg" aria-hidden="true">' +
+          '<span class="product-reviews__image-see-more-overlay"><span class="product-reviews__image-see-more-label">See more</span><span class="product-reviews__image-see-more-count">+' +
           hidden +
-          "</span></button>";
+          "</span></span></button>";
         html +=
-          '<button type="button" class="product-reviews__image-see-less" style="display:none">Ver menos</button>';
+          '<button type="button" class="product-reviews__image-see-less" style="display:none">See less</button>';
       }
       html += "</div>";
       return html;
@@ -439,7 +511,7 @@
     function emptyStrings() {
       var lang = (document.documentElement.lang || "en").toLowerCase();
       if (lang.indexOf("pt") === 0)
-        return { t: "Ainda não há avaliações", s: "Seja o primeiro a avaliar este produto" };
+        return { t: "No reviews yet", s: "Be the first to review this product" };
       if (lang.indexOf("it") === 0)
         return { t: "Ancora nessuna recensione", s: "Sii il primo a recensire questo prodotto" };
       return { t: "No reviews yet", s: "Be the first to review this product" };
@@ -450,9 +522,21 @@
       if (filters) filters.hidden = true;
       var sum = root && root.querySelector(".pr-sum");
       var writeBtn = root && root.querySelector(".pr-w");
+      // Reaproveita a logo Trustpilot já renderizada no cabeçalho (evita hardcodar a URL do asset).
+      var tpLogoEl =
+        root &&
+        (root.querySelector(".pr-tp") ||
+          root.querySelector(".product-reviews__trustpilot-logo"));
+      var tpLogoSrc = tpLogoEl ? tpLogoEl.getAttribute("src") : "";
+      var tpLogoHtml = tpLogoSrc
+        ? '<img class="vcom-empty__logo" src="' +
+          escAttr(tpLogoSrc) +
+          '" alt="Trustpilot" loading="lazy">'
+        : "";
       cardSlot.innerHTML =
         '<div class="vcom-empty">' +
-        '<svg class="vcom-empty__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M11.05 2.93c.3-.92 1.6-.92 1.9 0l1.83 5.63h5.92c.97 0 1.37 1.24.59 1.81l-4.79 3.48 1.83 5.63c.3.92-.76 1.69-1.54 1.12L12 18.75l-4.79 3.48c-.78.57-1.84-.2-1.54-1.12l1.83-5.63-4.79-3.48c-.78-.57-.38-1.81.59-1.81h5.92l1.83-5.63Z"/></svg>' +
+        tpLogoHtml +
+        '<span class="vcom-tp-boxes vcom-empty__boxes" style="--pct:0%;" aria-hidden="true"></span>' +
         '<p class="vcom-empty__title">' +
         esc(s.t) +
         '</p><p class="vcom-empty__sub">' +
@@ -516,7 +600,7 @@
       var err = g.querySelector("[data-proxy-error]");
       var txt = g.querySelector("[data-proxy-error-text]");
       if (err) err.hidden = false;
-      if (txt) txt.textContent = msg || "Não foi possível carregar as avaliações.";
+      if (txt) txt.textContent = msg || "Could not load reviews.";
     }
     function applyProxyData(data, page, scroll) {
       hideProxyLoading();
@@ -533,7 +617,7 @@
       if (!html && (filterRating || filterPhotos)) {
         html =
           '<p class="product-reviews__filter-empty" style="grid-column:1/-1;width:100%;text-align:center;opacity:.6;padding:24px 0;margin:0;">' +
-          esc(filterEmptyText || "Nenhuma avaliação para este filtro.") +
+          esc(filterEmptyText || "No reviews for this filter.") +
           "</p>";
       }
       cardSlot.innerHTML = html;
@@ -616,7 +700,7 @@
           if (!res.ok || !data || !data.ok) {
             showProxyError(
               (data && data.error) ||
-                (res.status ? "Erro HTTP " + res.status : "Erro ao carregar avaliações"),
+                (res.status ? "HTTP error " + res.status : "Error loading reviews"),
             );
             return;
           }
@@ -628,7 +712,7 @@
         .catch(function (e) {
           if (gen !== fetchGen) return;
           g.classList.remove("is-loading");
-          showProxyError(e && e.message ? e.message : "Falha de rede");
+          showProxyError(e && e.message ? e.message : "Network error");
         });
     }
     function goLocal(page, scroll) {
@@ -764,7 +848,7 @@
     }
 
     bindCardMediaOnce();
-    if ((embeddedReviews && embeddedReviews.length > 0) || (usesRemoteProxy() && totalCount > 0)) {
+    if ((embeddedReviews && embeddedReviews.length > 0) || usesRemoteProxy()) {
       fetchProxyPage(1, false);
     } else {
       applyLocal();
@@ -774,7 +858,7 @@
       resizeTimer = setTimeout(function () {
         currentPage = 1;
         pageCache = {};
-        if ((embeddedReviews && embeddedReviews.length > 0) || (usesRemoteProxy() && totalCount > 0)) {
+        if ((embeddedReviews && embeddedReviews.length > 0) || usesRemoteProxy()) {
           fetchProxyPage(1, false, true);
         } else applyLocal();
         applyImageLimits();
