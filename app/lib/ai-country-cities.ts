@@ -208,6 +208,55 @@ export const COUNTRY_CITIES: Record<string, readonly string[]> = {
     "Canberra",
     "Gold Coast",
   ],
+  "Nova Zelândia": ["Auckland", "Wellington", "Christchurch", "Hamilton", "Dunedin"],
+  "África do Sul": ["Johannesburg", "Cape Town", "Durban", "Pretoria", "Port Elizabeth"],
+  Singapura: ["Singapore", "Jurong", "Tampines", "Woodlands", "Bedok"],
+  Peru: ["Lima", "Arequipa", "Cusco", "Trujillo", "Piura", "Chiclayo"],
+  Uruguai: ["Montevideo", "Salto", "Punta del Este", "Maldonado", "Paysandú"],
+  Paraguai: ["Asunción", "Ciudad del Este", "Encarnación", "San Lorenzo"],
+  Bolívia: ["La Paz", "Santa Cruz", "Cochabamba", "Sucre", "Oruro"],
+  Equador: ["Quito", "Guayaquil", "Cuenca", "Ambato", "Manta"],
+  Venezuela: ["Caracas", "Maracaibo", "Valencia", "Barquisimeto", "Maracay"],
+  "Costa Rica": ["San José", "Alajuela", "Cartago", "Heredia", "Liberia"],
+  Panamá: ["Ciudad de Panamá", "Colón", "David", "Santiago", "Chitré"],
+  Guatemala: ["Ciudad de Guatemala", "Quetzaltenango", "Escuintla", "Antigua Guatemala"],
+  "República Dominicana": [
+    "Santo Domingo",
+    "Santiago de los Caballeros",
+    "La Romana",
+    "Punta Cana",
+    "San Pedro de Macorís",
+  ],
+};
+
+/** Grupos de países (fonte única; reexportado por ai-review-options). */
+export const COUNTRY_GROUPS: Record<string, string[]> = {
+  global: [
+    "Estados Unidos",
+    "Reino Unido",
+    "Canadá",
+    "Irlanda",
+    "Austrália",
+    "Nova Zelândia",
+    "África do Sul",
+    "Singapura",
+  ],
+  latam: [
+    "México",
+    "Argentina",
+    "Chile",
+    "Colômbia",
+    "Peru",
+    "Uruguai",
+    "Paraguai",
+    "Bolívia",
+    "Equador",
+    "Venezuela",
+    "Costa Rica",
+    "Panamá",
+    "Guatemala",
+    "República Dominicana",
+  ],
 };
 
 export type AiCityMode = "random" | "fixed" | "none";
@@ -227,6 +276,15 @@ export function pickRandomCityForCountry(country: string): string {
     const pools = Object.values(COUNTRY_CITIES);
     const pool = pools[Math.floor(Math.random() * pools.length)] ?? COUNTRY_CITIES.Brasil;
     return pickFromPool(pool);
+  }
+  // Grupos (global / latam): sorteia um país do grupo e depois a cidade.
+  const group = COUNTRY_GROUPS[country];
+  if (group?.length) {
+    const withCities = group.filter((name) => COUNTRY_CITIES[name]?.length);
+    if (withCities.length > 0) {
+      const chosen = withCities[Math.floor(Math.random() * withCities.length)];
+      return pickFromPool(COUNTRY_CITIES[chosen]);
+    }
   }
   const pool = COUNTRY_CITIES[country];
   if (!pool?.length) return "";

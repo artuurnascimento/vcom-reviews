@@ -8,8 +8,10 @@ import {
 } from "./ai-country-cities";
 import {
   clampRating,
+  COUNTRY_GROUPS,
   distributeRatings,
   getAiTonePromptBlock,
+  isCountryGroup,
   MAX_REVIEWS_PER_GEMINI_CALL,
   MAX_REVIEWS_TOTAL,
   normalizeRatingRange,
@@ -222,7 +224,12 @@ function buildPrompt(
   const cityMode = resolveCityMode(input);
 
   if (!hasPerReviewCities) {
-    if (input.country !== "random") {
+    if (isCountryGroup(input.country)) {
+      const pool = COUNTRY_GROUPS[input.country] || [];
+      personaParts.push(
+        `clientes de países variados — use um país diferente a cada avaliação, sem repetir em sequência, e cite uma cidade real desse país: ${pool.join(", ")}`,
+      );
+    } else if (input.country !== "random") {
       const loc =
         cityMode === "fixed" && input.city?.trim()
           ? `${input.city.trim()}, ${input.country}`
@@ -244,7 +251,9 @@ function buildPrompt(
           .map((cityName, i) => {
             if (!cityName.trim()) return "";
             const place =
-              input.country !== "random" ? `${cityName}, ${input.country}` : cityName;
+              input.country !== "random" && !isCountryGroup(input.country)
+                ? `${cityName}, ${input.country}`
+                : cityName;
             return `- Avaliação ${i + 1}: cliente de ${place} (pode citar a cidade no texto de forma natural).`;
           })
           .filter(Boolean)

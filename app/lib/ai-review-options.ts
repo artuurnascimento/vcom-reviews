@@ -121,6 +121,8 @@ export const AI_LOCALES = [
 
 export const AI_COUNTRIES = [
   { label: "Aleatório", value: "random" },
+  { label: "🌎 Global — países de língua inglesa", value: "global" },
+  { label: "🌎 LATAM — países de língua espanhola", value: "latam" },
   { label: "Brasil", value: "Brasil" },
   { label: "Portugal", value: "Portugal" },
   { label: "Estados Unidos", value: "Estados Unidos" },
@@ -145,7 +147,29 @@ export const AI_COUNTRIES = [
   { label: "Coreia do Sul", value: "Coreia do Sul" },
   { label: "China", value: "China" },
   { label: "Austrália", value: "Austrália" },
+  { label: "Nova Zelândia", value: "Nova Zelândia" },
+  { label: "África do Sul", value: "África do Sul" },
+  { label: "Singapura", value: "Singapura" },
+  { label: "Peru", value: "Peru" },
+  { label: "Uruguai", value: "Uruguai" },
+  { label: "Paraguai", value: "Paraguai" },
+  { label: "Bolívia", value: "Bolívia" },
+  { label: "Equador", value: "Equador" },
+  { label: "Venezuela", value: "Venezuela" },
+  { label: "Costa Rica", value: "Costa Rica" },
+  { label: "Panamá", value: "Panamá" },
+  { label: "Guatemala", value: "Guatemala" },
+  { label: "República Dominicana", value: "República Dominicana" },
 ] as const;
+
+/** Grupos de países (fonte única em ai-country-cities). */
+import { COUNTRY_GROUPS } from "./ai-country-cities";
+
+export { COUNTRY_GROUPS };
+
+export function isCountryGroup(country: string): boolean {
+  return Object.prototype.hasOwnProperty.call(COUNTRY_GROUPS, country);
+}
 
 /** Idioma padrão ao selecionar um país */
 const COUNTRY_DEFAULT_LOCALE: Record<string, string> = {
@@ -173,6 +197,22 @@ const COUNTRY_DEFAULT_LOCALE: Record<string, string> = {
   "Coreia do Sul": "ko-KR",
   China: "zh-CN",
   Austrália: "en-GB",
+  "Nova Zelândia": "en-GB",
+  "África do Sul": "en-GB",
+  Singapura: "en-GB",
+  Peru: "es-MX",
+  Uruguai: "es-AR",
+  Paraguai: "es-AR",
+  Bolívia: "es-MX",
+  Equador: "es-MX",
+  Venezuela: "es-MX",
+  "Costa Rica": "es-MX",
+  Panamá: "es-MX",
+  Guatemala: "es-MX",
+  "República Dominicana": "es-MX",
+  // Grupos
+  global: "en-US",
+  latam: "es-MX",
 };
 
 /** Idiomas recomendados por país (aparecem primeiro no select) */
@@ -201,6 +241,8 @@ const COUNTRY_SUGGESTED_LOCALES: Record<string, string[]> = {
   "Coreia do Sul": ["ko-KR", "en-US", "ja-JP", "zh-CN"],
   China: ["zh-CN", "en-US", "ja-JP"],
   Austrália: ["en-GB", "en-US"],
+  global: ["en-US", "en-GB"],
+  latam: ["es-MX", "es-AR", "es-ES"],
 };
 
 export function getDefaultLocaleForCountry(country: string): string {
