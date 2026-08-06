@@ -178,12 +178,6 @@ export async function searchProducts(
     return listStoreProducts(admin, { first: Math.max(first, 25) });
   }
 
-  const catalog = await listStoreProducts(admin, { first: 50 });
-  const local = filterProductsByTerm(catalog, term);
-  if (local.length > 0) {
-    return local.slice(0, first);
-  }
-
   const attempts = [
     buildProductSearchQuery(term),
     term,
@@ -191,14 +185,37 @@ export async function searchProducts(
     `handle:*${term}*`,
   ].filter((q, i, arr): q is string => Boolean(q) && arr.indexOf(q) === i);
 
+  const merged: StoreProductSearchRow[] = [];
+  const seen = new Set<string>();
+  const collect = (rows: StoreProductSearchRow[]) => {
+    for (const row of rows) {
+      if (merged.length >= first) return;
+      if (seen.has(row.id)) continue;
+      seen.add(row.id);
+      merged.push(row);
+    }
+  };
+
+  // A busca do Shopify cobre o catálogo inteiro — precisa vir primeiro, senão
+  // lojas com mais produtos que a página local ficam com resultados faltando.
   for (const shopifyQuery of attempts) {
+    if (merged.length >= first) break;
     try {
-      const remote = await fetchProducts(admin, first, shopifyQuery);
-      if (remote.length > 0) return remote;
+      collect(await fetchProducts(admin, first, shopifyQuery));
     } catch (error) {
       console.warn("[vcom-reviews] product search attempt failed", shopifyQuery, error);
     }
   }
 
-  return [];
+  // Complementa com o filtro local (cobre casos que a query do Shopify não casa).
+  if (merged.length < first) {
+    try {
+      const catalog = await listStoreProducts(admin, { first: 50 });
+      collect(filterProductsByTerm(catalog, term));
+    } catch (error) {
+      console.warn("[vcom-reviews] local product filter failed", error);
+    }
+  }
+
+  return merged.slice(0, first);
 }
