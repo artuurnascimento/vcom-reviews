@@ -218,9 +218,17 @@ export default function GenerateReviewsPage() {
   const searchResults = useMemo(() => {
     const term = searchQuery.trim();
     if (!term) return catalogProducts;
-    const local = filterProductsByTerm(catalogProducts, term);
-    if (local.length > 0) return local;
-    return remoteSearchResults ?? [];
+    // Junta o resultado do servidor (catálogo inteiro) com o filtro local, sem
+    // duplicar. O filtro local sozinho só enxerga a 1ª página do catálogo.
+    const remote = remoteSearchResults ?? [];
+    const merged = [...remote];
+    const seen = new Set(remote.map((p) => p.id));
+    for (const product of filterProductsByTerm(catalogProducts, term)) {
+      if (seen.has(product.id)) continue;
+      seen.add(product.id);
+      merged.push(product);
+    }
+    return merged;
   }, [searchQuery, catalogProducts, remoteSearchResults]);
 
   useEffect(() => {
@@ -228,13 +236,6 @@ export default function GenerateReviewsPage() {
       setRemoteSearchResults(null);
       lastRemoteQuery.current = "";
       setSearchError(productsLoadError ?? null);
-      return;
-    }
-
-    const local = filterProductsByTerm(catalogProducts, searchQuery);
-    if (local.length > 0) {
-      setRemoteSearchResults(null);
-      setSearchError(null);
       return;
     }
 
