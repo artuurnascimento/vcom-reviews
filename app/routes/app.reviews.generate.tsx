@@ -816,17 +816,6 @@ export default function GenerateReviewsPage() {
           ))}
         </InlineStack>
 
-        {parsedCount > GENERATE_HTTP_CHUNK_THRESHOLD && !isGenerating ? (
-          <Banner tone="info" title="Geração em volume">
-            <p>
-              {parsedCount} avaliações = {Math.ceil(parsedCount / GENERATE_HTTP_CHUNK_SIZE)}{" "}
-              etapas de {GENERATE_HTTP_CHUNK_SIZE} (evita timeout). Não feche a aba — o progresso
-              aparece no botão. Use <strong>gemini-2.5-flash-lite</strong> no Railway e desative
-              &quot;Analisar fotos&quot; para acelerar.
-            </p>
-          </Banner>
-        ) : null}
-
         {isBulkGenerating && generateProgress ? (
           <Banner tone="info" title="Gerando em etapas">
             <p>
