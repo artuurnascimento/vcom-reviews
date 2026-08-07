@@ -47,7 +47,6 @@ import {
 } from "../lib/reviews.server";
 import { getDashboardStats } from "../lib/dashboard.server";
 import { getProductCardInfoByIds } from "../lib/top-reviews.server";
-import { syncStorefrontReviewStats } from "../lib/storefront-stats.server";
 import { StatCard } from "../components/StatCard";
 import { ReviewStars } from "../components/ReviewStars";
 import { ReviewModerationActions } from "../components/ReviewModerationActions";
@@ -57,14 +56,12 @@ const REVIEWS_INDEX_ROUTE_DATA_ID = "routes/app.reviews._index";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  // Atualiza o metafield storefront_stats (inclui all_avg) ao abrir esta página.
-  void syncStorefrontReviewStats(admin);
-  const [stats, reviews, pending, rejected] = await Promise.all([
-    getDashboardStats(admin),
-    listAllReviews(admin),
-    listPendingReviews(admin),
-    listRejectedReviews(admin),
-  ]);
+  // Uma única varredura: pendentes/rejeitadas e as estatísticas saem dela.
+  // (listPendingReviews/listRejectedReviews refazem o scan completo por dentro.)
+  const reviews = await listAllReviews(admin);
+  const pending = reviews.filter((r) => r.status === "pending");
+  const rejected = reviews.filter((r) => r.status === "rejected");
+  const stats = await getDashboardStats(admin, reviews);
   const productIds = [
     ...new Set(
       reviews

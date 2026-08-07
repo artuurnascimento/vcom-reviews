@@ -20,7 +20,7 @@ import {
 import { authenticate } from "../shopify.server";
 import { getDashboardStats } from "../lib/dashboard.server";
 import { getReviewsByProduct } from "../lib/reviews-by-product.server";
-import { publishAllReviewMetaobjects } from "../lib/metaobject-publish.server";
+import { listAllReviews } from "../lib/reviews.server";
 import { syncStorefrontReviewStats } from "../lib/storefront-stats.server";
 import { StatCard, RatingBar } from "../components/StatCard";
 import { ReviewStars } from "../components/ReviewStars";
@@ -28,11 +28,13 @@ import { useAppPaths } from "../hooks/useEmbeddedAppPath";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  await publishAllReviewMetaobjects(admin);
+  // syncStorefrontReviewStats já publica os metaobjects por dentro.
   await syncStorefrontReviewStats(admin);
+  // Uma varredura só, reaproveitada pelas estatísticas e pelo agrupamento.
+  const reviews = await listAllReviews(admin);
   const [stats, groups] = await Promise.all([
-    getDashboardStats(admin),
-    getReviewsByProduct(admin),
+    getDashboardStats(admin, reviews),
+    getReviewsByProduct(admin, reviews),
   ]);
   const productGroups = groups.map((g) => ({
     numericId: g.numericId,

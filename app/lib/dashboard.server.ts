@@ -1,7 +1,7 @@
 import { ratingToDistributionBucket } from "./ai-review-options";
 import type { ReviewRecord } from "./constants";
 import { REVIEW_METAOBJECT_TYPE } from "./constants";
-import { listAllReviews, listPendingReviews } from "./reviews.server";
+import { listAllReviews } from "./reviews.server";
 
 type AdminApi = Parameters<typeof listAllReviews>[0];
 
@@ -18,12 +18,20 @@ export type DashboardStats = {
   pendingCount: number;
 };
 
-export async function getDashboardStats(admin: AdminApi): Promise<DashboardStats> {
-  const [reviews, infra, pending] = await Promise.all([
-    listAllReviews(admin),
+/**
+ * `prefetchedReviews` evita repetir a varredura completa das avaliações quando
+ * quem chama já tem a lista (cada varredura custa muitas chamadas GraphQL e
+ * derruba o app no rate limit da Admin API).
+ */
+export async function getDashboardStats(
+  admin: AdminApi,
+  prefetchedReviews?: ReviewRecord[],
+): Promise<DashboardStats> {
+  const [reviews, infra] = await Promise.all([
+    prefetchedReviews ?? listAllReviews(admin),
     fetchInfrastructure(admin),
-    listPendingReviews(admin),
   ]);
+  const pending = reviews.filter((r) => r.status === "pending");
 
   const approved = reviews.filter((r) => r.status === "approved");
   const homepagePublished = approved.filter((r) => r.placement === "homepage").length;

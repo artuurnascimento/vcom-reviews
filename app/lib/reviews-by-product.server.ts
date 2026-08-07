@@ -27,8 +27,9 @@ function numericIdOf(gid: string): string {
  */
 export async function getReviewsByProduct(
   admin: AdminApi,
+  prefetchedReviews?: ReviewRecord[],
 ): Promise<ProductReviewGroup[]> {
-  const all = await listAllReviews(admin);
+  const all = prefetchedReviews ?? (await listAllReviews(admin));
   const withProduct = all.filter(
     (r) => r.productId && r.status !== "rejected",
   );
