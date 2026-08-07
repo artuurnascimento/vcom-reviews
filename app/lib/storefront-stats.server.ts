@@ -125,7 +125,36 @@ export async function syncProductRatingMetafields(
   }
 }
 
+/**
+ * Coalesce por requisição: salvar N avaliações chamava este sync N vezes, e
+ * cada execução varre todas as avaliações e grava metafields — a Admin API
+ * responde `Throttled`. Aqui roda uma vez agora e, se chegaram novas chamadas
+ * durante a execução, apenas mais uma no fim (para não perder as últimas).
+ */
+type SyncState = { running: Promise<void>; queued: boolean };
+const syncStateByAdmin = new WeakMap<object, SyncState>();
+
 export async function syncStorefrontReviewStats(admin: AdminApi): Promise<void> {
+  const key = admin as unknown as object;
+  const existing = syncStateByAdmin.get(key);
+  if (existing) {
+    existing.queued = true;
+    return existing.running;
+  }
+
+  const state: SyncState = { running: Promise.resolve(), queued: false };
+  syncStateByAdmin.set(key, state);
+  state.running = (async () => {
+    for (;;) {
+      state.queued = false;
+      await syncStorefrontReviewStatsOnce(admin);
+      if (!state.queued) break;
+    }
+  })();
+  return state.running;
+}
+
+async function syncStorefrontReviewStatsOnce(admin: AdminApi): Promise<void> {
   try {
     try {
       await publishAllReviewMetaobjects(admin);
