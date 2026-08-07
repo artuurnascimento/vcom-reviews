@@ -174,7 +174,31 @@ async function migrateLegacyAppReviews(admin: AdminApi) {
 }
 
 /** Garante que o tipo review existe antes de criar/listar avaliações */
+/**
+ * Memoiza por cliente admin (na prática, por requisição). Sem isso, criar N
+ * avaliações em lote dispara N checagens + N migrações de legado — cada uma
+ * varrendo metaobjects — e a Admin API responde `Throttled`.
+ */
+const definitionReadyByAdmin = new WeakMap<
+  object,
+  Promise<{ ok: boolean; errors: string[] }>
+>();
+
 export async function ensureReviewDefinitionReady(admin: AdminApi) {
+  const key = admin as unknown as object;
+  const cached = definitionReadyByAdmin.get(key);
+  if (cached) return cached;
+
+  const pending = ensureReviewDefinitionReadyUncached(admin).catch((error) => {
+    // Falhou: não cacheia, para permitir nova tentativa.
+    definitionReadyByAdmin.delete(key);
+    throw error;
+  });
+  definitionReadyByAdmin.set(key, pending);
+  return pending;
+}
+
+async function ensureReviewDefinitionReadyUncached(admin: AdminApi) {
   const check = await admin.graphql(
     `#graphql
     query ReviewDefinitionCheck {
