@@ -77,6 +77,43 @@
     return AVATAR_COLORS[sum % AVATAR_COLORS.length];
   }
 
+  /**
+   * Descobre a cor de fundo do favicon (amostra as bordas) e aplica no circulo,
+   * para um favicon escuro virar um circulo escuro e um claro, claro.
+   */
+  function applyAvatarBackground(img, holder) {
+    if (!img || !holder) return;
+    try {
+      var n = 24;
+      var canvas = document.createElement("canvas");
+      canvas.width = n;
+      canvas.height = n;
+      var ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.drawImage(img, 0, 0, n, n);
+      var mid = Math.floor(n / 2);
+      var pts = [[0, 0], [n - 1, 0], [0, n - 1], [n - 1, n - 1], [mid, 0], [0, mid], [mid, n - 1], [n - 1, mid]];
+      var r = 0, g = 0, b = 0, used = 0;
+      for (var i = 0; i < pts.length; i++) {
+        var d = ctx.getImageData(pts[i][0], pts[i][1], 1, 1).data;
+        if (d[3] < 20) continue;
+        r += d[0];
+        g += d[1];
+        b += d[2];
+        used++;
+      }
+      if (!used) return;
+      r = Math.round(r / used);
+      g = Math.round(g / used);
+      b = Math.round(b / used);
+      holder.style.background = "rgb(" + r + "," + g + "," + b + ")";
+      var lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      holder.style.borderColor = lum < 0.5 ? "rgba(255,255,255,.22)" : "#e6e9ee";
+    } catch (e) {
+      /* canvas bloqueado por CORS: mantem o fundo padrao */
+    }
+  }
+
   function build() {
     var el = document.createElement("div");
     el.className = "vcom-rm";
@@ -176,6 +213,19 @@
         '<div class="vcom-rm__themes-wrap">' + cards + "</div>";
     }
     if (extra) head.insertAdjacentHTML("beforeend", extra);
+
+    var avatarImg = head.querySelector(".vcom-rm__avatar img");
+    if (avatarImg) {
+      var holder = avatarImg.parentNode;
+      avatarImg.crossOrigin = "anonymous";
+      if (avatarImg.complete && avatarImg.naturalWidth > 0) {
+        applyAvatarBackground(avatarImg, holder);
+      } else {
+        avatarImg.addEventListener("load", function () {
+          applyAvatarBackground(avatarImg, holder);
+        });
+      }
+    }
 
     var sec = modal.querySelector("[data-rm-sec]");
     sec.hidden = false;
