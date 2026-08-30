@@ -130,7 +130,7 @@
     <span style="color:#EEF1F5;">{{ tp_score_label }}</span>
     <strong style="font-weight:700;color:#FFFFFF;"> {{ display_rating }}</strong>
     {%- if display_count > 0 -%}
-      <button type="button" class="vcom-footer-trustpilot__count" data-vcom-reviews-modal data-shop-name="{{ shop.name | escape }}" data-shop-url="{{ shop.url }}" data-shop-category="{{ cfg.footer_trustpilot_category | default: '' | escape }}"{%- if shop.brand.square_logo != blank %} data-shop-logo="{{ shop.brand.square_logo | image_url: width: 200 }}"{%- elsif shop.brand.logo != blank %} data-shop-logo="{{ shop.brand.logo | image_url: width: 200 }}"{%- endif %} style="color:#EEF1F5;text-decoration:underline;text-underline-offset:2px;background:none;border:0;padding:0;font:inherit;cursor:pointer;">{{ display_count }}{% if display_count >= 1000 %}+{% endif %} {{ tp_reviews_word }}</button>
+      <button type="button" class="vcom-footer-trustpilot__count" data-vcom-reviews-modal data-shop-name="{{ shop.name | escape }}" data-shop-url="{{ shop.url }}" data-app-logo="{{ 'vcom-app-logo.svg' | asset_url }}" data-shop-category="{{ cfg.footer_trustpilot_category | default: '' | escape }}"{%- if shop.brand.square_logo != blank %} data-shop-logo="{{ shop.brand.square_logo | image_url: width: 200 }}"{%- elsif shop.brand.logo != blank %} data-shop-logo="{{ shop.brand.logo | image_url: width: 200 }}"{%- endif %} style="color:#EEF1F5;text-decoration:underline;text-underline-offset:2px;background:none;border:0;padding:0;font:inherit;cursor:pointer;">{{ display_count }}{% if display_count >= 1000 %}+{% endif %} {{ tp_reviews_word }}</button>
     {%- endif -%}
   </p>
 </div>

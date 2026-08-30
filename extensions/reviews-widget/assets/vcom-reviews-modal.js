@@ -7,7 +7,7 @@
   var PER_PAGE = 10;
   var AVATAR_COLORS = ["#f2c94c", "#6fcf97", "#56ccf2", "#bb6bd9", "#f2994a", "#eb5757"];
   var modal = null;
-  var meta = { name: "", url: "/", category: "", logo: "" };
+  var meta = { name: "", url: "/", category: "", logo: "", appLogo: "" };
   var page = 1;
   var totalPages = 1;
   var loading = false;
@@ -121,12 +121,18 @@
     el.setAttribute("aria-modal", "true");
     el.innerHTML =
       '<div class="vcom-rm__panel">' +
-      '<button type="button" class="vcom-rm__close" aria-label="Close">&times;</button>' +
+      '<header class="vcom-rm__topbar">' +
+      '<span class="vcom-rm__brand" data-rm-brand></span>' +
+      '<button type="button" class="vcom-rm__close" aria-label="Close">' +
+      '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
+      "</button></header>" +
+      '<nav class="vcom-rm__crumbs" data-rm-crumbs></nav>' +
+      '<div class="vcom-rm__sheet">' +
       '<div data-rm-header></div>' +
       '<h2 class="vcom-rm__sec" data-rm-sec hidden>Reviews</h2>' +
       '<div class="vcom-rm__list" data-rm-list></div>' +
       '<button type="button" class="vcom-rm__more" data-rm-more hidden>See more reviews</button>' +
-      "</div>";
+      "</div></div>";
     document.body.appendChild(el);
 
     el.querySelector(".vcom-rm__close").addEventListener("click", close);
@@ -335,6 +341,20 @@
     meta.url = trigger.getAttribute("data-shop-url") || "/";
     meta.category = trigger.getAttribute("data-shop-category") || "";
     meta.logo = findFavicon();
+    meta.appLogo = trigger.getAttribute("data-app-logo") || "";
+    var brand = modal.querySelector("[data-rm-brand]");
+    if (brand) {
+      brand.innerHTML =
+        (meta.appLogo ? '<img src="' + esc(meta.appLogo) + '" alt="">' : "") +
+        "<span>VCOM Reviews</span>";
+    }
+    var crumbs = modal.querySelector("[data-rm-crumbs]");
+    if (crumbs) {
+      crumbs.innerHTML =
+        '<span class="vcom-rm__dots">&bull;&bull;&bull;</span><span>&rsaquo;</span>' +
+        "<span>" + esc(meta.category || "Reviews") + "</span><span>&rsaquo;</span>" +
+        '<span class="vcom-rm__crumb-now">' + esc(meta.name) + "</span>";
+    }
     modal.classList.add("is-open");
     modal.scrollTop = 0;
     document.body.style.overflow = "hidden";

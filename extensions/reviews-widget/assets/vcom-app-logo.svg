@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="180" y1="120" x2="1020" y2="1080" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1a9d4f"/>
+      <stop offset="1" stop-color="#0f6b35"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#0a3d1f" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="1200" rx="260" fill="url(#bg)"/>
+  <g filter="url(#shadow)">
+    <path fill="#fff" d="M360 760c0-44 36-80 80-80h320c44 0 80 36 80 80v24H360v-24z" opacity="0.18"/>
+    <path fill="#fff" d="M320 420c0-33 27-60 60-60h440c33 0 60 27 60 60v300c0 33-27 60-60 60H520L420 880l40-160H380c-33 0-60-27-60-60V420z"/>
+    <g transform="translate(420 500)">
+      <path fill="#1d8a42" d="M0 28l38 22 86-94-28-26-58 64-10-6z"/>
+      <path fill="#1d8a42" d="M120 0h48v48h-48z" opacity="0"/>
+    </g>
+    <g fill="#f5c518" transform="translate(400 540)">
+      <path d="M48 0 60 36h39l-32 23 12 36-39-28-39 28 12-36-32-23h39z"/>
+      <path d="M168 0l12 36h39l-32 23 12 36-39-28-39 28 12-36-32-23h39z"/>
+      <path d="M288 0l12 36h39l-32 23 12 36-39-28-39 28 12-36-32-23h39z"/>
+      <path d="M408 0l12 36h39l-32 23 12 36-39-28-39 28 12-36-32-23h39z" opacity="0.55"/>
+      <path d="M528 0l12 36h39l-32 23 12 36-39-28-39 28 12-36-32-23h39z" opacity="0.35"/>
+    </g>
+  </g>
+</svg>
