@@ -6,6 +6,7 @@ import { getFileImageUrls } from "../lib/reviews.server";
 import {
   getProductCardInfoByIds,
   getTopProductReviews,
+  getStoreReviewSummary,
   TOP_REVIEWS_DEFAULT_LIMIT,
   TOP_REVIEWS_DEFAULT_PER_PRODUCT_CAP,
   TOP_REVIEWS_MAX_LIMIT,
@@ -85,14 +86,22 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       .map((v) => v.trim())
       .filter(Boolean);
 
-    const top = await getTopProductReviews(admin, session.shop, {
-      sort,
-      limit: total,
-      perProductCap,
-      interleave,
-      perRound,
-      productIds,
-    });
+    // all=1: pop-up "todas as avaliacoes" do rodape — lista completa + distribuicao.
+    const wantAll = url.searchParams.get("all") === "1";
+    const summary = wantAll
+      ? await getStoreReviewSummary(admin, session.shop, "date_new")
+      : null;
+
+    const top = summary
+      ? summary.reviews
+      : await getTopProductReviews(admin, session.shop, {
+          sort,
+          limit: total,
+          perProductCap,
+          interleave,
+          perRound,
+          productIds,
+        });
 
     const ratingSum = top.reduce((sum, r) => sum + r.rating, 0);
     const count = top.length;
@@ -126,6 +135,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const res = json({
       ok: true,
       count,
+      total: summary ? summary.total : count,
+      avg_all: summary ? summary.avg : Math.round(avg * 10) / 10,
+      dist: summary ? summary.dist : null,
       avg: Math.round(avg * 10) / 10,
       page,
       limit,

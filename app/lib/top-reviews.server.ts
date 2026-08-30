@@ -1,3 +1,4 @@
+import { ratingToDistributionBucket } from "./ai-review-options";
 import type { ReviewRecord } from "./constants";
 import { getApprovedProductReviewsByShop } from "./review-proxy-cache.server";
 import {
@@ -208,4 +209,37 @@ export async function getProductCardInfoByIds(
     }
   }
   return out;
+}
+
+export interface StoreReviewSummary {
+  /** Todas as avaliacoes aprovadas, ja ordenadas. */
+  reviews: ReviewRecord[];
+  total: number;
+  avg: number;
+  dist: Record<1 | 2 | 3 | 4 | 5, number>;
+}
+
+/**
+ * Resumo da loja inteira (nota media, total e distribuicao por estrela) usado
+ * pelo pop-up "todas as avaliacoes" do rodape.
+ */
+export async function getStoreReviewSummary(
+  admin: AdminApi,
+  shop: string,
+  sort: ReviewsSortMode = "date_new",
+): Promise<StoreReviewSummary> {
+  const approved = await getApprovedProductReviewsByShop(admin, shop);
+  const dist: Record<1 | 2 | 3 | 4 | 5, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  let sum = 0;
+  for (const review of approved) {
+    sum += review.rating;
+    dist[ratingToDistributionBucket(review.rating)] += 1;
+  }
+  const total = approved.length;
+  return {
+    reviews: sortStorefrontReviews(approved, sort),
+    total,
+    avg: total > 0 ? Math.round((sum / total) * 10) / 10 : 0,
+    dist,
+  };
 }

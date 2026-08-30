@@ -531,6 +531,9 @@
     }
     function renderEmptyState() {
       var s = emptyStrings();
+      // O wrap vira multi-coluna (column-count) no mobile: sem isso o navegador
+      // fatia o texto do estado vazio entre as duas colunas.
+      if (g && g.classList) g.classList.add("vcom-is-empty");
       var filters = root && root.querySelector("[data-vcom-filters]");
       if (filters) filters.hidden = true;
       var sum = root && root.querySelector(".pr-sum");
@@ -633,6 +636,7 @@
           esc(filterEmptyText || "No reviews for this filter.") +
           "</p>";
       }
+      if (g && g.classList) g.classList.remove("vcom-is-empty");
       cardSlot.innerHTML = html;
       var totalReviews = parseInt(data.total, 10);
       if (isNaN(totalReviews)) totalReviews = parseInt(data.count, 10) || 0;
