@@ -157,6 +157,10 @@ export default function AppearancePage() {
     coerceStorefrontSettings(loaderData.settings),
   );
   const [selectedTab, setSelectedTab] = useState(0);
+  // Texto cru do campo de tamanho do logo: permite apagar/digitar livremente.
+  const [logoSizeText, setLogoSizeText] = useState(() =>
+    String(coerceStorefrontSettings(loaderData.settings).modal_brand_logo_size),
+  );
 
   const layoutLabel =
     STOREFRONT_LAYOUTS.find((l) => l.id === settings.layout)?.name ?? "Layout";
@@ -1158,12 +1162,24 @@ export default function AppearancePage() {
                             label="Tamanho do logo (px)"
                             name="modal_brand_logo_size"
                             type="number"
-                            value={String(settings.modal_brand_logo_size)}
-                            onChange={(v) => set("modal_brand_logo_size", parseInt(v, 10) || 30)}
+                            value={logoSizeText}
+                            onChange={(v) => {
+                              setLogoSizeText(v);
+                              const n = parseInt(v, 10);
+                              if (Number.isFinite(n)) set("modal_brand_logo_size", n);
+                            }}
+                            onBlur={() => {
+                              const n = parseInt(logoSizeText, 10);
+                              const clamped = Number.isFinite(n)
+                                ? Math.min(44, Math.max(12, n))
+                                : 30;
+                              setLogoSizeText(String(clamped));
+                              set("modal_brand_logo_size", clamped);
+                            }}
                             autoComplete="off"
                             min={12}
                             max={44}
-                            helpText="12 a 44px (o pop-up trava nesse limite automaticamente)"
+                            helpText="12 a 44px — o valor é ajustado ao sair do campo"
                           />
                           <Select
                             label="Posição do logo"
