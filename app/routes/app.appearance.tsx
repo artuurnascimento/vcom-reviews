@@ -1232,6 +1232,17 @@ export default function AppearancePage() {
                             onChange={(v) => set("modal_show_disclosure", v)}
                           />
                         </InlineStack>
+                        {settings.modal_show_write_review ? (
+                          <TextField
+                            label="Link do botão &quot;Write a review&quot; (opcional)"
+                            name="modal_write_review_url"
+                            value={settings.modal_write_review_url}
+                            onChange={(v) => set("modal_write_review_url", v)}
+                            autoComplete="off"
+                            placeholder="/collections/all"
+                            helpText="Usado quando não há formulário de avaliação na página atual (ex.: ao abrir da home). Vazio = leva para todos os produtos."
+                          />
+                        ) : null}
                         {settings.modal_show_disclosure ? (
                           <BlockStack gap="200">
                             <TextField

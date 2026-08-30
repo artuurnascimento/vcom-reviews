@@ -346,5 +346,6 @@ export function parseStorefrontSettingsForm(form: FormData): StorefrontSettings 
       const v = str("modal_brand_display");
       return v === "name" || v === "logo" ? v : "both";
     })() as StorefrontSettings["modal_brand_display"],
+    modal_write_review_url: str("modal_write_review_url"),
   });
 }

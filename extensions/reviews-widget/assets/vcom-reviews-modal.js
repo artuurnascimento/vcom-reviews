@@ -13,6 +13,7 @@
     showWrite: true, showSummary: true, showThemes: true, showDisclosure: true,
     disclosureTitle: "", disclosureBody: "",
     brandLogoSize: 30, brandPosition: "left", brandDisplay: "both",
+    writeUrl: "",
   };
   var page = 1;
   var totalPages = 1;
@@ -165,8 +166,22 @@
       var w = e.target.closest && e.target.closest("[data-rm-write]");
       if (!w) return;
       close();
+      // Prefere o formulario da propria pagina (produto); sem ele, leva para
+      // um lugar onde o cliente pode escolher um produto e avaliar.
       var form = document.querySelector(".pr-w, [data-vcom-write-review]");
-      if (form) form.click();
+      if (form) {
+        form.click();
+        return;
+      }
+      var dest = meta.writeUrl;
+      if (!dest) {
+        try {
+          dest = new URL("/collections/all", meta.url || window.location.origin).href;
+        } catch (err) {
+          dest = "/collections/all";
+        }
+      }
+      window.location.assign(dest);
     });
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape" && el.classList.contains("is-open")) close();
@@ -193,7 +208,7 @@
       ? '<span class="vcom-rm__avatar"><img src="' + esc(meta.logo) + '" alt=""></span>'
       : '<span class="vcom-rm__avatar">' + esc(initials(meta.name)) + "</span>";
 
-    var canWrite = meta.showWrite && !!document.querySelector(".pr-w, [data-vcom-write-review]");
+    var canWrite = meta.showWrite;
 
     head.innerHTML =
       '<div class="vcom-rm__biz">' +
@@ -447,6 +462,7 @@
     meta.brandPosition = posAttr === "center" || posAttr === "right" ? posAttr : "left";
     var dispAttr = trigger.getAttribute("data-brand-display") || "both";
     meta.brandDisplay = dispAttr === "name" || dispAttr === "logo" ? dispAttr : "both";
+    meta.writeUrl = trigger.getAttribute("data-write-url") || "";
     var brand = modal.querySelector("[data-rm-brand]");
     if (brand) {
       var logoValue = (meta.brandLogo || "").trim();
