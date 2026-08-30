@@ -118,7 +118,7 @@
       starsHtml(avg, "vcom-rm__mini") + "<strong>" + esc(avg) + "</strong></div>" +
       (meta.category ? '<p class="vcom-rm__cat">' + esc(meta.category) + "</p>" : "") +
       "</div>" +
-      (canWrite ? '<button type="button" class="vcom-rm__write" data-rm-write>Write a review</button>' : "") +
+      (canWrite ? '<button type="button" class="vcom-rm__write" data-rm-write><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Write a review</button>' : "") +
       '<div class="vcom-rm__box">' +
       '<div class="vcom-rm__score">' +
       '<div class="vcom-rm__num">' + esc(avg) + "</div>" +
@@ -126,6 +126,32 @@
       starsHtml(avg, "vcom-rm__stars") +
       '<div class="vcom-rm__label">' + nfmt(total) + " reviews</div></div>" +
       '<div class="vcom-rm__dist">' + rows + "</div></div>";
+
+    // Resumo automatico + assuntos mais citados (calculados sobre as avaliacoes reais)
+    var extra = "";
+    if (data.summary_text) {
+      extra +=
+        '<h3 class="vcom-rm__h3">Review summary</h3>' +
+        '<p class="vcom-rm__ai">&#10022; Generated automatically from this store\u2019s reviews</p>' +
+        '<p class="vcom-rm__sum">' + esc(data.summary_text) + "</p>";
+    }
+    if (data.themes && data.themes.length) {
+      var cards = data.themes
+        .slice(0, 3)
+        .map(function (t) {
+          return (
+            '<div class="vcom-rm__theme"><div class="vcom-rm__themeh">' + esc(t.label) + "</div>" +
+            '<div class="vcom-rm__themec">Mentioned in ' + nfmt(t.count) + " reviews</div>" +
+            (t.sample ? '<p class="vcom-rm__themes">&ldquo;' + esc(t.sample) + '&rdquo;</p>' : "") +
+            "</div>"
+          );
+        })
+        .join("");
+      extra +=
+        '<h3 class="vcom-rm__h3">What people talk about most</h3>' +
+        '<div class="vcom-rm__themes-wrap">' + cards + "</div>";
+    }
+    if (extra) head.insertAdjacentHTML("beforeend", extra);
 
     var sec = modal.querySelector("[data-rm-sec]");
     sec.hidden = false;
@@ -185,7 +211,7 @@
         if (append) list.insertAdjacentHTML("beforeend", html);
         else list.innerHTML = html || '<div class="vcom-rm__state">No reviews yet</div>';
         more.hidden = page >= totalPages;
-        more.textContent = "See all " + nfmt(data.total || data.count || 0) + " reviews";
+        more.innerHTML = "See all " + nfmt(data.total || data.count || 0) + " reviews &#8595;";
         more.disabled = false;
       })
       .catch(function () {

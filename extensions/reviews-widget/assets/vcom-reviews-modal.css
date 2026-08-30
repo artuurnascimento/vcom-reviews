@@ -67,3 +67,14 @@
 .vcom-rm__more[disabled]{opacity:.55;cursor:default}
 .vcom-rm__state{padding:28px;text-align:center;color:#6b7280;font-size:14px}
 @media(max-width:640px){.vcom-rm{padding:10px 8px}.vcom-rm__biz,.vcom-rm__box{padding-left:18px;padding-right:18px;margin-left:0;margin-right:0}.vcom-rm__box{margin:16px 18px 0}.vcom-rm__write,.vcom-rm__more{width:calc(100% - 36px);margin-left:18px;margin-right:18px}.vcom-rm__sec,.vcom-rm__list{margin-left:18px;margin-right:18px}.vcom-rm__name{font-size:22px}}
+/* Resumo automatico e assuntos mais citados */
+.vcom-rm__h3{margin:26px 28px 0;font-size:19px;font-weight:800}
+.vcom-rm__ai{margin:8px 28px 0;font-size:13px;color:#6b7280}
+.vcom-rm__sum{margin:8px 28px 0;font-size:15px;line-height:1.6;color:#3b3f46}
+.vcom-rm__themes-wrap{display:flex;gap:12px;margin:14px 28px 0;overflow-x:auto;padding-bottom:4px}
+.vcom-rm__theme{flex:0 0 240px;border:1px solid #ded9f7;border-radius:10px;padding:14px;background:#faf9ff}
+.vcom-rm__themeh{font-size:15px;font-weight:700;margin-bottom:2px}
+.vcom-rm__themec{font-size:12px;color:#6b7280}
+.vcom-rm__themes{margin:8px 0 0;font-size:13px;line-height:1.5;color:#3b3f46}
+.vcom-rm__write svg{vertical-align:-3px;margin-right:6px}
+@media(max-width:640px){.vcom-rm__h3,.vcom-rm__ai,.vcom-rm__sum,.vcom-rm__themes-wrap{margin-left:18px;margin-right:18px}}

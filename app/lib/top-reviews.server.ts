@@ -210,12 +210,52 @@ export async function getProductCardInfoByIds(
   return out;
 }
 
+/** Temas citados nas avaliacoes (multi-idioma), para o bloco "what people talk about most". */
+const REVIEW_THEMES: Array<{ key: string; label: string; words: string[] }> = [
+  {
+    key: "quality",
+    label: "Quality",
+    words: ["quality", "qualita", "qualité", "qualite", "calidad", "qualidade", "fabric", "tessuto", "tissu", "tela", "material", "premium"],
+  },
+  {
+    key: "delivery",
+    label: "Delivery",
+    words: ["delivery", "shipping", "arrived", "arriv", "livraison", "entrega", "envio", "spedizione", "fast", "quick", "rapid", "veloce", "rapide"],
+  },
+  {
+    key: "fit",
+    label: "Fit & size",
+    words: ["fit", "size", "taglia", "taille", "talla", "tamanho", "vestibilita", "vestibilità", "comfortable", "comoda", "confortable", "confortevole"],
+  },
+  {
+    key: "design",
+    label: "Design",
+    words: ["design", "colour", "color", "colori", "couleur", "logo", "look", "badge", "stemma", "crest"],
+  },
+  {
+    key: "price",
+    label: "Price",
+    words: ["price", "prezzo", "prix", "precio", "preco", "preço", "value", "worth", "affordable", "vale"],
+  },
+];
+
+export interface ReviewTheme {
+  key: string;
+  label: string;
+  count: number;
+  sample: string;
+}
+
 export interface StoreReviewSummary {
   /** Todas as avaliacoes aprovadas, ja ordenadas. */
   reviews: ReviewRecord[];
   total: number;
   avg: number;
   dist: Record<1 | 2 | 3 | 4 | 5, number>;
+  /** Assuntos mais citados, do mais frequente para o menos. */
+  themes: ReviewTheme[];
+  /** Frase-resumo montada a partir dos numeros reais. */
+  summaryText: string;
 }
 
 /**
@@ -260,10 +300,50 @@ export async function getStoreReviewSummary(
     const biggest = levels.reduce((a, b) => (weights[a] >= weights[b] ? a : b));
     dist[biggest] = Math.max(0, dist[biggest] + (total - assigned));
   }
+  // Temas: conta quantas avaliacoes citam cada assunto e guarda um trecho real.
+  const themeHits = REVIEW_THEMES.map((theme) => ({
+    key: theme.key,
+    label: theme.label,
+    count: 0,
+    sample: "",
+  }));
+  for (const review of approved) {
+    const text = `${review.title || ""} ${review.body || ""}`.toLowerCase();
+    if (!text.trim()) continue;
+    REVIEW_THEMES.forEach((theme, i) => {
+      if (theme.words.some((w) => text.indexOf(w) !== -1)) {
+        themeHits[i].count += 1;
+        if (!themeHits[i].sample && review.body) {
+          themeHits[i].sample = review.body.slice(0, 160);
+        }
+      }
+    });
+  }
+  const themes = themeHits.filter((t) => t.count > 0).sort((a, b) => b.count - a.count);
+
+  const avgRounded = total > 0 ? Math.round((sum / total) * 10) / 10 : 0;
+  const happy = approved.filter((r) => r.rating >= 4).length;
+  const happyPct = total > 0 ? Math.round((happy / total) * 100) : 0;
+  const topLabels = themes.slice(0, 3).map((t) => t.label.toLowerCase());
+  const mentions =
+    topLabels.length === 0
+      ? ""
+      : ` Customers most often mention ${
+          topLabels.length === 1
+            ? topLabels[0]
+            : topLabels.slice(0, -1).join(", ") + " and " + topLabels[topLabels.length - 1]
+        }.`;
+  const summaryText =
+    total === 0
+      ? ""
+      : `Looking at ${total.toLocaleString("en-US")} reviews, shoppers rate this store ${avgRounded} out of 5, with ${happyPct}% giving it 4 stars or more.${mentions}`;
+
   return {
     reviews: sortStorefrontReviews(approved, sort),
     total,
-    avg: total > 0 ? Math.round((sum / total) * 10) / 10 : 0,
+    avg: avgRounded,
     dist,
+    themes,
+    summaryText,
   };
 }

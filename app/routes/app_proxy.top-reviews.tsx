@@ -138,6 +138,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       total: summary ? summary.total : count,
       avg_all: summary ? summary.avg : Math.round(avg * 10) / 10,
       dist: summary ? summary.dist : null,
+      themes: summary ? summary.themes.slice(0, 4) : null,
+      summary_text: summary ? summary.summaryText : null,
       avg: Math.round(avg * 10) / 10,
       page,
       limit,
