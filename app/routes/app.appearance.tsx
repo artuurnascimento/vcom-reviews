@@ -1142,16 +1142,18 @@ export default function AppearancePage() {
                               set("modal_brand_display", v as typeof settings.modal_brand_display)
                             }
                           />
-                          <TextField
-                            label="Logo (URL da imagem ou código SVG)"
-                            name="modal_brand_logo_url"
-                            value={settings.modal_brand_logo_url}
-                            onChange={(v) => set("modal_brand_logo_url", v)}
-                            autoComplete="off"
-                            multiline={3}
-                            placeholder="https://.../seu-logo.png ou <svg>...</svg>"
-                            helpText="Vazio = usa o ícone do app. Aceita um link de imagem ou código SVG colado direto."
-                          />
+                          <div style={{ maxHeight: 172, overflowY: "auto", borderRadius: 8 }}>
+                            <TextField
+                              label="Logo (URL da imagem ou código SVG)"
+                              name="modal_brand_logo_url"
+                              value={settings.modal_brand_logo_url}
+                              onChange={(v) => set("modal_brand_logo_url", v)}
+                              autoComplete="off"
+                              multiline={3}
+                              placeholder="https://.../seu-logo.png ou <svg>...</svg>"
+                              helpText="Vazio = usa o ícone do app. Aceita um link de imagem ou código SVG colado direto (a caixa não cresce; role para ver tudo)."
+                            />
+                          </div>
                           <TextField
                             label="Tamanho do logo (px)"
                             name="modal_brand_logo_size"
