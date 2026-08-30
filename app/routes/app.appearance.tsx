@@ -1159,16 +1159,11 @@ export default function AppearancePage() {
                             name="modal_brand_logo_size"
                             type="number"
                             value={String(settings.modal_brand_logo_size)}
-                            onChange={(v) =>
-                              set(
-                                "modal_brand_logo_size",
-                                Math.min(44, Math.max(12, parseInt(v, 10) || 30)),
-                              )
-                            }
+                            onChange={(v) => set("modal_brand_logo_size", parseInt(v, 10) || 30)}
                             autoComplete="off"
                             min={12}
                             max={44}
-                            helpText="Máx. 44px para o cabeçalho não ficar muito alto"
+                            helpText="12 a 44px (o pop-up trava nesse limite automaticamente)"
                           />
                           <Select
                             label="Posição do logo"
