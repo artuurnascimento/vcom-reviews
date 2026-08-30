@@ -143,6 +143,14 @@
       if (page < totalPages) load(page + 1, true);
     });
     el.addEventListener("click", function (e) {
+      var tg = e.target.closest && e.target.closest("[data-rm-note-toggle]");
+      if (tg) {
+        var body = el.querySelector("[data-rm-note-body]");
+        var open = tg.getAttribute("aria-expanded") === "true";
+        tg.setAttribute("aria-expanded", open ? "false" : "true");
+        if (body) body.hidden = open;
+        return;
+      }
       var w = e.target.closest && e.target.closest("[data-rm-write]");
       if (!w) return;
       close();
@@ -236,7 +244,9 @@
         "Newest first, with the customer photos and the product each review refers to.",
       ) +
       "</div>" +
-      '<div class="vcom-rm__note"><span class="vcom-rm__noteico">' +
+      '<div class="vcom-rm__note" data-rm-note>' +
+      '<button type="button" class="vcom-rm__noteh" data-rm-note-toggle aria-expanded="false">' +
+      '<span class="vcom-rm__noteico">' +
       '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
       '<defs><linearGradient id="vcomShieldGrad" x1="0" y1="0" x2="1" y2="1">' +
       '<stop offset="0" stop-color="#9db0ff"/><stop offset="1" stop-color="#4b4dff"/>' +
@@ -244,8 +254,17 @@
       '<path d="M12 1.7 3.6 4.8v6.9c0 5.9 8.4 10.6 8.4 10.6s8.4-4.7 8.4-10.6V4.8L12 1.7Z" fill="url(#vcomShieldGrad)"/>' +
       '<path d="M12 6.9l1.5 3.1 3.4.4-2.5 2.4.7 3.4-3.1-1.7-3.1 1.7.7-3.4-2.5-2.4 3.4-.4L12 6.9Z" fill="#0d0d1f"/>' +
       "</svg></span>" +
-      "<span>Reviews are published by " + esc(meta.name) +
-      ". The score is calculated automatically from every published review.</span></div>";
+      '<span class="vcom-rm__notet">Reviews here are published by ' + esc(meta.name) +
+      ", and the score is calculated automatically</span>" +
+      '<span class="vcom-rm__chev" aria-hidden="true">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>' +
+      "</span></button>" +
+      '<div class="vcom-rm__notebody" data-rm-note-body hidden>' +
+      "<p>Every review on this page was published by the store. The overall score and the star distribution above are recalculated automatically from all " +
+      nfmt(total) + " published reviews \u2014 nothing is set by hand.</p>" +
+      "<p>Reviews may include customer photos, the product they refer to and a \u201cVerified Buyer\u201d label applied by the store. " +
+      "If you believe a review is inaccurate, get in touch through the store\u2019s contact channels and it will be reviewed.</p>" +
+      "</div></div>";
 
     // Resumo automatico + assuntos mais citados (calculados sobre as avaliacoes reais)
     var extra = infoHtml;
