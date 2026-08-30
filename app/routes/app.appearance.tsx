@@ -1130,7 +1130,7 @@ export default function AppearancePage() {
                             value={settings.modal_brand_name}
                             onChange={(v) => set("modal_brand_name", v)}
                             autoComplete="off"
-                            placeholder="VCOM Reviews"
+                            placeholder="Vertix Reviews"
                             helpText="Aparece na barra superior do pop-up"
                           />
                           <Select

@@ -228,7 +228,7 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   pagination_active_color: "#1d8a42",
   pagination_inactive_color: "#dcdce6",
   show_empty_message: false,
-  empty_message: "Adicione avaliações no app VCOM Reviews.",
+  empty_message: "Adicione avaliações no app Vertix Reviews.",
   show_review_form: true,
   review_form_show_success: true,
   review_form_success_message: "",

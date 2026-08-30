@@ -1,11 +1,11 @@
 import type { MetaFunction } from "@remix-run/node";
 
 export const meta: MetaFunction = () => [
-  { title: "Privacy Policy — VCOM Reviews" },
+  { title: "Privacy Policy — Vertix Reviews" },
   { name: "robots", content: "noindex" },
 ];
 
-const APP_NAME = "VCOM Reviews";
+const APP_NAME = "Vertix Reviews";
 
 export default function PrivacyPolicy() {
   const contactEmail =

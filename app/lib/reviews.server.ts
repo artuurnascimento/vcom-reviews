@@ -17,6 +17,7 @@ import {
 import { ensureReviewDefinitionReady } from "./metaobject-setup.server";
 import { invalidateReviewDedupeCache } from "./review-dedupe.server";
 import { emitReviewEvent } from "./review-events.server";
+import { recordReviewCollected } from "./usage-events.server";
 import { syncStorefrontReviewStats } from "./storefront-stats.server";
 
 function scheduleStorefrontStatsSync(admin: AdminApi) {
@@ -449,6 +450,8 @@ async function createMetaobject(admin: AdminApi, data: ReviewFormData) {
   }
   const id = json.data?.metaobjectCreate?.metaobject?.id as string;
   scheduleStorefrontStatsSync(admin);
+  // Medição p/ o console Vertix (usage_events) — fire-and-forget.
+  recordReviewCollected(admin);
   void emitReviewEvent({
     event: "review.created",
     emittedAt: new Date().toISOString(),

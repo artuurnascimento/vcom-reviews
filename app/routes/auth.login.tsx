@@ -40,7 +40,7 @@ export default function AuthLogin() {
           <Form method="post">
             <FormLayout>
               <Text as="h2" variant="headingMd">
-                Entrar no VCOM Reviews
+                Entrar no Vertix Reviews
               </Text>
               <TextField
                 type="text"

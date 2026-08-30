@@ -27,7 +27,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const res = json(
         {
           ok: false,
-          error: "Sessão do app indisponível. Abra o app VCOM Reviews no admin da loja.",
+          error: "Sessão do app indisponível. Abra o app Vertix Reviews no admin da loja.",
         },
         { status: 503 },
       );

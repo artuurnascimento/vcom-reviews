@@ -43,7 +43,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           count: 0,
           avg: 0,
           error:
-            "Sessão do app expirada. Abra o app VCOM Reviews no admin da Shopify e clique em Salvar em Aparência.",
+            "Sessão do app expirada. Abra o app Vertix Reviews no admin da Shopify e clique em Salvar em Aparência.",
         },
         { status: 503 },
       );
@@ -58,7 +58,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
           reviews: [],
           count: 0,
           avg: 0,
-          error: "Sessão do app indisponível. Abra o app VCOM Reviews no admin da loja.",
+          error: "Sessão do app indisponível. Abra o app Vertix Reviews no admin da loja.",
         },
         { status: 503 },
       );
