@@ -437,7 +437,7 @@
     meta.showDisclosure = trigger.getAttribute("data-show-disclosure") !== "0";
     meta.disclosureTitle = trigger.getAttribute("data-disclosure-title") || "";
     meta.disclosureBody = trigger.getAttribute("data-disclosure-body") || "";
-    meta.brandLogoSize = parseInt(trigger.getAttribute("data-brand-logo-size"), 10) || 30;
+    meta.brandLogoSize = Math.min(44, Math.max(12, parseInt(trigger.getAttribute("data-brand-logo-size"), 10) || 30));
     var posAttr = trigger.getAttribute("data-brand-position") || "left";
     meta.brandPosition = posAttr === "center" || posAttr === "right" ? posAttr : "left";
     var dispAttr = trigger.getAttribute("data-brand-display") || "both";
