@@ -223,25 +223,36 @@
       });
   }
 
-  /** Logo da loja: Brand do Shopify e, se nao houver, o logo do proprio tema. */
-  function findThemeLogo() {
-    var sels = [
-      "header img[class*='logo' i]",
-      "img[class*='logo' i]",
-      "header a[href='/'] img",
-      ".footer img[class*='logo' i]",
-    ];
-    for (var i = 0; i < sels.length; i++) {
-      var list = document.querySelectorAll(sels[i]);
-      for (var j = 0; j < list.length; j++) {
-        var img = list[j];
-        if (img.closest(".vcom-rm")) continue;
-        var src = img.currentSrc || img.getAttribute("src") || "";
-        if (!src || src.indexOf("trustpilot") !== -1) continue;
-        if (img.naturalWidth > 0 || src) return src;
+  /** Favicon da loja (quadrado, cabe no circulo). Pede versao maior ao CDN. */
+  function findFavicon() {
+    var links = document.querySelectorAll(
+      'link[rel~="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"], link[rel="apple-touch-icon-precomposed"]',
+    );
+    var best = "";
+    var bestSize = 0;
+    for (var i = 0; i < links.length; i++) {
+      var href = links[i].getAttribute("href");
+      if (!href) continue;
+      var rel = (links[i].getAttribute("rel") || "").toLowerCase();
+      var size = parseInt(links[i].getAttribute("sizes") || "", 10);
+      if (!size) size = rel.indexOf("apple-touch") !== -1 ? 180 : 32;
+      if (size > bestSize) {
+        bestSize = size;
+        best = href;
       }
     }
-    return "";
+    if (!best) best = "/favicon.ico";
+    var url;
+    try {
+      url = new URL(best, window.location.origin);
+    } catch (e) {
+      return best;
+    }
+    // Favicon do Shopify vem em 32px; pede 180px para nao borrar no circulo.
+    if (url.hostname.indexOf("shopify") !== -1 || url.pathname.indexOf("/cdn/shop") !== -1) {
+      url.searchParams.set("width", "180");
+    }
+    return url.href;
   }
 
   function open(trigger) {
@@ -249,7 +260,7 @@
     meta.name = trigger.getAttribute("data-shop-name") || document.title;
     meta.url = trigger.getAttribute("data-shop-url") || "/";
     meta.category = trigger.getAttribute("data-shop-category") || "";
-    meta.logo = trigger.getAttribute("data-shop-logo") || findThemeLogo();
+    meta.logo = findFavicon();
     modal.classList.add("is-open");
     modal.scrollTop = 0;
     document.body.style.overflow = "hidden";
