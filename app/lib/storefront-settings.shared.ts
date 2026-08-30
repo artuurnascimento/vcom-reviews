@@ -277,7 +277,7 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   modal_brand_name: "",
   modal_brand_logo_url: "",
   modal_category: "",
-  modal_accent_color: "#4b4dff",
+  modal_accent_color: "#3c57bc",
   modal_show_write_review: true,
   modal_show_summary: true,
   modal_show_themes: true,

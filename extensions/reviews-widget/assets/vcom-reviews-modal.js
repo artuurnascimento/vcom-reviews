@@ -497,7 +497,7 @@
     }
     modal.querySelector(".vcom-rm__panel").style.setProperty(
       "--vcom-rm-accent",
-      meta.accentColor || "#4b4dff",
+      meta.accentColor || "#3c57bc",
     );
     modal.classList.add("is-open");
     modal.scrollTop = 0;
