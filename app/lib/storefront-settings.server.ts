@@ -342,5 +342,9 @@ export function parseStorefrontSettingsForm(form: FormData): StorefrontSettings 
       const v = str("modal_brand_position");
       return v === "center" || v === "right" ? v : "left";
     })() as StorefrontSettings["modal_brand_position"],
+    modal_brand_display: (() => {
+      const v = str("modal_brand_display");
+      return v === "name" || v === "logo" ? v : "both";
+    })() as StorefrontSettings["modal_brand_display"],
   });
 }

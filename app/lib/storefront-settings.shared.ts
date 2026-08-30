@@ -152,6 +152,7 @@ export interface StorefrontSettings {
   modal_disclosure_body: string;
   modal_brand_logo_size: number;
   modal_brand_position: "left" | "center" | "right";
+  modal_brand_display: "both" | "name" | "logo";
 }
 
 export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
@@ -284,6 +285,7 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   modal_disclosure_body: "",
   modal_brand_logo_size: 30,
   modal_brand_position: "left",
+  modal_brand_display: "both",
 };
 
 function num(value: unknown, fallback: number): number {
@@ -519,5 +521,9 @@ export function coerceStorefrontSettings(
       r.modal_brand_position === "center" || r.modal_brand_position === "right"
         ? r.modal_brand_position
         : d.modal_brand_position,
+    modal_brand_display:
+      r.modal_brand_display === "name" || r.modal_brand_display === "logo"
+        ? r.modal_brand_display
+        : d.modal_brand_display,
   };
 }

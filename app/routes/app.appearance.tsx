@@ -1129,6 +1129,19 @@ export default function AppearancePage() {
                             placeholder="VCOM Reviews"
                             helpText="Aparece na barra superior do pop-up"
                           />
+                          <Select
+                            label="O que exibir na barra"
+                            name="modal_brand_display"
+                            options={[
+                              { label: "Nome e logo", value: "both" },
+                              { label: "Só o nome", value: "name" },
+                              { label: "Só a logo", value: "logo" },
+                            ]}
+                            value={settings.modal_brand_display}
+                            onChange={(v) =>
+                              set("modal_brand_display", v as typeof settings.modal_brand_display)
+                            }
+                          />
                           <TextField
                             label="Logo (URL da imagem ou código SVG)"
                             name="modal_brand_logo_url"

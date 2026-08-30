@@ -12,7 +12,7 @@
     brandName: "", brandLogo: "", accentColor: "",
     showWrite: true, showSummary: true, showThemes: true, showDisclosure: true,
     disclosureTitle: "", disclosureBody: "",
-    brandLogoSize: 30, brandPosition: "left",
+    brandLogoSize: 30, brandPosition: "left", brandDisplay: "both",
   };
   var page = 1;
   var totalPages = 1;
@@ -440,6 +440,8 @@
     meta.brandLogoSize = parseInt(trigger.getAttribute("data-brand-logo-size"), 10) || 30;
     var posAttr = trigger.getAttribute("data-brand-position") || "left";
     meta.brandPosition = posAttr === "center" || posAttr === "right" ? posAttr : "left";
+    var dispAttr = trigger.getAttribute("data-brand-display") || "both";
+    meta.brandDisplay = dispAttr === "name" || dispAttr === "logo" ? dispAttr : "both";
     var brand = modal.querySelector("[data-rm-brand]");
     if (brand) {
       var logoValue = (meta.brandLogo || "").trim();
@@ -450,11 +452,17 @@
         : logoValue
           ? '<img src="' + esc(logoValue) + '" alt="">'
           : "";
-      var logoHtml = logoInner
-        ? '<span class="vcom-rm__logo-wrap" style="width:' + size + "px;height:" + size + 'px">' +
-          logoInner + "</span>"
+      var showLogo = meta.brandDisplay !== "name";
+      var showName = meta.brandDisplay !== "logo";
+      var logoHtml =
+        showLogo && logoInner
+          ? '<span class="vcom-rm__logo-wrap" style="width:' + size + "px;height:" + size + 'px">' +
+            logoInner + "</span>"
+          : "";
+      var nameHtml = showName
+        ? "<span>" + esc(meta.brandName || "VCOM Reviews") + "</span>"
         : "";
-      brand.innerHTML = logoHtml + "<span>" + esc(meta.brandName || "VCOM Reviews") + "</span>";
+      brand.innerHTML = logoHtml + nameHtml;
     }
     var brandSlot = modal.querySelector("[data-rm-brandslot]");
     if (brandSlot) brandSlot.setAttribute("data-pos", meta.brandPosition);
