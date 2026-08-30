@@ -9,8 +9,8 @@
 .vcom-rm__brandslot[data-pos="center"]{justify-content:center}
 .vcom-rm__brandslot[data-pos="right"]{justify-content:flex-end}
 .vcom-rm__brand{display:flex;align-items:center;gap:10px;color:#fff;font-size:20px;font-weight:800;letter-spacing:-.01em;line-height:1;min-width:0}
-.vcom-rm__logo-wrap{flex:0 0 auto;display:block;border-radius:7px;overflow:hidden;max-width:44px;max-height:44px}
-.vcom-rm__logo-wrap img,.vcom-rm__logo-wrap svg{width:100%;height:100%;display:block;object-fit:contain}
+.vcom-rm__logo-wrap{flex:0 0 auto;display:block;overflow:hidden;max-width:200px}
+.vcom-rm__logo-wrap img,.vcom-rm__logo-wrap svg{height:100%;width:auto;max-width:100%;display:block;object-fit:contain}
 .vcom-rm__crumbs{display:flex;align-items:center;gap:10px;padding:0 24px 12px;font-size:13px;line-height:1;color:#fff}
 .vcom-rm__crumbs span{color:#c9cdd6}
 .vcom-rm__dots{color:#8b9cff!important;letter-spacing:2px}

@@ -459,9 +459,10 @@
           : "";
       var showLogo = meta.brandDisplay !== "name";
       var showName = meta.brandDisplay !== "logo";
+      var maxW = size * 5;
       var logoHtml =
         showLogo && logoInner
-          ? '<span class="vcom-rm__logo-wrap" style="width:' + size + "px;height:" + size + 'px">' +
+          ? '<span class="vcom-rm__logo-wrap" style="height:' + size + "px;max-width:" + maxW + 'px">' +
             logoInner + "</span>"
           : "";
       var nameHtml = showName
