@@ -228,15 +228,38 @@ export async function getStoreReviewSummary(
   sort: ReviewsSortMode = "date_new",
 ): Promise<StoreReviewSummary> {
   const approved = await getApprovedProductReviewsByShop(admin, shop);
-  const dist: Record<1 | 2 | 3 | 4 | 5, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  // Notas sao fracionadas (4.6, 4.7...). Distribui proporcionalmente entre as
+  // duas estrelas vizinhas (4.7 = 30% em 4 estrelas + 70% em 5), o que mantem a
+  // curva coerente com a media exibida.
+  const weights: Record<1 | 2 | 3 | 4 | 5, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   let sum = 0;
   for (const review of approved) {
     sum += review.rating;
-    // Arredonda (4.8 -> 5 estrelas), como o Trustpilot faz na distribuicao.
-    const bucket = Math.min(5, Math.max(1, Math.round(review.rating))) as 1 | 2 | 3 | 4 | 5;
-    dist[bucket] += 1;
+    const value = Math.min(5, Math.max(1, review.rating));
+    const low = Math.floor(value) as 1 | 2 | 3 | 4 | 5;
+    const frac = value - low;
+    if (frac <= 0 || low >= 5) {
+      weights[low] += 1;
+    } else {
+      const high = (low + 1) as 2 | 3 | 4 | 5;
+      weights[low] += 1 - frac;
+      weights[high] += frac;
+    }
   }
   const total = approved.length;
+
+  // Arredonda para inteiros sem perder o total (sobra vai para a maior barra).
+  const dist: Record<1 | 2 | 3 | 4 | 5, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  const levels: Array<1 | 2 | 3 | 4 | 5> = [1, 2, 3, 4, 5];
+  let assigned = 0;
+  for (const level of levels) {
+    dist[level] = Math.round(weights[level]);
+    assigned += dist[level];
+  }
+  if (total > 0 && assigned !== total) {
+    const biggest = levels.reduce((a, b) => (weights[a] >= weights[b] ? a : b));
+    dist[biggest] = Math.max(0, dist[biggest] + (total - assigned));
+  }
   return {
     reviews: sortStorefrontReviews(approved, sort),
     total,
