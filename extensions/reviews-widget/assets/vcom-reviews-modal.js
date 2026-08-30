@@ -219,7 +219,7 @@
       starsHtml(avg, "vcom-rm__mini") + "<strong>" + esc(avg) + "</strong></div>" +
       (meta.category ? '<p class="vcom-rm__cat">' + esc(meta.category) + "</p>" : "") +
       "</div>" +
-      (canWrite ? '<button type="button" class="vcom-rm__write" data-rm-write><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Write a review</button>' : "") +
+      (canWrite ? '<button type="button" class="vcom-rm__write" data-rm-write><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M16 2.713 13.288 0l-1.567 1.567-9.564 9.56L0 15.996l4.934-2.223 9.145-9.14L16 2.714Zm-2.274.86.86-.86-1.298-1.3-.86.86 1.298 1.3ZM1.962 14.034l1.75-.776-.974-.975-.776 1.751Zm2.62-1.32-1.3-1.3 8.438-8.433L13.02 4.28 4.58 12.714Z"/></svg> Write a review</button>' : "") +
       '<div class="vcom-rm__box">' +
       '<div class="vcom-rm__score">' +
       '<div class="vcom-rm__num">' + esc(avg) + "</div>" +
