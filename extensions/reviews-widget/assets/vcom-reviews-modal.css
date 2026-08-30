@@ -32,8 +32,8 @@
 .vcom-rm__cat{margin:8px 0 0;font-size:14px;color:#2f6ecf}
 .vcom-rm__visit{flex:0 0 auto;border:1px solid #d6dae1;border-radius:999px;background:#fff;color:#191919;font-size:14px;font-weight:600;padding:10px 18px;text-decoration:none;display:inline-flex;gap:6px;align-items:center}
 .vcom-rm__visit:hover{background:#f6f8fa}
-.vcom-rm__write{display:block;width:calc(100% - 56px);margin:20px 28px 0;padding:14px;border:none;border-radius:8px;background:var(--vcom-rm-accent);color:#fff;font-size:16px;font-weight:700;cursor:pointer;text-align:center;filter:brightness(1)}
-.vcom-rm__write:hover{filter:brightness(.85)}
+.vcom-rm__write{display:block;width:calc(100% - 56px);margin:20px 28px 0;padding:14px!important;border:0!important;border-radius:8px!important;background:var(--vcom-rm-accent)!important;background-image:none!important;color:#fff!important;font-size:16px;font-weight:700;cursor:pointer;text-align:center;filter:brightness(1)}
+.vcom-rm__write:hover{background:var(--vcom-rm-accent)!important;filter:brightness(.85)}
 
 /* Caixa da nota + distribuicao */
 .vcom-rm__box{margin:20px 28px 0;border:1px solid #e6e9ee;border-radius:10px;padding:20px;display:flex;gap:26px;align-items:center;flex-wrap:wrap}
@@ -73,8 +73,8 @@
 .vcom-rm__prod{display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid #eef0f3;font-size:13px;color:#3b3f46;text-decoration:none}
 .vcom-rm__prod img{width:30px;height:30px;object-fit:cover;border-radius:6px}
 .vcom-rm__prod:hover{color:var(--vcom-rm-accent)}
-.vcom-rm__more{display:block;width:calc(100% - 56px);margin:20px 28px 0;padding:14px;border-radius:999px;border:1px solid #d6dae1;background:#f6f8fa;color:#191919;font-size:15px;font-weight:700;cursor:pointer}
-.vcom-rm__more:hover{background:#eef1f5}
+.vcom-rm__more{display:block;width:calc(100% - 56px);margin:20px 28px 0;padding:14px!important;border-radius:999px!important;border:1px solid #d6dae1!important;background:#f6f8fa!important;background-image:none!important;color:#191919!important;font-size:15px;font-weight:700;cursor:pointer}
+.vcom-rm__more:hover{background:#eef1f5!important}
 .vcom-rm__more[disabled]{opacity:.55;cursor:default}
 .vcom-rm__state{padding:28px;text-align:center;color:#6b7280;font-size:14px}
 @media(max-width:640px){.vcom-rm{padding:10px 8px}.vcom-rm__decoicons{display:none}.vcom-rm__topbar,.vcom-rm__crumbs{padding-left:16px;padding-right:16px}.vcom-rm__brand{font-size:18px}.vcom-rm__biz,.vcom-rm__box{padding-left:18px;padding-right:18px;margin-left:0;margin-right:0}.vcom-rm__box{margin:16px 18px 0}.vcom-rm__write,.vcom-rm__more{width:calc(100% - 36px);margin-left:18px;margin-right:18px}.vcom-rm__sec,.vcom-rm__list{margin-left:18px;margin-right:18px}.vcom-rm__name{font-size:22px}}
