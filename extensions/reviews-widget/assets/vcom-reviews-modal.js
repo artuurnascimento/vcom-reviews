@@ -205,8 +205,6 @@
       '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/>';
     var ICON_CHART =
       '<path d="M3 3v18h18"/><path d="M7 15v3M12 10v8M17 6v12"/>';
-    var ICON_SHIELD =
-      '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>';
 
     function infoRow(icon, title, sub, aside) {
       return (
@@ -239,7 +237,13 @@
       ) +
       "</div>" +
       '<div class="vcom-rm__note"><span class="vcom-rm__noteico">' +
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + ICON_SHIELD + "</svg></span>" +
+      '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
+      '<defs><linearGradient id="vcomShieldGrad" x1="0" y1="0" x2="1" y2="1">' +
+      '<stop offset="0" stop-color="#9db0ff"/><stop offset="1" stop-color="#4b4dff"/>' +
+      "</linearGradient></defs>" +
+      '<path d="M12 1.7 3.6 4.8v6.9c0 5.9 8.4 10.6 8.4 10.6s8.4-4.7 8.4-10.6V4.8L12 1.7Z" fill="url(#vcomShieldGrad)"/>' +
+      '<path d="M12 6.9l1.5 3.1 3.4.4-2.5 2.4.7 3.4-3.1-1.7-3.1 1.7.7-3.4-2.5-2.4 3.4-.4L12 6.9Z" fill="#0d0d1f"/>' +
+      "</svg></span>" +
       "<span>Reviews are published by " + esc(meta.name) +
       ". The score is calculated automatically from every published review.</span></div>";
 
