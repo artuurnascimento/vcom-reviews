@@ -326,5 +326,16 @@ export function parseStorefrontSettingsForm(form: FormData): StorefrontSettings 
     footer_trustpilot_score_label: str("footer_trustpilot_score_label"),
     footer_trustpilot_reviews_word: str("footer_trustpilot_reviews_word"),
     footer_trustpilot_fallback_count: num("footer_trustpilot_fallback_count", 0),
+
+    modal_brand_name: str("modal_brand_name"),
+    modal_brand_logo_url: str("modal_brand_logo_url"),
+    modal_category: str("modal_category"),
+    modal_accent_color: str("modal_accent_color"),
+    modal_show_write_review: bool("modal_show_write_review"),
+    modal_show_summary: bool("modal_show_summary"),
+    modal_show_themes: bool("modal_show_themes"),
+    modal_show_disclosure: bool("modal_show_disclosure"),
+    modal_disclosure_title: str("modal_disclosure_title"),
+    modal_disclosure_body: str("modal_disclosure_body"),
   });
 }

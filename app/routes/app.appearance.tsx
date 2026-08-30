@@ -1112,6 +1112,102 @@ export default function AppearancePage() {
                       </BlockStack>
                     </Card>
                     <Card>
+                      <BlockStack gap="400">
+                        <Text as="h3" variant="headingSm">
+                          Pop-up &quot;todas as avaliações&quot;
+                        </Text>
+                        <Text as="p" tone="subdued">
+                          Abre ao clicar no contador do rodapé (ex.: &quot;1.307 reviews&quot;). Marca, cor e textos abaixo são só seus — não referenciam nenhuma marca de terceiros.
+                        </Text>
+                        <InlineGrid columns={2} gap="400">
+                          <TextField
+                            label="Nome exibido"
+                            name="modal_brand_name"
+                            value={settings.modal_brand_name}
+                            onChange={(v) => set("modal_brand_name", v)}
+                            autoComplete="off"
+                            placeholder="VCOM Reviews"
+                            helpText="Aparece na barra superior do pop-up"
+                          />
+                          <TextField
+                            label="URL do logo (opcional)"
+                            name="modal_brand_logo_url"
+                            value={settings.modal_brand_logo_url}
+                            onChange={(v) => set("modal_brand_logo_url", v)}
+                            autoComplete="off"
+                            placeholder="https://.../seu-logo.png"
+                            helpText="Vazio = usa o ícone do app"
+                          />
+                          <TextField
+                            label="Categoria"
+                            name="modal_category"
+                            value={settings.modal_category}
+                            onChange={(v) => set("modal_category", v)}
+                            autoComplete="off"
+                            placeholder="Ex.: Football Shirts"
+                            helpText="Mostrada no breadcrumb e sob o nome da loja"
+                          />
+                          <ColorPickerField
+                            label="Cor de destaque"
+                            name="modal_accent_color"
+                            value={settings.modal_accent_color}
+                            onChange={(v) => set("modal_accent_color", v)}
+                          />
+                        </InlineGrid>
+                        <Divider />
+                        <Text as="h4" variant="headingXs">
+                          Seções visíveis
+                        </Text>
+                        <InlineStack gap="400" wrap>
+                          <Checkbox
+                            label="Botão &quot;Write a review&quot;"
+                            name="modal_show_write_review"
+                            checked={settings.modal_show_write_review}
+                            onChange={(v) => set("modal_show_write_review", v)}
+                          />
+                          <Checkbox
+                            label="Resumo automático"
+                            name="modal_show_summary"
+                            checked={settings.modal_show_summary}
+                            onChange={(v) => set("modal_show_summary", v)}
+                          />
+                          <Checkbox
+                            label="Assuntos mais citados"
+                            name="modal_show_themes"
+                            checked={settings.modal_show_themes}
+                            onChange={(v) => set("modal_show_themes", v)}
+                          />
+                          <Checkbox
+                            label="Caixa de aviso (escudo)"
+                            name="modal_show_disclosure"
+                            checked={settings.modal_show_disclosure}
+                            onChange={(v) => set("modal_show_disclosure", v)}
+                          />
+                        </InlineStack>
+                        {settings.modal_show_disclosure ? (
+                          <BlockStack gap="200">
+                            <TextField
+                              label="Título da caixa de aviso"
+                              name="modal_disclosure_title"
+                              value={settings.modal_disclosure_title}
+                              onChange={(v) => set("modal_disclosure_title", v)}
+                              autoComplete="off"
+                              placeholder="Reviews here are published by [sua loja]..."
+                            />
+                            <TextField
+                              label="Texto da caixa de aviso"
+                              name="modal_disclosure_body"
+                              value={settings.modal_disclosure_body}
+                              onChange={(v) => set("modal_disclosure_body", v)}
+                              autoComplete="off"
+                              multiline={4}
+                              helpText="Um parágrafo por linha. Vazio = usa o texto padrão."
+                            />
+                          </BlockStack>
+                        ) : null}
+                      </BlockStack>
+                    </Card>
+                    <Card>
                       <Checkbox
                         label="Mostrar mensagem quando não há reviews"
                         name="show_empty_message"

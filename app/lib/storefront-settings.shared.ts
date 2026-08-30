@@ -138,6 +138,18 @@ export interface StorefrontSettings {
   footer_trustpilot_score_label: string;
   footer_trustpilot_reviews_word: string;
   footer_trustpilot_fallback_count: number;
+
+  /** Pop-up "todas as avaliacoes" (aberto pelo contador do rodape). */
+  modal_brand_name: string;
+  modal_brand_logo_url: string;
+  modal_category: string;
+  modal_accent_color: string;
+  modal_show_write_review: boolean;
+  modal_show_summary: boolean;
+  modal_show_themes: boolean;
+  modal_show_disclosure: boolean;
+  modal_disclosure_title: string;
+  modal_disclosure_body: string;
 }
 
 export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
@@ -257,6 +269,17 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   footer_trustpilot_score_label: "TrustScore",
   footer_trustpilot_reviews_word: "reviews",
   footer_trustpilot_fallback_count: 0,
+
+  modal_brand_name: "",
+  modal_brand_logo_url: "",
+  modal_category: "",
+  modal_accent_color: "#4b4dff",
+  modal_show_write_review: true,
+  modal_show_summary: true,
+  modal_show_themes: true,
+  modal_show_disclosure: true,
+  modal_disclosure_title: "",
+  modal_disclosure_body: "",
 };
 
 function num(value: unknown, fallback: number): number {
@@ -476,5 +499,16 @@ export function coerceStorefrontSettings(
     footer_trustpilot_score_label: str(r.footer_trustpilot_score_label, d.footer_trustpilot_score_label),
     footer_trustpilot_reviews_word: str(r.footer_trustpilot_reviews_word, d.footer_trustpilot_reviews_word),
     footer_trustpilot_fallback_count: num(r.footer_trustpilot_fallback_count, d.footer_trustpilot_fallback_count),
+
+    modal_brand_name: str(r.modal_brand_name, d.modal_brand_name),
+    modal_brand_logo_url: str(r.modal_brand_logo_url, d.modal_brand_logo_url),
+    modal_category: str(r.modal_category, d.modal_category),
+    modal_accent_color: str(r.modal_accent_color, d.modal_accent_color),
+    modal_show_write_review: bool(r.modal_show_write_review, d.modal_show_write_review),
+    modal_show_summary: bool(r.modal_show_summary, d.modal_show_summary),
+    modal_show_themes: bool(r.modal_show_themes, d.modal_show_themes),
+    modal_show_disclosure: bool(r.modal_show_disclosure, d.modal_show_disclosure),
+    modal_disclosure_title: str(r.modal_disclosure_title, d.modal_disclosure_title),
+    modal_disclosure_body: str(r.modal_disclosure_body, d.modal_disclosure_body),
   };
 }
