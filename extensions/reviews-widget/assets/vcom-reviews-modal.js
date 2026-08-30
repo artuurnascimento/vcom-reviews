@@ -223,12 +223,33 @@
       });
   }
 
+  /** Logo da loja: Brand do Shopify e, se nao houver, o logo do proprio tema. */
+  function findThemeLogo() {
+    var sels = [
+      "header img[class*='logo' i]",
+      "img[class*='logo' i]",
+      "header a[href='/'] img",
+      ".footer img[class*='logo' i]",
+    ];
+    for (var i = 0; i < sels.length; i++) {
+      var list = document.querySelectorAll(sels[i]);
+      for (var j = 0; j < list.length; j++) {
+        var img = list[j];
+        if (img.closest(".vcom-rm")) continue;
+        var src = img.currentSrc || img.getAttribute("src") || "";
+        if (!src || src.indexOf("trustpilot") !== -1) continue;
+        if (img.naturalWidth > 0 || src) return src;
+      }
+    }
+    return "";
+  }
+
   function open(trigger) {
     if (!modal) modal = build();
     meta.name = trigger.getAttribute("data-shop-name") || document.title;
     meta.url = trigger.getAttribute("data-shop-url") || "/";
     meta.category = trigger.getAttribute("data-shop-category") || "";
-    meta.logo = trigger.getAttribute("data-shop-logo") || "";
+    meta.logo = trigger.getAttribute("data-shop-logo") || findThemeLogo();
     modal.classList.add("is-open");
     modal.scrollTop = 0;
     document.body.style.overflow = "hidden";
