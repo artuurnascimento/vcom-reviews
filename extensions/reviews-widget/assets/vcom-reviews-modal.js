@@ -111,14 +111,12 @@
 
     head.innerHTML =
       '<div class="vcom-rm__biz">' +
-      avatar +
-      '<div class="vcom-rm__bizmain">' +
+      '<div class="vcom-rm__bizrow">' + avatar +
+      '<a class="vcom-rm__visit" href="' + esc(meta.url) + '">Visit website &#8599;</a></div>' +
       '<h2 class="vcom-rm__name">' + esc(meta.name) + "</h2>" +
       '<div class="vcom-rm__facts"><u>Reviews ' + nfmt(total) + "</u> &middot; " +
       starsHtml(avg, "vcom-rm__mini") + "<strong>" + esc(avg) + "</strong></div>" +
       (meta.category ? '<p class="vcom-rm__cat">' + esc(meta.category) + "</p>" : "") +
-      "</div>" +
-      '<a class="vcom-rm__visit" href="' + esc(meta.url) + '">Visit website</a>' +
       "</div>" +
       (canWrite ? '<button type="button" class="vcom-rm__write" data-rm-write>Write a review</button>' : "") +
       '<div class="vcom-rm__box">' +
