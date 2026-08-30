@@ -51,6 +51,15 @@
     return el;
   }
 
+  function scoreWord(avg) {
+    var n = Number(avg) || 0;
+    if (n >= 4.3) return "Excellent";
+    if (n >= 3.5) return "Great";
+    if (n >= 2.5) return "Average";
+    if (n >= 1.5) return "Poor";
+    return "Bad";
+  }
+
   function renderHeader(data) {
     var head = modal.querySelector("[data-rm-header]");
     var total = data.total || data.count || 0;
@@ -62,14 +71,16 @@
       var n = parseInt(dist[s], 10) || 0;
       var pct = total > 0 ? Math.round((n / total) * 100) : 0;
       rows +=
-        '<div class="vcom-rm__row"><span>' + s + "-star</span>" +
+        '<div class="vcom-rm__row" data-s="' + s + '"><span>' + s + "-star</span>" +
         '<span class="vcom-rm__bar"><span class="vcom-rm__fill" style="width:' + pct + '%"></span></span>' +
         '<span class="vcom-rm__pct">' + pct + "%</span></div>";
     }
     head.innerHTML =
       (logo ? '<img class="vcom-rm__logo" src="' + esc(logo) + '" alt="Trustpilot">' : "") +
       '<div class="vcom-rm__top">' +
-      '<div class="vcom-rm__score"><div class="vcom-rm__num">' + esc(avg) + "</div>" +
+      '<div class="vcom-rm__score">' +
+      '<div class="vcom-rm__num">' + esc(avg) + "</div>" +
+      '<div class="vcom-rm__word">' + esc(scoreWord(avg)) + "</div>" +
       starsHtml(avg, "vcom-rm__stars") +
       '<div class="vcom-rm__label">' + esc(total) + " reviews</div></div>" +
       '<div class="vcom-rm__dist">' + rows + "</div></div>";

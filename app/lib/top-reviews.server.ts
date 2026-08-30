@@ -1,4 +1,3 @@
-import { ratingToDistributionBucket } from "./ai-review-options";
 import type { ReviewRecord } from "./constants";
 import { getApprovedProductReviewsByShop } from "./review-proxy-cache.server";
 import {
@@ -233,7 +232,9 @@ export async function getStoreReviewSummary(
   let sum = 0;
   for (const review of approved) {
     sum += review.rating;
-    dist[ratingToDistributionBucket(review.rating)] += 1;
+    // Arredonda (4.8 -> 5 estrelas), como o Trustpilot faz na distribuicao.
+    const bucket = Math.min(5, Math.max(1, Math.round(review.rating))) as 1 | 2 | 3 | 4 | 5;
+    dist[bucket] += 1;
   }
   const total = approved.length;
   return {
