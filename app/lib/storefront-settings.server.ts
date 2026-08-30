@@ -337,5 +337,10 @@ export function parseStorefrontSettingsForm(form: FormData): StorefrontSettings 
     modal_show_disclosure: bool("modal_show_disclosure"),
     modal_disclosure_title: str("modal_disclosure_title"),
     modal_disclosure_body: str("modal_disclosure_body"),
+    modal_brand_logo_size: num("modal_brand_logo_size", 30),
+    modal_brand_position: (() => {
+      const v = str("modal_brand_position");
+      return v === "center" || v === "right" ? v : "left";
+    })() as StorefrontSettings["modal_brand_position"],
   });
 }

@@ -12,6 +12,7 @@
     brandName: "", brandLogo: "", accentColor: "",
     showWrite: true, showSummary: true, showThemes: true, showDisclosure: true,
     disclosureTitle: "", disclosureBody: "",
+    brandLogoSize: 30, brandPosition: "left",
   };
   var page = 1;
   var totalPages = 1;
@@ -127,7 +128,7 @@
     el.innerHTML =
       '<div class="vcom-rm__panel">' +
       '<header class="vcom-rm__topbar">' +
-      '<span class="vcom-rm__brand" data-rm-brand></span>' +
+      '<span class="vcom-rm__brandslot" data-rm-brandslot><span class="vcom-rm__brand" data-rm-brand></span></span>' +
       '<button type="button" class="vcom-rm__close" aria-label="Close">' +
       '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>' +
       "</button></header>" +
@@ -436,12 +437,27 @@
     meta.showDisclosure = trigger.getAttribute("data-show-disclosure") !== "0";
     meta.disclosureTitle = trigger.getAttribute("data-disclosure-title") || "";
     meta.disclosureBody = trigger.getAttribute("data-disclosure-body") || "";
+    meta.brandLogoSize = parseInt(trigger.getAttribute("data-brand-logo-size"), 10) || 30;
+    var posAttr = trigger.getAttribute("data-brand-position") || "left";
+    meta.brandPosition = posAttr === "center" || posAttr === "right" ? posAttr : "left";
     var brand = modal.querySelector("[data-rm-brand]");
     if (brand) {
-      brand.innerHTML =
-        (meta.brandLogo ? '<img src="' + esc(meta.brandLogo) + '" alt="">' : "") +
-        "<span>" + esc(meta.brandName || "VCOM Reviews") + "</span>";
+      var logoValue = (meta.brandLogo || "").trim();
+      var isInlineSvg = /^<svg[\s>]/i.test(logoValue);
+      var size = meta.brandLogoSize;
+      var logoInner = isInlineSvg
+        ? logoValue
+        : logoValue
+          ? '<img src="' + esc(logoValue) + '" alt="">'
+          : "";
+      var logoHtml = logoInner
+        ? '<span class="vcom-rm__logo-wrap" style="width:' + size + "px;height:" + size + 'px">' +
+          logoInner + "</span>"
+        : "";
+      brand.innerHTML = logoHtml + "<span>" + esc(meta.brandName || "VCOM Reviews") + "</span>";
     }
+    var brandSlot = modal.querySelector("[data-rm-brandslot]");
+    if (brandSlot) brandSlot.setAttribute("data-pos", meta.brandPosition);
     var crumbs = modal.querySelector("[data-rm-crumbs]");
     if (crumbs) {
       crumbs.innerHTML =

@@ -1130,13 +1130,40 @@ export default function AppearancePage() {
                             helpText="Aparece na barra superior do pop-up"
                           />
                           <TextField
-                            label="URL do logo (opcional)"
+                            label="Logo (URL da imagem ou código SVG)"
                             name="modal_brand_logo_url"
                             value={settings.modal_brand_logo_url}
                             onChange={(v) => set("modal_brand_logo_url", v)}
                             autoComplete="off"
-                            placeholder="https://.../seu-logo.png"
-                            helpText="Vazio = usa o ícone do app"
+                            multiline={3}
+                            placeholder="https://.../seu-logo.png ou <svg>...</svg>"
+                            helpText="Vazio = usa o ícone do app. Aceita um link de imagem ou código SVG colado direto."
+                          />
+                          <TextField
+                            label="Tamanho do logo (px)"
+                            name="modal_brand_logo_size"
+                            type="number"
+                            value={String(settings.modal_brand_logo_size)}
+                            onChange={(v) => set("modal_brand_logo_size", parseInt(v, 10) || 30)}
+                            autoComplete="off"
+                            min={12}
+                            max={80}
+                          />
+                          <Select
+                            label="Posição do logo"
+                            name="modal_brand_position"
+                            options={[
+                              { label: "Esquerda", value: "left" },
+                              { label: "Centro", value: "center" },
+                              { label: "Direita", value: "right" },
+                            ]}
+                            value={settings.modal_brand_position}
+                            onChange={(v) =>
+                              set(
+                                "modal_brand_position",
+                                v as typeof settings.modal_brand_position,
+                              )
+                            }
                           />
                           <TextField
                             label="Categoria"
