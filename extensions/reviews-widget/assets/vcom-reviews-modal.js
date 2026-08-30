@@ -247,12 +247,10 @@
       '<div class="vcom-rm__note" data-rm-note>' +
       '<button type="button" class="vcom-rm__noteh" data-rm-note-toggle aria-expanded="false">' +
       '<span class="vcom-rm__noteico">' +
-      '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
-      '<defs><linearGradient id="vcomShieldGrad" x1="0" y1="0" x2="1" y2="1">' +
-      '<stop offset="0" stop-color="#9db0ff"/><stop offset="1" stop-color="#4b4dff"/>' +
-      "</linearGradient></defs>" +
-      '<path d="M12 1.7 3.6 4.8v6.9c0 5.9 8.4 10.6 8.4 10.6s8.4-4.7 8.4-10.6V4.8L12 1.7Z" fill="url(#vcomShieldGrad)"/>' +
-      '<path d="M12 6.9l1.5 3.1 3.4.4-2.5 2.4.7 3.4-3.1-1.7-3.1 1.7.7-3.4-2.5-2.4 3.4-.4L12 6.9Z" fill="#0d0d1f"/>' +
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0.602 24 28.8" aria-hidden="true">' +
+      '<path fill="#7AA0E9" d="M24 20.542V5.69a2.76 2.76 0 0 0-1.697-2.533C14.13-.34 9.131-.156 1.663 3.148A2.76 2.76 0 0 0 0 5.666V20.52c0 .93.48 1.8 1.284 2.333l9.128 6.036a3.14 3.14 0 0 0 3.46-.02l8.873-6.015C23.533 22.322 24 21.46 24 20.543"/>' +
+      '<path fill="#4E81E5" fill-rule="evenodd" d="M22.5 20.542V5.69c0-.553-.33-1.03-.814-1.237-3.978-1.702-7.048-2.449-9.957-2.429-2.906.02-5.801.806-9.433 2.413-.474.21-.796.681-.796 1.229V20.52c0 .465.24.9.642 1.166l9.128 6.037c.52.344 1.214.34 1.73-.01l8.872-6.015a1.4 1.4 0 0 0 .628-1.157M24 5.69v14.852c0 .918-.467 1.78-1.255 2.313l-8.872 6.016c-1.033.7-2.42.708-3.461.02l-9.128-6.037C.479 22.322 0 21.45 0 20.52V5.666c0-1.074.635-2.064 1.662-2.518C9.131-.156 14.13-.34 22.304 3.158A2.76 2.76 0 0 1 24 5.69" clip-rule="evenodd"/>' +
+      '<path fill="#1C1C1C" d="m12 5.398 1.975 6.393H20.4l-5.175 3.962-3.2 2.43-5.2 3.963L8.8 15.753l-5.2-3.962h6.425zM15.65 17.232 12 18.21l5.175 3.988z"/>' +
       "</svg></span>" +
       '<span class="vcom-rm__notet">Reviews here are published by ' + esc(meta.name) +
       ", and the score is calculated automatically</span>" +
