@@ -22,10 +22,34 @@
     return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   }
 
+  var STAR_PATH =
+    "M9.2 27L16 21.807 22.797 27 20.202 18.596 27 13.403h-8.402L16 5l-2.597 8.403H5l6.798 5.193L9.2 27z";
+  var STAR_ON = "#00b67a";
+  var STAR_OFF = "#dcdce6";
+
+  /** Mesmo SVG das estrelas usadas nos blocos do app (quadrado + estrela branca). */
+  function starSvg(fillWidth) {
+    var partial =
+      fillWidth > 0 && fillWidth < 32
+        ? '<rect width="' + fillWidth + '" height="32" fill="' + STAR_ON + '"/>'
+        : "";
+    var base = fillWidth >= 32 ? STAR_ON : STAR_OFF;
+    return (
+      '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      '<rect width="32" height="32" fill="' + base + '"/>' +
+      partial +
+      '<path d="' + STAR_PATH + '" fill="#fff"/></svg>'
+    );
+  }
+
   function starsHtml(rating, cls) {
-    var full = Math.round(Number(rating) || 0);
+    var value = Number(rating) || 0;
     var out = "";
-    for (var i = 1; i <= 5; i++) out += '<i class="' + (i <= full ? "on" : "") + '"></i>';
+    for (var i = 0; i < 5; i++) {
+      var diff = value - i;
+      var w = diff >= 1 ? 32 : diff > 0 ? Math.round(diff * 32) : 0;
+      out += starSvg(w);
+    }
     return '<div class="' + cls + '">' + out + "</div>";
   }
 

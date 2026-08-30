@@ -27,9 +27,7 @@
 .vcom-rm__word{font-size:15px;font-weight:700;margin:2px 0 8px}
 .vcom-rm__label{font-size:13px;color:#6b7280;margin-top:8px}
 .vcom-rm__stars{display:flex;gap:3px;justify-content:center}
-.vcom-rm__stars i{width:22px;height:22px;display:block;background:#dcdce6;border-radius:2px;position:relative}
-.vcom-rm__stars i.on{background:#00b67a}
-.vcom-rm__stars i::after{content:"★";position:absolute;inset:0;color:#fff;font-size:14px;line-height:22px;text-align:center;font-style:normal}
+.vcom-rm__stars svg{width:23px;height:23px;display:block;flex:0 0 auto}
 .vcom-rm__dist{flex:1 1 280px;min-width:250px;display:flex;flex-direction:column;gap:8px}
 .vcom-rm__row{display:flex;align-items:center;gap:12px;font-size:13px;color:#191919}
 .vcom-rm__row>span:first-child{flex:0 0 54px}
@@ -51,9 +49,7 @@
 .vcom-rm__nm{font-size:15px;font-weight:700;line-height:1.2}
 .vcom-rm__dt{font-size:13px;color:#6b7280}
 .vcom-rm__mini{display:flex;gap:2px;margin-bottom:10px}
-.vcom-rm__mini i{width:19px;height:19px;display:block;background:#dcdce6;border-radius:2px;position:relative}
-.vcom-rm__mini i.on{background:#00b67a}
-.vcom-rm__mini i::after{content:"★";position:absolute;inset:0;color:#fff;font-size:12px;line-height:19px;text-align:center;font-style:normal}
+.vcom-rm__mini svg{width:19px;height:19px;display:block;flex:0 0 auto}
 .vcom-rm__vb{font-size:12px;font-weight:700;color:#00875a;margin-left:8px;align-self:center}
 .vcom-rm__title{margin:0 0 6px;font-size:16px;font-weight:700}
 .vcom-rm__body{margin:0;font-size:15px;line-height:1.55;color:#3b3f46}
