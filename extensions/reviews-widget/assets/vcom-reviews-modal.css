@@ -82,3 +82,15 @@
 .vcom-rm__themes{margin:8px 0 0;font-size:13px;line-height:1.5;color:#3b3f46}
 .vcom-rm__write svg{vertical-align:-3px;margin-right:6px}
 @media(max-width:640px){.vcom-rm__h3,.vcom-rm__ai,.vcom-rm__sum,.vcom-rm__themes-wrap{margin-left:18px;margin-right:18px}}
+/* Linhas de informacao + aviso (layout do perfil) */
+.vcom-rm__infos-wrap{margin:26px 28px 0;display:flex;flex-direction:column;gap:22px;padding-top:22px;border-top:1px solid #eef0f3}
+.vcom-rm__info{display:flex;align-items:flex-start;gap:16px}
+.vcom-rm__ico{flex:0 0 auto;width:46px;height:46px;border-radius:50%;background:#f4f5f7;color:#191919;display:flex;align-items:center;justify-content:center}
+.vcom-rm__ico svg{width:22px;height:22px}
+.vcom-rm__infotxt{flex:1 1 auto;min-width:0}
+.vcom-rm__infoh{font-size:15px;font-weight:700;line-height:1.3}
+.vcom-rm__infos{font-size:14px;line-height:1.5;color:#5b6068;margin-top:2px}
+.vcom-rm__note{margin:22px 28px 0;display:flex;gap:14px;align-items:center;border:1px solid #e6e9ee;border-radius:10px;background:#faf9f5;padding:16px;font-size:14px;font-weight:600;line-height:1.45}
+.vcom-rm__noteico{flex:0 0 auto;width:34px;height:34px;color:#4b4dff}
+.vcom-rm__noteico svg{width:34px;height:34px}
+@media(max-width:640px){.vcom-rm__infos-wrap,.vcom-rm__note{margin-left:18px;margin-right:18px}}

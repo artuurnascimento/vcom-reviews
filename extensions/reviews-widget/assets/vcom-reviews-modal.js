@@ -194,8 +194,57 @@
       '<div class="vcom-rm__label">' + nfmt(total) + " reviews</div></div>" +
       '<div class="vcom-rm__dist">' + rows + "</div></div>";
 
+    // Linhas de informacao (mesmo layout do print, com fatos reais da loja)
+    var happyPct = 0;
+    if (total > 0) {
+      happyPct = Math.round((((dist[4] || 0) + (dist[5] || 0)) / total) * 100);
+    }
+    var ICON_SEND =
+      '<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/>';
+    var ICON_CHAT =
+      '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/>';
+    var ICON_CHART =
+      '<path d="M3 3v18h18"/><path d="M7 15v3M12 10v8M17 6v12"/>';
+    var ICON_SHIELD =
+      '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>';
+
+    function infoRow(icon, title, sub, aside) {
+      return (
+        '<div class="vcom-rm__info">' +
+        '<span class="vcom-rm__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
+        icon + "</svg></span>" +
+        '<div class="vcom-rm__infotxt"><div class="vcom-rm__infoh">' + title + "</div>" +
+        '<div class="vcom-rm__infos">' + sub + "</div></div>" +
+        (aside || "") +
+        "</div>"
+      );
+    }
+
+    var infoHtml =
+      '<div class="vcom-rm__infos-wrap">' +
+      infoRow(
+        ICON_SEND,
+        "Open to every customer",
+        "Any buyer can leave a review straight from the product page.",
+      ) +
+      infoRow(
+        ICON_CHAT,
+        esc(happyPct) + "% rated 4 stars or higher",
+        "Based on " + nfmt(total) + " published reviews.",
+      ) +
+      infoRow(
+        ICON_CHART,
+        "How these reviews are shown",
+        "Newest first, with the customer photos and the product each review refers to.",
+      ) +
+      "</div>" +
+      '<div class="vcom-rm__note"><span class="vcom-rm__noteico">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + ICON_SHIELD + "</svg></span>" +
+      "<span>Reviews are published by " + esc(meta.name) +
+      ". The score is calculated automatically from every published review.</span></div>";
+
     // Resumo automatico + assuntos mais citados (calculados sobre as avaliacoes reais)
-    var extra = "";
+    var extra = infoHtml;
     if (data.summary_text) {
       extra +=
         '<h3 class="vcom-rm__h3">Review summary</h3>' +
