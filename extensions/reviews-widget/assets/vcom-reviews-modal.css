@@ -30,8 +30,8 @@
 .vcom-rm__facts{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px}
 .vcom-rm__facts u{text-decoration:underline;text-underline-offset:2px}
 .vcom-rm__cat{margin:8px 0 0;font-size:14px;color:#2f6ecf}
-.vcom-rm__visit{flex:0 0 auto;border:1px solid #d6dae1;border-radius:999px;background:#fff;color:#191919;font-size:14px;font-weight:600;padding:10px 18px;text-decoration:none;display:inline-flex;gap:6px;align-items:center}
-.vcom-rm__visit:hover{background:#f6f8fa}
+.vcom-rm__visit{flex:0 0 auto;border:1px solid var(--vcom-rm-accent);border-radius:999px;background:transparent;color:var(--vcom-rm-accent);font-size:14px;font-weight:600;padding:10px 18px;text-decoration:none;display:inline-flex;gap:6px;align-items:center}
+.vcom-rm__visit:hover{background:var(--vcom-rm-accent);color:#fff}
 .vcom-rm__write{display:block;width:calc(100% - 56px);margin:20px 28px 0;padding:14px!important;border:0!important;border-radius:8px!important;background:var(--vcom-rm-accent)!important;background-image:none!important;color:#fff!important;font-size:16px;font-weight:700;cursor:pointer;text-align:center;filter:brightness(1)}
 .vcom-rm__write:hover{background:var(--vcom-rm-accent)!important;filter:brightness(.85)}
 
